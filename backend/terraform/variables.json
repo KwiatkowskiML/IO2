@@ -1,0 +1,6 @@
+{
+  "tfstate_bucket_url": "787831b7d26887c1_bucket_tfstate",
+  "credentials_file_path": "credentials.json",
+  "location": "europe-west1",
+  "project_id": "resellio-454121"
+}
