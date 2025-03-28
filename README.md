@@ -16,7 +16,17 @@ This repository marks the initial setup of the project, with more features and r
 
 
 # Development
+### Local Database
+run to build postgres database:
+```sh
+docker-compose up
+```
 
+You can then connect to your local db:
+```sh
+psql -h localhost -p 5432 -d resellio_db -U root -W
+```
+You will need to enter the passord: `my_password`
 ### Code Style
 
 This repository uses pre-commit hooks with forced Python formatting ([black](https://github.com/psf/black), [flake8](https://flake8.pycqa.org/en/latest/), and [isort](https://pycqa.github.io/isort/)):
