@@ -2,3 +2,4 @@ credentials.json
 tmp
 .env
 .venv
+*__pycache__*
