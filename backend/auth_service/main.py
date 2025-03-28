@@ -44,7 +44,7 @@ def health_check():
 @app.get("/protected")
 def protected_route(user=Depends(get_current_user)):
     """Test endpoint to verify authentication is working"""
-    return {"message": "This is a protected route", "user_id": user.id, "email": user.email, "role": user.role}
+    return {"message": "This is a protected route", "user_id": user.user_id, "email": user.email, "role": user.role}
 
 
 if __name__ == "__main__":

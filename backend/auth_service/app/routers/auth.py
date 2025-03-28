@@ -1,12 +1,11 @@
-# auth_service/app/routers/auth.py
 from typing import List
 from datetime import datetime, timedelta
 
 from app.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from app.models.user import User, UserRole, UserStatus
 from fastapi.security import OAuth2PasswordRequestForm
+from app.models import User, Customer, Organiser, Administrator
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status
 from app.schemas.auth import (
     Token,
@@ -37,18 +36,27 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 @router.post("/register/customer", response_model=Token, status_code=status.HTTP_201_CREATED)
-def register_customer(user: UserCreate, db: Session = Depends(get_db)):
+def register_customer(
+    user: UserCreate,
+    db: Session = Depends(get_db),
+):
     """Register a new customer account"""
     try:
         # Check if email already exists
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
 
         # Check if login already exists
         db_login = db.query(User).filter(User.login == user.login).first()
         if db_login:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Login already taken")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Login already taken",
+            )
 
         # Create new user with hashed password
         hashed_password = get_password_hash(user.password)
@@ -58,18 +66,24 @@ def register_customer(user: UserCreate, db: Session = Depends(get_db)):
             password_hash=hashed_password,
             first_name=user.first_name,
             last_name=user.last_name,
-            role=UserRole.CUSTOMER,
-            status=UserStatus.ACTIVE,
+            user_type="customer",
+            is_active=True,
         )
 
         db.add(db_user)
+        db.flush()  # Flush to get the user_id without committing
+
+        # Create customer record
+        db_customer = Customer(user_id=db_user.user_id)
+        db.add(db_customer)
+
         db.commit()
         db.refresh(db_user)
 
         # Generate access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": db_user.email, "role": db_user.role.value}, expires_delta=access_token_expires
+            data={"sub": db_user.email, "role": "customer"}, expires_delta=access_token_expires
         )
 
         return {"token": access_token, "message": "User registered successfully"}
@@ -93,7 +107,7 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
         if db_login:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Login already taken")
 
-        # Create new organizer with hashed password
+        # Create new user with hashed password
         hashed_password = get_password_hash(user.password)
         db_user = User(
             email=user.email,
@@ -101,13 +115,17 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
             password_hash=hashed_password,
             first_name=user.first_name,
             last_name=user.last_name,
-            role=UserRole.ORGANIZER,
-            status=UserStatus.VERIFICATION_PENDING,
-            company_name=user.company_name,
-            is_verified=False,
+            user_type="organiser",
+            is_active=True,
         )
 
         db.add(db_user)
+        db.flush()  # Flush to get the user_id without committing
+
+        # Create organiser record
+        db_organiser = Organiser(user_id=db_user.user_id, company_name=user.company_name, is_verified=False)
+        db.add(db_organiser)
+
         db.commit()
         db.refresh(db_user)
 
@@ -115,7 +133,7 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
         # This can be used for initial login to check verification status
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": db_user.email, "role": db_user.role.value}, expires_delta=access_token_expires
+            data={"sub": db_user.email, "role": "organiser"}, expires_delta=access_token_expires
         )
 
         return {
@@ -153,18 +171,24 @@ def register_admin(user: AdminCreate, db: Session = Depends(get_db)):
             password_hash=hashed_password,
             first_name=user.first_name,
             last_name=user.last_name,
-            role=UserRole.ADMINISTRATOR,
-            status=UserStatus.ACTIVE,
+            user_type="administrator",
+            is_active=True,
         )
 
         db.add(db_user)
+        db.flush()  # Flush to get the user_id without committing
+
+        # Create administrator record
+        db_admin = Administrator(user_id=db_user.user_id)
+        db.add(db_admin)
+
         db.commit()
         db.refresh(db_user)
 
         # Generate access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": db_user.email, "role": db_user.role.value}, expires_delta=access_token_expires
+            data={"sub": db_user.email, "role": "administrator"}, expires_delta=access_token_expires
         )
 
         return {"token": access_token, "message": "Administrator registered successfully"}
@@ -186,18 +210,20 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Check if the user is banned
-    if user.status == UserStatus.BANNED:
+    # Check if the user is active
+    if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account banned")
 
     # Check if the organizer is verified
-    if user.role == UserRole.ORGANIZER and user.status == UserStatus.VERIFICATION_PENDING:
-        return {"token": "", "message": "Your account is pending verification by an administrator"}
+    if user.user_type == "organiser":
+        organiser = db.query(Organiser).filter(Organiser.user_id == user.user_id).first()
+        if not organiser.is_verified:
+            return {"token": "", "message": "Your account is pending verification by an administrator"}
 
     # Generate access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.role.value}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.user_type}, expires_delta=access_token_expires
     )
 
     return {"token": access_token, "message": "Login successful"}
@@ -220,33 +246,58 @@ def verify_organizer(
     verification: VerificationRequest, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
 ):
     """Verify or reject an organizer account (admin only)"""
-    # Find the organizer
-    organizer = db.query(User).filter(User.id == verification.organizer_id, User.role == UserRole.ORGANIZER).first()
+    # Find the organiser
+    organiser = db.query(Organiser).filter(Organiser.organiser_id == verification.organizer_id).first()
 
-    if not organizer:
+    if not organiser:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizer not found")
 
+    # Find the associated user
+    user = db.query(User).filter(User.user_id == organiser.user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
     if verification.approve:
-        organizer.status = UserStatus.ACTIVE
-        organizer.is_verified = True
+        organiser.is_verified = True
     else:
-        # If rejected, we keep the account but mark it as banned
-        organizer.status = UserStatus.BANNED
+        # If rejected, we keep the account but mark it as inactive
+        user.is_active = False
 
     db.commit()
-    db.refresh(organizer)
+    db.refresh(organiser)
+    db.refresh(user)
 
-    return organizer
+    # Combine user and organiser for response
+    user_dict = {c.name: getattr(user, c.name) for c in user.__table__.columns}
+    user_dict["organiser_id"] = organiser.organiser_id
+    user_dict["company_name"] = organiser.company_name
+    user_dict["is_verified"] = organiser.is_verified
+
+    return user_dict
 
 
 @router.get("/pending-organizers", response_model=List[OrganizerResponse])
 def list_pending_organizers(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     """List all organizers pending verification (admin only)"""
-    organizers = (
-        db.query(User).filter(User.role == UserRole.ORGANIZER, User.status == UserStatus.VERIFICATION_PENDING).all()
+    # Join User and Organiser tables to get all unverified organisers
+    unverified_organisers = (
+        db.query(User, Organiser)
+        .join(Organiser, User.user_id == Organiser.user_id)
+        .filter(User.user_type == "organiser", not Organiser.is_verified, User.is_active)
+        .all()
     )
 
-    return organizers
+    # Format the response
+    result = []
+    for user, organiser in unverified_organisers:
+        user_dict = {c.name: getattr(user, c.name) for c in user.__table__.columns}
+        user_dict["organiser_id"] = organiser.organiser_id
+        user_dict["company_name"] = organiser.company_name
+        user_dict["is_verified"] = organiser.is_verified
+        result.append(user_dict)
+
+    return result
 
 
 @router.post("/request-password-reset")
@@ -256,52 +307,34 @@ def request_password_reset(
     """Request a password reset link via email"""
     user = db.query(User).filter(User.email == reset_request.email).first()
 
-    # Even if user doesn't exist, return success to prevent email enumeration
     if not user:
         return {"message": "If your email is registered, you will receive a password reset link"}
 
-    reset_token = generate_reset_token()
+    reset_token = generate_reset_token()  # noqa
+    token_expiry = datetime.utcnow() + timedelta(hours=24)  # noqa
 
-    # Set token expiry (24 hours)
-    token_expiry = datetime.utcnow() + timedelta(hours=24)
+    # TODO: Store token in user's session - and look it up in the table (make a new table for tokens?)
 
-    user.token = reset_token
-    user.token_expiry = token_expiry
-    db.commit()
-
-    # Send email with reset token
-    # when email service is implemented
-    return {"message": "Password reset not supported. Contact our administators."}
+    return {"message": "Password reset not supported. Contact our administrators."}
 
 
 @router.post("/reset-password")
 def reset_password(reset_confirm: PasswordResetConfirm, db: Session = Depends(get_db)):
     """Reset password using a valid reset token"""
-    user = db.query(User).filter(User.token == reset_confirm.token).first()
-
-    if not user or not user.token_expiry or user.token_expiry < datetime.utcnow():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset token")
-
-    user.password_hash = get_password_hash(reset_confirm.new_password)
-
-    user.token = None
-    user.token_expiry = None
-
-    db.commit()
-
-    return {"message": "Password has been reset successfully"}
+    # TODO
+    return {"message": "Password reset functionality not implemented. Contact administrators."}
 
 
 @router.post("/ban-user/{user_id}")
 def ban_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     """Ban a user (admin only)"""
     # Find the user
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.user_id == user_id).first()
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    user.status = UserStatus.BANNED
+    user.is_active = False
     db.commit()
 
     return {"message": "User has been banned"}
@@ -310,15 +343,15 @@ def ban_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(
 @router.post("/unban-user/{user_id}")
 def unban_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     """Unban a user (admin only)"""
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.user_id == user_id).first()
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    if user.status != UserStatus.BANNED:
+    if user.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not banned")
 
-    user.status = UserStatus.ACTIVE
+    user.is_active = True
     db.commit()
 
     return {"message": "User has been unbanned"}

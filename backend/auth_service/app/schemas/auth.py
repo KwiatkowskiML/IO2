@@ -1,20 +1,7 @@
-from enum import Enum
 from typing import Optional
 from datetime import datetime
 
-from pydantic import Field, EmailStr, BaseModel, validator
-
-
-class UserRole(str, Enum):
-    CUSTOMER = "customer"
-    ORGANIZER = "organizer"
-    ADMINISTRATOR = "administrator"
-
-
-class UserStatus(str, Enum):
-    ACTIVE = "active"
-    BANNED = "banned"
-    VERIFICATION_PENDING = "verification_pending"
+from pydantic import Field, EmailStr, BaseModel, field_validator
 
 
 class UserBase(BaseModel):
@@ -27,7 +14,8 @@ class UserCreate(UserBase):
     first_name: str
     last_name: str
 
-    @validator("password")
+    @field_validator("password")
+    @classmethod
     def password_complexity(cls, v):
         if not any(char.isdigit() for char in v):
             raise ValueError("Password must contain at least one digit")
@@ -60,20 +48,34 @@ class TokenData(BaseModel):
     exp: Optional[datetime] = None
 
 
-class UserResponse(UserBase):
-    id: int
+class UserResponse(BaseModel):
+    user_id: int
+    email: str
+    login: str
     first_name: str
     last_name: str
     creation_date: datetime
     is_active: bool
-    role: UserRole
-    status: UserStatus
+    user_type: str
 
     class Config:
         orm_mode = True
 
+    @property
+    def id(self) -> int:
+        return self.user_id
+
+    @property
+    def role(self) -> str:
+        return self.user_type
+
+    @property
+    def status(self) -> str:
+        return "active" if self.is_active else "banned"
+
 
 class OrganizerResponse(UserResponse):
+    organiser_id: int
     company_name: str
     is_verified: bool
 
@@ -94,7 +96,8 @@ class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str = Field(..., min_length=8)
 
-    @validator("new_password")
+    @field_validator("new_password")
+    @classmethod
     def password_complexity(cls, v):
         if not any(char.isdigit() for char in v):
             raise ValueError("Password must contain at least one digit")
