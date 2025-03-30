@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 class Event {
   final String id;
   final String name;
@@ -16,7 +15,6 @@ class Event {
     this.imageUrl,
   });
 }
-
 
 class EventCard extends StatelessWidget {
   final Event event;
@@ -39,22 +37,21 @@ class EventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Expanded(
               flex: 5,
               child: Container(
                 color: Colors.grey.shade800,
                 width: double.infinity,
-                child: event.imageUrl != null
-                    ? Image.network(event.imageUrl!, fit: BoxFit.cover)
-                    : Icon(
-                  Icons.event,
-                  size: 48,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                child:
+                    event.imageUrl != null
+                        ? Image.network(event.imageUrl!, fit: BoxFit.cover)
+                        : Icon(
+                          Icons.event,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
               ),
             ),
-
 
             Expanded(
               flex: 4,
@@ -69,23 +66,23 @@ class EventCard extends StatelessWidget {
                       children: [
                         Text(
                           event.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           event.date,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
-                          ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                         ),
                       ],
                     ),
 
-                    Row( // Price and Buy Button
+                    Row(
+                      // Price and Buy Button
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
@@ -99,7 +96,10 @@ class EventCard extends StatelessWidget {
                           ElevatedButton(
                             onPressed: onBuyPressed,
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
