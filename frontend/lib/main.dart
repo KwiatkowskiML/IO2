@@ -3,8 +3,6 @@ import 'package:resellio/app/config/app_router.dart';
 import 'package:resellio/app/config/app_theme.dart';
 
 void main() {
-  // WidgetsFlutterBinding.ensureInitialized(); // Needed for async setup before runApp
-
   runApp(const ResellioApp());
 }
 
@@ -16,8 +14,8 @@ class ResellioApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Resellio',
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      darkTheme: AppTheme.lightTheme,
+      themeMode: ThemeMode.dark,
       routerConfig: AppRouter.router,
       debugShowCheckedModeBanner: false,
     );
