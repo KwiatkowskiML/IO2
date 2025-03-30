@@ -1,19 +1,20 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Path, Depends
 
-from common.schemas.ticket import TicketDetails, TicketPDF
+from common.schemas.ticket import TicketDetails, TicketPDF, ResellTicketRequest
+from common.schemas.payment import  PaymentResponse
+from common.security import get_current_user
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
-@router.post("/purchase")
-async def purchase_ticket():
-    """
-    Purchase a new ticket for an event
-    """
-    pass
+@router.post("/{ticket_id}/purchase")
+async def purchase_ticket(
+        ticket_id: str = Path(..., title="ticket ID"), current_user=Depends(get_current_user)
+) -> PaymentResponse:
+    return PaymentResponse(success=True, transaction_id="123456789", error_message=None)
 
 @router.get("/{ticket_id}")
 async def get_ticket_details(
-    ticket_id: str = Path(..., title="ticket ID"), current_user=Depends(get_current_user)
+    ticket_id: str = Path(..., title="ticket ID")
 ) -> TicketDetails:
     return TicketDetails(
         id="123",

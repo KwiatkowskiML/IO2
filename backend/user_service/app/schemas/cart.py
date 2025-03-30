@@ -23,13 +23,3 @@ class ShoppingCartResponse(BaseModel):
     total: float
     currency: str
 
-
-class ResellTicketRequest(BaseModel):
-    ticket_id: str
-    price: Optional[float] = None
-
-
-class PaymentResponse(BaseModel):
-    success: bool
-    transaction_id: Optional[str] = None
-    error_message: Optional[str] = None

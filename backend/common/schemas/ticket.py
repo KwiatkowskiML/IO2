@@ -23,3 +23,8 @@ class TicketDetails(TicketBase):
 class TicketPDF(BaseModel):
     pdf_data: str
     filename: str
+
+
+class ResellTicketRequest(BaseModel):
+    ticket_id: str
+    price: Optional[float] = None
