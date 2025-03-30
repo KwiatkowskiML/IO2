@@ -1,4 +1,4 @@
-from backend.common.models.base import Base
+from common.models.base import Base
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, String, Boolean, Integer, ForeignKey
 
