@@ -10,7 +10,7 @@ def home():
     return {"message": "Hello World - Cart"}
 
 
-@router.get("/cart")
+@router.get("/")
 async def get_shopping_cart(current_user=Depends(get_current_user)) -> ShoppingCartResponse:
     return ShoppingCartResponse(id="123", user_id="123", items=[], total=0.0, currency="PLN")
 
