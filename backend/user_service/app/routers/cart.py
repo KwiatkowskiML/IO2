@@ -1,6 +1,7 @@
 from common.security import get_current_user
 from fastapi import Path, Depends, APIRouter
-from user_service.app.schemas.cart import CartItem, PaymentResponse, ShoppingCartResponse
+from user_service.app.schemas.cart import CartItem, ShoppingCartResponse
+from common.schemas.payment import PaymentResponse
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 

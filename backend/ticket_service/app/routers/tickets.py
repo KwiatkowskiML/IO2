@@ -45,3 +45,18 @@ async def resell_ticket(resell_data: ResellTicketRequest, current_user=Depends(g
         ticket_type_id="123",
         seat="A1",
     )
+
+@router.delete("/tickets/{ticket_id}/resell")
+async def cancel_resell(
+    ticket_id: str = Path(..., title="ticket ID"), current_user=Depends(get_current_user)
+) -> TicketDetails:
+    return TicketDetails(
+        id="123",
+        owner_id="123",
+        is_on_sale=True,
+        price=40.0,
+        currency="PLN",
+        event_id="123",
+        ticket_type_id="123",
+        seat="A1",
+    )
