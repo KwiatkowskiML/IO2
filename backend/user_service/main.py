@@ -4,7 +4,7 @@ from common.models.user import Base
 from fastapi import Depends, FastAPI
 from common.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
-from user_service.app.routers import cart, customers, organisers
+from user_service.app.routers import cart, users, tickets
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,8 +24,8 @@ app.add_middleware(
 
 # Include routers for different functionalities
 app.include_router(cart.router)
-app.include_router(organisers.router)
-app.include_router(customers.router)
+app.include_router(tickets.router)
+app.include_router(users.router)
 
 
 @app.get("/")
