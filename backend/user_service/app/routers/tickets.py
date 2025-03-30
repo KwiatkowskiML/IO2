@@ -3,7 +3,7 @@ from typing import Optional
 from common.security import get_current_user
 from fastapi import Path, Depends, APIRouter
 from user_service.app.schemas.cart import PaymentResponse
-from user_service.app.schemas.ticket import TicketDetails
+from common.schemas.ticket import TicketDetails
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 

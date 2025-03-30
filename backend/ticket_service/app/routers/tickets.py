@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from common.schemas.ticket import TicketDetails, TicketPDF
+
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 @router.post("/purchase")
@@ -10,50 +12,35 @@ async def purchase_ticket():
     pass
 
 @router.get("/{ticket_id}")
-async def get_ticket_details():
-    """
-    Get details of a specific ticket
-    """
-    pass
-
-@router.post("/{ticket_id}/resell")
-async def resell_ticket():
-    """
-    Resell a purchased ticket
-    """
-    pass
+async def get_ticket_details(
+    ticket_id: str = Path(..., title="ticket ID"), current_user=Depends(get_current_user)
+) -> TicketDetails:
+    return TicketDetails(
+        id="123",
+        owner_id="123",
+        is_on_sale=True,
+        price=40.0,
+        currency="PLN",
+        event_id="123",
+        ticket_type_id="123",
+        seat="A1",
+    )
 
 @router.get("/{ticket_id}/download")
-async def download_ticket():
-    """
-    Download ticket as PDF
-    """
-    pass
+async def download_ticket(
+    ticket_id: str = Path(..., title="ticket ID"), current_user=Depends(get_current_user)
+) -> TicketPDF:
+    return TicketPDF(pdf_data="base64_encoded_pdf_data", filename="ticket.pdf")
 
-@router.get("/{ticket_id}/qrcode")
-async def generate_qrcode():
-    """
-    Generate QR code for ticket validation
-    """
-    pass
-
-@router.post("/cart/items")
-async def add_to_cart():
-    """
-    Add ticket to shopping cart
-    """
-    pass
-
-@router.delete("/cart/items/{item_id}")
-async def remove_from_cart():
-    """
-    Remove item from shopping cart
-    """
-    pass
-
-@router.post("/cart/checkout")
-async def checkout_cart():
-    """
-    Complete purchase of cart items
-    """
-    pass
+@router.post("/tickets/{ticket_id}/resell")
+async def resell_ticket(resell_data: ResellTicketRequest, current_user=Depends(get_current_user)) -> TicketDetails:
+    return TicketDetails(
+        id="123",
+        owner_id="123",
+        is_on_sale=True,
+        price=40.0,
+        currency="PLN",
+        event_id="123",
+        ticket_type_id="123",
+        seat="A1",
+    )

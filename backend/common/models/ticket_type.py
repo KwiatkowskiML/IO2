@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey
-from backend.common.models.base import Base
+from common.models.base import Base
 
 class TicketType(Base):
     __tablename__ = 'ticket_types'

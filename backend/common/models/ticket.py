@@ -1,8 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, Numeric, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
 from enum import Enum
 
-from backend.common.models.base import Base
+from common.models.base import Base
 
 
 class TicketStatus(Enum):
