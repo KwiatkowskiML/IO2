@@ -10,6 +10,9 @@ class EventBase(BaseModel):
     end_date: datetime
     description: Optional[str] = None
 
+class EventCreate(EventBase):
+    pass
+
 class EventDetails(EventBase):
     id: str
     organizer_id: str
