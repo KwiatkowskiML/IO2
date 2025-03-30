@@ -1,9 +1,9 @@
 import uvicorn
-from app.routers import auth
-from app.database import engine
-from app.models.user import Base
+from common.database import engine
+from common.models.user import Base
 from fastapi import Depends, FastAPI
-from app.security import get_current_user
+from auth_service.app.routers import auth
+from common.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(bind=engine)

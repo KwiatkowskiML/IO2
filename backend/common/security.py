@@ -4,12 +4,12 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 
 import jwt
-from app.database import get_db
+from common.database import get_db
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
-from app.models import User, Organiser, Administrator
+from common.models import User, Organiser, Administrator
 
 # Get security settings from environment variables or use defaults
 SECRET_KEY = os.getenv("SECRET_KEY", "your-256-bit-secret")
