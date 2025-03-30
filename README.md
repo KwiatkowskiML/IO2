@@ -43,3 +43,17 @@ To run the hooks against all files without running a commit:
 ```sh
 pre-commit run --all-files
 ```
+
+# Usage
+
+## Run User Service
+```sh
+cd backend
+uvicorn user_service.main:app --reload --port 8001
+```
+
+## Run Auth Service
+```sh
+cd backend
+uvicorn auth_service.main:app --reload --port 8000
+```

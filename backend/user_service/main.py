@@ -2,15 +2,15 @@ import uvicorn
 from common.database import engine
 from common.models.user import Base
 from fastapi import Depends, FastAPI
-from auth_service.app.routers import auth
 from common.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
+from user_service.app.routers import cart, users, tickets
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Resellio Auth Service",
-    description="Authentication microservice for Resellio ticket selling platform",
+    title="Resellio User Service",
+    description="User microservice for Resellio ticket selling platform",
     version="1.0.0",
 )
 
@@ -22,14 +22,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
+# Include routers for different functionalities
+app.include_router(cart.router)
+app.include_router(tickets.router)
+app.include_router(users.router)
 
 
 @app.get("/")
 def read_root():
     """Root endpoint to verify service is running"""
     return {
-        "service": "Resellio Auth Service",
+        "service": "Resellio User Service",
         "status": "operational",
         "version": "0.0.1",
     }
@@ -48,4 +51,4 @@ def protected_route(user=Depends(get_current_user)):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
