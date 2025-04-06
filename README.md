@@ -52,6 +52,24 @@ cd backend
 uvicorn user_service.main:app --reload --port 8001
 ```
 
+## Run Events & Tickets Service
+Run docker compose
+```sh
+cd backend/event_ticketing_service/db
+docker-compose up
+```
+
+Connect to the database
+```sh
+psql -h localhost -p 5432 -U root -d resellio_event_ticketing_db
+```
+
+Then run the service
+```sh
+cd backend
+uvicorn event_ticketing_service.main:app --port 8002
+```
+
 ## Run Auth Service
 ```sh
 cd backend
