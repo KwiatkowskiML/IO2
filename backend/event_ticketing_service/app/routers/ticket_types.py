@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Path, Depends
 
 from common.schemas.ticket import TicketType
-from common.filters.ticket_filters import TicketTypeFilter
+from common.filters.ticket_type_filter import TicketTypeFilter
 from common.security import get_current_user
 
 router = APIRouter(prefix="/ticket-types", tags=["ticket_types"])

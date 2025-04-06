@@ -1,5 +1,4 @@
 from typing import Optional
-
 from pydantic import BaseModel
 
 # TicketType is a model representing a type of ticket for an event.
@@ -23,7 +22,6 @@ class TicketDetails(TicketBase):
     owner_id: Optional[int] = None
     resell_price: Optional[float] = None
 
-# look into it
 class TicketPDF(BaseModel):
     pdf_data: str
     filename: str
