@@ -1,5 +1,4 @@
 version: '3.1'
-
 services:
   user_auth_db:
     image: postgres:latest
@@ -8,10 +7,8 @@ services:
       - ./backend/user_auth_service/db/sql/tables:/sql_tables
       - ./backend/user_auth_service/db/sql/initdb:/docker-entrypoint-initdb.d
       - ./tmp/user_auth_db:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: my_password
-      POSTGRES_DB: resellio_db
+    env_file:
+      - backend/user_auth_service/.env
     ports:
       - "5432:5432"
     healthcheck:
@@ -28,10 +25,9 @@ services:
       - ./backend/event_ticketing_service/db/sql/initdb:/docker-entrypoint-initdb.d
       - ./tmp/event_ticketing_db:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: my_password
-      POSTGRES_DB: resellio_event_ticketing_db
       PGPORT: 5433
+    env_file:
+      - backend/event_ticketing_service/.env
     ports:
       - "5433:5433"
     healthcheck:
@@ -47,10 +43,10 @@ services:
     depends_on:
       user_auth_db:
         condition: service_healthy
-    environment:
-      POSTGRES_HOST: user_auth_db
-    ports:
-      - "8000:8000"
+    env_file:
+      - backend/user_auth_service/.env
+    expose:
+      - "8000"
     volumes:
       - ./backend/user_auth_service:/app
 
@@ -61,9 +57,23 @@ services:
     depends_on:
       event_ticketing_db:
         condition: service_healthy
-    environment:
-      POSTGRES_HOST: event_ticketing_db
-    ports:
-      - "8001:8001"
+    env_file:
+      - backend/event_ticketing_service/.env
+    expose:
+      - "8001"
     volumes:
       - ./backend/event_ticketing_service:/app
+
+  api_gateway:
+    build:
+      context: ./backend/api_gateway
+    container_name: api_gateway
+    depends_on:
+      - user_auth_service
+      - event_ticketing_service
+    env_file:
+      - "backend/api_gateway/.env"
+    ports:
+      - "8080:8080"  # Expose gateway to host
+    volumes:
+      - ./backend/api_gateway:/app
