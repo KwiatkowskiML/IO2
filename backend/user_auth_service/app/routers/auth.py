@@ -5,16 +5,15 @@ from app.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi.security import OAuth2PasswordRequestForm
+from app.schemas.user import UserResponse, OrganizerResponse
 from app.models import User, Customer, Organiser, Administrator
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status
 from app.schemas.auth import (
     Token,
     UserCreate,
     AdminCreate,
-    UserResponse,
     PasswordReset,
     OrganizerCreate,
-    OrganizerResponse,
     VerificationRequest,
     PasswordResetConfirm,
 )
