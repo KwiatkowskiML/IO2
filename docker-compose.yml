@@ -1,7 +1,7 @@
 version: '3.1'
 
 services:
-  db_user:
+  user_auth_db:
     image: postgres:latest
     container_name: user_auth_db
     volumes:
@@ -13,30 +13,30 @@ services:
       POSTGRES_PASSWORD: my_password
       POSTGRES_DB: resellio_db
     ports:
-      - "5433:5433"
+      - "5432:5432"
 
-  db_event_ticketing:
+  event_ticketing_db:
     image: postgres:latest
     container_name: event_ticketing_db
     volumes:
-      - ./backend/user_auth_service/db/sql/tables:/sql_tables
-      - ./backend/user_auth_service/db/sql/initdb:/docker-entrypoint-initdb.d
+      - ./backend/db_event_ticketing/db/sql/tables:/sql_tables
+      - ./backend/db_event_ticketing/db/sql/initdb:/docker-entrypoint-initdb.d
       - ./tmp/event_ticketing_db:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: my_password
       POSTGRES_DB: resellio_event_ticketing_db
     ports:
-      - "5432:5432"
+      - "5433:5433"
 
   user_auth_service:
     build:
       context: ./backend/user_auth_service
     container_name: user_auth_service
     depends_on:
-      - db_user
+      - user_auth_db
     environment:
-      POSTGRES_HOST: db_user
+      POSTGRES_HOST: user_auth_db
     ports:
       - "8000:8000"
     volumes:
@@ -47,9 +47,9 @@ services:
       context: ./backend/event_ticketing_service
     container_name: event_ticketing_service
     depends_on:
-      - db_event_ticketing
+      - event_ticketing_db
     environment:
-      POSTGRES_HOST: db_event_ticketing
+      POSTGRES_HOST: event_ticketing_db
     ports:
       - "8001:8001"
     volumes:
