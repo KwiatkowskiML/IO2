@@ -4,7 +4,7 @@ from common.models.user import Base
 from fastapi import Depends, FastAPI
 from common.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
-from event_ticketing_service.app.routers import tickets, events, ticket_types
+from event_ticketing_service.app.routers import tickets, events, ticket_types, cart
 
 Base.metadata.create_all(bind=engine)
 
@@ -26,6 +26,7 @@ app.add_middleware(
 app.include_router(tickets.router)
 app.include_router(events.router)
 app.include_router(ticket_types.router)
+app.include_router(cart.router)
 
 @app.get("/")
 def read_root():
