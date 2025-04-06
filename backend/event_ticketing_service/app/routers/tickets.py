@@ -9,7 +9,7 @@ from common.filters.ticket_filter import TicketFilter
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
-@router.get("/", response_model=List[TicketDetails])
+@router.get("", response_model=List[TicketDetails])
 async def get_tickets(
     filters: TicketFilter = Depends(),
     current_user=Depends(get_current_user)
@@ -21,20 +21,9 @@ async def get_tickets(
         owner_id=1,
     )]
 
-@router.get("/{ticket_id}", response_model=TicketDetails)
-async def get_ticket_details(
-    ticket_id: str = Path(..., title="ticket ID")
-) -> TicketDetails:
-    return [TicketDetails(
-        ticket_id=1,
-        ticket_type_id=1,
-        seat="A1",
-        owner_id=1,
-    )]
-
 @router.get("/{ticket_id}/download", response_model=TicketPDF)
 async def download_ticket(
-    ticket_id: str = Path(..., title="ticket ID"),
+    ticket_id: int = Path(..., title="ticket ID"),
     current_user=Depends(get_current_user)
 ) -> TicketPDF:
     return TicketPDF(pdf_data="base64_encoded_pdf_data", filename="ticket.pdf")
@@ -54,7 +43,7 @@ async def resell_ticket(
 
 @router.delete("/{ticket_id}/resell", response_model=TicketDetails)
 async def cancel_resell(
-    ticket_id: str = Path(..., title="ticket ID"),
+    ticket_id: int = Path(..., title="ticket ID"),
     current_user=Depends(get_current_user)
 ) -> TicketDetails:
     return TicketDetails(

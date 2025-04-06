@@ -53,9 +53,16 @@ uvicorn user_service.main:app --reload --port 8001
 ```
 
 ## Run Events & Tickets Service
+Run docker compose
+```sh
+cd backend/event_ticketing_service/db
+docker-compose up
+```
+
+Then run the service
 ```sh
 cd backend
-uvicorn event_ticketing_service.main:app --reload --port 8002
+uvicorn event_ticketing_service.main:app --port 8002
 ```
 
 ## Run Auth Service
