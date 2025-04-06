@@ -1,7 +1,7 @@
 import uvicorn
-from app.routers import auth
 from app.database import engine
 from app.models.base import Base
+from app.routers import auth, user
 from fastapi import Depends, FastAPI
 from app.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(user.router)
 
 
 @app.get("/")

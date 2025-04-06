@@ -48,41 +48,6 @@ class TokenData(BaseModel):
     exp: Optional[datetime] = None
 
 
-class UserResponse(BaseModel):
-    user_id: int
-    email: str
-    login: str
-    first_name: str
-    last_name: str
-    creation_date: datetime
-    is_active: bool
-    user_type: str
-
-    class Config:
-        orm_mode = True
-
-    @property
-    def id(self) -> int:
-        return self.user_id
-
-    @property
-    def role(self) -> str:
-        return self.user_type
-
-    @property
-    def status(self) -> str:
-        return "active" if self.is_active else "banned"
-
-
-class OrganizerResponse(UserResponse):
-    organiser_id: int
-    company_name: str
-    is_verified: bool
-
-    class Config:
-        orm_mode = True
-
-
 class VerificationRequest(BaseModel):
     organizer_id: int
     approve: bool

@@ -19,8 +19,8 @@ services:
     image: postgres:latest
     container_name: event_ticketing_db
     volumes:
-      - ./backend/db_event_ticketing/db/sql/tables:/sql_tables
-      - ./backend/db_event_ticketing/db/sql/initdb:/docker-entrypoint-initdb.d
+      - ./backend/event_ticketing_service/db/sql/tables:/sql_tables
+      - ./backend/event_ticketing_service/db/sql/initdb:/docker-entrypoint-initdb.d
       - ./tmp/event_ticketing_db:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: root
