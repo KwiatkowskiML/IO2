@@ -32,12 +32,12 @@ async def get_events(
     # Example mock response
     return [
         EventDetails(
-            id="event_123",
+            id=1,
             name="Sample Event",
             location="Warsaw",
             start_date=datetime.now(),
             end_date=datetime.now(),
-            organizer_id="org_123",
+            organizer_id=1,
             status="active",
             total_tickets=100,
             available_tickets=80
@@ -46,8 +46,8 @@ async def get_events(
 
 @router.put("/{event_id}", response_model=EventDetails)
 async def update_event(
-    event_id: str = Path(..., title="Event ID"),
-    update_data: EventUpdate = None,
+    update_data: EventUpdate,
+    event_id: int = Path(..., title="Event ID"),
     current_user=Depends(get_current_user)
 ):
     """Update an event (requires organizer authentication)"""
@@ -65,7 +65,7 @@ async def update_event(
 
 @router.delete("/{event_id}", response_model=EventDetails)
 async def cancel_event(
-    event_id: str = Path(..., title="Event ID"),
+    event_id: int = Path(..., title="Event ID"),
     current_user=Depends(get_current_user)
 ):
     """Cancel an event (requires organizer authentication)"""
@@ -83,7 +83,7 @@ async def cancel_event(
 
 @router.post("/{event_id}/notify")
 async def notify_participants(
-    event_id: str = Path(..., title="Event ID"),
+    event_id: int = Path(..., title="Event ID"),
     notification: NotificationRequest = None,
     current_user=Depends(get_current_user)
 ):
