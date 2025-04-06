@@ -4,12 +4,12 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 
 import jwt
-from common.database import get_db
+from app.database import get_db
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
-from common.models import User, Organiser, Administrator
+from app.models import User, Organiser, Administrator
 
 # Get security settings from environment variables or use defaults
 SECRET_KEY = os.getenv("SECRET_KEY", "your-256-bit-secret")
@@ -19,6 +19,29 @@ ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin-secret-key")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+
+def decode_token(token: str):
+    """Decode a JWT token and return the payload"""
+    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+
+
+def get_token_data(token: str = Depends(oauth2_scheme)):
+    """Extract and validate data from the JWT token"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        role: str = payload.get("role")
+        if email is None:
+            raise credentials_exception
+        return {"email": email, "role": role}
+    except jwt.PyJWTError:
+        raise credentials_exception
 
 
 def verify_password(plain_password, hashed_password):
@@ -45,32 +68,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def decode_token(token: str):
-    """Decode a JWT token and return the payload"""
-    return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-
-
 def generate_reset_token():
     """Generate a random token for password reset"""
     return secrets.token_urlsafe(32)
-
-
-def get_token_data(token: str = Depends(oauth2_scheme)):
-    """Extract and validate data from the JWT token"""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        role: str = payload.get("role")
-        if email is None:
-            raise credentials_exception
-        return {"email": email, "role": role}
-    except jwt.PyJWTError:
-        raise credentials_exception
 
 
 def get_current_user(token_data: dict = Depends(get_token_data), db: Session = Depends(get_db)):
