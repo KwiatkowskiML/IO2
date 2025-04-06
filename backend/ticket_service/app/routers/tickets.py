@@ -33,7 +33,7 @@ async def download_ticket(
 ) -> TicketPDF:
     return TicketPDF(pdf_data="base64_encoded_pdf_data", filename="ticket.pdf")
 
-@router.post("/tickets/{ticket_id}/resell")
+@router.post("/{ticket_id}/resell")
 async def resell_ticket(resell_data: ResellTicketRequest, current_user=Depends(get_current_user)) -> TicketDetails:
     return TicketDetails(
         id="123",
@@ -46,7 +46,7 @@ async def resell_ticket(resell_data: ResellTicketRequest, current_user=Depends(g
         seat="A1",
     )
 
-@router.delete("/tickets/{ticket_id}/resell")
+@router.delete("/{ticket_id}/resell")
 async def cancel_resell(
     ticket_id: str = Path(..., title="ticket ID"), current_user=Depends(get_current_user)
 ) -> TicketDetails:
