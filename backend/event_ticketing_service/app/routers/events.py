@@ -3,30 +3,35 @@ from typing import Optional, List
 from datetime import datetime
 
 from common.security import get_current_user
-from common.schemas.event import EventCreate, EventDetails, EventUpdate, NotificationRequest
+from common.schemas.event import EventBase, EventDetails, EventUpdate, NotificationRequest
+from common.filters.events_filter import EventsFilter
 
 router = APIRouter(prefix="/events", tags=["events"])
 
 @router.post("/", response_model=EventDetails)
 async def create_event(
-    event_data: EventCreate,
+    event_data: EventBase,
     current_user=Depends(get_current_user)
 ):
     """Create a new event (requires authentication)"""
     return EventDetails(
         id=1,
-        organizer_id=current_user.user_id,
-        status="active",
-        total_tickets=100,
+        status="Pending approval",
         available_tickets=100,
         **event_data.dict()
     )
 
+@router.post("/authorize/{event_id}", response_model=bool)
+async def authorize_event(
+    event_id: int = Path(..., title="Event ID"),
+    current_user=Depends(get_current_user)
+):
+    """Authorize an event (requires admin authentication)"""
+    return True
+
 @router.get("/", response_model=List[EventDetails])
 async def get_events(
-    location: Optional[str] = Query(None),
-    start_date: Optional[datetime] = Query(None),
-    end_date: Optional[datetime] = Query(None)
+    event_filter: EventsFilter = Depends(),
 ):
     """Get events with optional filtering"""
     # Example mock response
@@ -63,23 +68,13 @@ async def update_event(
         end_date=datetime.now()
     )
 
-@router.delete("/{event_id}", response_model=EventDetails)
+@router.delete("/{event_id}", response_model=bool)
 async def cancel_event(
     event_id: int = Path(..., title="Event ID"),
     current_user=Depends(get_current_user)
 ):
     """Cancel an event (requires organizer authentication)"""
-    return EventDetails(
-        id=event_id,
-        organizer_id=current_user.user_id,
-        status="cancelled",
-        total_tickets=100,
-        available_tickets=80,
-        name="Cancelled Event",
-        location="Warsaw",
-        start_date=datetime.now(),
-        end_date=datetime.now()
-    )
+    return True
 
 @router.post("/{event_id}/notify")
 async def notify_participants(
