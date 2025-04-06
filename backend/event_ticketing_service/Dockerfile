@@ -1,4 +1,4 @@
-# auth_service/Dockerfile
+# event_ticketing_service/Dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
