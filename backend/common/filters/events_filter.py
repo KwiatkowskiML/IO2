@@ -23,9 +23,6 @@ class EventsFilter(BaseModel):
     max_price: Optional[float] = Query(
         None, ge=0, title="Maximum Price", description="Maximum ticket price available"
     )
-    categories: Optional[List[str]] = Query(
-        None, title="Categories", description="Events matching any of these categories"
-    )
     organizer_id: Optional[int] = Query(
         None, title="Organizer ID", description="Filter by specific organizer"
     )
