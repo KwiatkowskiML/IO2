@@ -52,16 +52,10 @@ cd backend
 uvicorn user_service.main:app --reload --port 8001
 ```
 
-## Run Ticket Service
+## Run Events & Tickets Service
 ```sh
 cd backend
-uvicorn ticket_service.main:app --reload --port 8002
-```
-
-## Run Event Service
-```sh
-cd backend
-uvicorn event_service.main:app --reload --port 8003
+uvicorn event_ticketing_service.main:app --reload --port 8002
 ```
 
 ## Run Auth Service

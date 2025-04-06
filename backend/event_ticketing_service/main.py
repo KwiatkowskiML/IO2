@@ -4,13 +4,13 @@ from common.models.user import Base
 from fastapi import Depends, FastAPI
 from common.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
-from event_service.app.routers import events
+from event_ticketing_service.app.routers import tickets, events
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Resellio Event Service",
-    description="Event microservice for Resellio ticket selling platform",
+    title="Resellio Tickets & Events Service",
+    description="Tickets & Events microservice for Resellio ticket selling platform",
     version="1.0.0",
 )
 
@@ -23,13 +23,14 @@ app.add_middleware(
 )
 
 # Include routers for different functionalities
+app.include_router(tickets.router)
 app.include_router(events.router)
 
 @app.get("/")
 def read_root():
     """Root endpoint to verify service is running"""
     return {
-        "service": "Resellio Event Service",
+        "service": "Resellio Tickets & Events Service",
         "status": "operational",
         "version": "0.0.1",
     }
@@ -48,4 +49,4 @@ def protected_route(user=Depends(get_current_user)):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8003, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8002, reload=True)

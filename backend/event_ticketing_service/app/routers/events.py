@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Path, Query
 from typing import Optional, List
 from datetime import datetime
+
 from common.security import get_current_user
 from common.schemas.event import EventCreate, EventDetails, EventUpdate, NotificationRequest
 
