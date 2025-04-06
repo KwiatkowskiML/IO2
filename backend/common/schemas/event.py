@@ -25,8 +25,8 @@ class EventDetails(EventBase):
 class EventUpdate(BaseModel):
     name: Optional[str] = None
     location: Optional[str] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
+    start: Optional[datetime] = None
+    end: Optional[datetime] = None
     description: Optional[str] = None
 
 class NotificationRequest(BaseModel):

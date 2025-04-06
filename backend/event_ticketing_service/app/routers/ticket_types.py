@@ -23,13 +23,13 @@ def get_ticket_types(ticket_type_filter: TicketTypeFilter = Depends()):
 @router.post("/", response_model=TicketType)
 def create_ticket_type(
     ticket: TicketType,
-    current_user=Depends(get_current_user)
+    #current_user=Depends(get_current_user)
 ):
     return ticket
 
 @router.delete("/{ticket_id}", response_model=bool)
 def delete_ticket_type(
     ticket_id: int = Path(..., title="Ticket ID", ge=1, description="Must be a positive integer"),
-    current_user=Depends(get_current_user)
+    #current_user=Depends(get_current_user)
 ):
     return True

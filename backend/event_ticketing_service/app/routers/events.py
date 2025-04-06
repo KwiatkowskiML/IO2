@@ -1,3 +1,5 @@
+from unicodedata import category
+
 from fastapi import APIRouter, Depends, Path, Query
 from typing import Optional, List
 from datetime import datetime
@@ -11,7 +13,7 @@ router = APIRouter(prefix="/events", tags=["events"])
 @router.post("/", response_model=EventDetails)
 async def create_event(
     event_data: EventBase,
-    current_user=Depends(get_current_user)
+    #current_user=Depends(get_current_user)
 ):
     """Create a new event (requires authentication)"""
     return EventDetails(
@@ -24,12 +26,12 @@ async def create_event(
 @router.post("/authorize/{event_id}", response_model=bool)
 async def authorize_event(
     event_id: int = Path(..., title="Event ID"),
-    current_user=Depends(get_current_user)
+    #current_user=Depends(get_current_user)
 ):
     """Authorize an event (requires admin authentication)"""
     return True
 
-@router.get("/", response_model=List[EventDetails])
+@router.get("", response_model=List[EventDetails])
 async def get_events(
     event_filter: EventsFilter = Depends(),
 ):
@@ -40,12 +42,13 @@ async def get_events(
             id=1,
             name="Sample Event",
             location="Warsaw",
-            start_date=datetime.now(),
-            end_date=datetime.now(),
+            start=datetime.now(),
+            end=datetime.now(),
             organizer_id=1,
             status="active",
             total_tickets=100,
-            available_tickets=80
+            available_tickets=80,
+            category=[]
         )
     ]
 
@@ -53,25 +56,26 @@ async def get_events(
 async def update_event(
     update_data: EventUpdate,
     event_id: int = Path(..., title="Event ID"),
-    current_user=Depends(get_current_user)
+    #current_user=Depends(get_current_user)
 ):
     """Update an event (requires organizer authentication)"""
     return EventDetails(
-        id=event_id,
-        organizer_id=current_user.user_id,
+        id=1,
+        name="Sample Event",
+        location="Warsaw",
+        start=datetime.now(),
+        end=datetime.now(),
+        organizer_id=1,
         status="active",
         total_tickets=100,
         available_tickets=80,
-        name=update_data.name if update_data else "Updated Event",
-        location=update_data.location if update_data else "Warsaw",
-        start_date=datetime.now(),
-        end_date=datetime.now()
+        category=[]
     )
 
 @router.delete("/{event_id}", response_model=bool)
 async def cancel_event(
     event_id: int = Path(..., title="Event ID"),
-    current_user=Depends(get_current_user)
+    #current_user=Depends(get_current_user)
 ):
     """Cancel an event (requires organizer authentication)"""
     return True
@@ -80,7 +84,7 @@ async def cancel_event(
 async def notify_participants(
     event_id: int = Path(..., title="Event ID"),
     notification: NotificationRequest = None,
-    current_user=Depends(get_current_user)
+    #current_user=Depends(get_current_user)
 ):
     """Notify participants of an event (requires organizer authentication)"""
     return {
