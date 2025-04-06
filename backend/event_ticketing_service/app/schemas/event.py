@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
 
 from pydantic import BaseModel
+
 
 # EventBase is the base model for creating and handling events
 class EventBase(BaseModel):
@@ -15,11 +16,13 @@ class EventBase(BaseModel):
     category: List[str]
     total_tickets: int
 
+
 # Details of the event, including its status and available tickets
 class EventDetails(EventBase):
     id: int
     status: str
     available_tickets: int
+
 
 # EventUpdate is used for updating existing events
 class EventUpdate(BaseModel):
@@ -28,6 +31,7 @@ class EventUpdate(BaseModel):
     start: Optional[datetime] = None
     end: Optional[datetime] = None
     description: Optional[str] = None
+
 
 class NotificationRequest(BaseModel):
     message: str
