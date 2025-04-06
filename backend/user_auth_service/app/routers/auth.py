@@ -1,13 +1,13 @@
 from typing import List
 from datetime import datetime, timedelta
 
-from common.database import get_db
+from app.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi.security import OAuth2PasswordRequestForm
-from common.models import User, Customer, Organiser, Administrator
+from app.models import User, Customer, Organiser, Administrator
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status
-from auth_service.app.schemas.auth import (
+from app.schemas.auth import (
     Token,
     UserCreate,
     AdminCreate,
@@ -18,7 +18,7 @@ from auth_service.app.schemas.auth import (
     VerificationRequest,
     PasswordResetConfirm,
 )
-from common.security import (
+from app.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     verify_password,
     get_current_user,
