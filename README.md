@@ -59,6 +59,11 @@ cd backend/event_ticketing_service/db
 docker-compose up
 ```
 
+Connect to the database
+```sh
+psql -h localhost -p 5433 -U root -d resellio_event_ticketing_db
+```
+
 Then run the service
 ```sh
 cd backend

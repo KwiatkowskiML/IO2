@@ -11,6 +11,6 @@ services:
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: my_password
-      POSTGRES_DB: resellio_db
+      POSTGRES_DB: resellio_event_ticketing_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
