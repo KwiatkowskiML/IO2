@@ -22,7 +22,7 @@ services:
     depends_on:
       - db_user
     environment:
-      DATABASE_URL: postgres://root:my_password@db_user:5432/resellio_db
+      POSTGRES_HOST: db_user
     ports:
       - "8000:8000"
     volumes:
