@@ -13,4 +13,4 @@ services:
       POSTGRES_PASSWORD: my_password
       POSTGRES_DB: resellio_event_ticketing_db
     ports:
-      - "5433:5432"
+      - "5432:5432"

@@ -1,11 +1,13 @@
 import uvicorn
-from common.database import engine
 from common.models.user import Base
 from fastapi import Depends, FastAPI
 from common.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 from event_ticketing_service.app.routers import tickets, events, ticket_types, cart
+from sqlalchemy import create_engine
+from common.database import EVENT_TICKET_DATABASE_URL
 
+engine = create_engine(EVENT_TICKET_DATABASE_URL)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
