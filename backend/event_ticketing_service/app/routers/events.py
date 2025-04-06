@@ -14,7 +14,7 @@ async def create_event(
 ):
     """Create a new event (requires authentication)"""
     return EventDetails(
-        id="event_123",
+        id=1,
         organizer_id=current_user.user_id,
         status="active",
         total_tickets=100,

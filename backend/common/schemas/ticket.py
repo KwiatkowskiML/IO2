@@ -2,6 +2,14 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+class TicketType(BaseModel):
+    type_id: str
+    event_id: str
+    description: Optional[str] = None
+    max_count: int
+    price: float
+    currency: str = "PLN"
+    available_from: Optional[str] = None
 
 class TicketBase(BaseModel):
     event_id: str

@@ -14,9 +14,9 @@ class EventCreate(EventBase):
     pass
 
 class EventDetails(EventBase):
-    id: str
-    organizer_id: str
-    status: str  # e.g., 'active', 'cancelled', 'completed'
+    id: int
+    organizer_id: int
+    status: str
     total_tickets: int
     available_tickets: int
 
