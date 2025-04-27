@@ -25,18 +25,30 @@ def list_tickets_endpoint(
 async def download_ticket(
     ticket_id: int = Path(..., title="ticket ID"),
 ) -> TicketPDF:
+    # TODO
     return TicketPDF(pdf_data="base64_encoded_pdf_data", filename="ticket.pdf")
 
 
 @router.post("/{ticket_id}/resell", response_model=TicketDetails)
 async def resell_ticket(
     resell_data: ResellTicketRequest,
+    db: Session = Depends(get_db)
 ) -> TicketDetails:
-    return TicketDetails(ticket_id=1, ticket_type_id=1, seat="A1", owner_id=1, resell_price=10.0)
+    # TODO: add authorization
+    current_user_id = 101  # Placeholder for current user ID
+
+    service = TicketService(db)
+    return service.resell_ticket(resell_data, current_user_id)
 
 
 @router.delete("/{ticket_id}/resell", response_model=TicketDetails)
 async def cancel_resell(
     ticket_id: int = Path(..., title="ticket ID"),
+    db: Session = Depends(get_db)
 ) -> TicketDetails:
-    return TicketDetails(ticket_id=1, ticket_type_id=1, seat="A1", owner_id=1, resell_price=None)
+    # TODO: add authorization
+    current_user_id = 101  # Placeholder for current user ID
+
+    service = TicketService(db)
+    return service.cancel_resell(ticket_id, current_user_id)
+

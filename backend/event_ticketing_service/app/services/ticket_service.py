@@ -37,8 +37,10 @@ class TicketService:
         # Stub: actual PDF generation logic goes here
         return TicketPDF(pdf_data="base64_pdf_data", filename=f"ticket_{ticket_id}.pdf")
 
-    def resell_ticket(self, data: ResellTicketRequest) -> TicketModel:
+    def resell_ticket(self, data: ResellTicketRequest, user_id: int) -> TicketModel:
         ticket = self.get_ticket(data.ticket_id)
+        if ticket.owner_id != user_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not the ticket owner")
         if data.price is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Resell price required")
         ticket.resell_price = data.price
@@ -46,8 +48,10 @@ class TicketService:
         self.db.refresh(ticket)
         return ticket
 
-    def cancel_resell(self, ticket_id: int) -> TicketModel:
+    def cancel_resell(self, ticket_id: int, user_id: int) -> TicketModel:
         ticket = self.get_ticket(ticket_id)
+        if ticket.owner_id != user_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not the ticket owner")
         ticket.resell_price = None
         self.db.commit()
         self.db.refresh(ticket)
