@@ -26,8 +26,8 @@ def get_ticket_types(
     query = db.query(TicketTypeModel)
 
     # 1) Filter by specific ticket type ID
-    if filters.ticket_type_id is not None:
-        query = query.filter(TicketTypeModel.type_id == filters.ticket_type_id)
+    if filters.type_id is not None:
+        query = query.filter(TicketTypeModel.type_id == filters.type_id)
 
     # 2) Filter by event ID
     if filters.event_id is not None:

@@ -15,3 +15,4 @@ class TicketTypeModel(Base):
     available_from = Column(DateTime, nullable=False)
 
     event = relationship('EventModel', back_populates='ticket_types')
+    tickets = relationship("TicketModel", back_populates="ticket_type")

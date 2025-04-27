@@ -19,16 +19,14 @@ class TicketType(BaseModel):
 
 
 # TicketBase is a base model for ticket-related operations.
-class TicketBase(BaseModel):
+class TicketDetails(BaseModel):
     ticket_id: int
-    ticket_type_id: int
+    type_id: int
     seat: Optional[str] = None
-
-
-# TicketDetails is a model representing detailed information about a ticket.
-class TicketDetails(TicketBase):
     owner_id: Optional[int] = None
     resell_price: Optional[float] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TicketPDF(BaseModel):

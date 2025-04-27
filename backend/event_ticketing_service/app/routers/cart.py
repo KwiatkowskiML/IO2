@@ -1,14 +1,14 @@
 from typing import List
 
 from fastapi import Path, APIRouter
-from app.schemas.ticket import TicketBase, TicketDetails
+from app.schemas.ticket import TicketDetails
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 
 
-@router.get("/items", response_model=List[TicketBase])
+@router.get("/items", response_model=List[TicketDetails])
 async def get_shopping_cart():
-    return [TicketBase(ticket_id=1, ticket_type_id=1)]
+    return [TicketDetails(ticket_id=1, ticket_type_id=1)]
 
 
 @router.post("/items", response_model=bool)

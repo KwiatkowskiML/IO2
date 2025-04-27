@@ -1,24 +1,24 @@
 from typing import List
 
 from fastapi import Path, Depends, APIRouter
+from sqlalchemy.orm import Session
+
 from app.filters.ticket_filter import TicketFilter
 from app.schemas.ticket import TicketPDF, TicketDetails, ResellTicketRequest
+from app.database import get_db
+from app.services.ticket_service import TicketService
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-@router.get("", response_model=List[TicketDetails])
-async def get_tickets(
+@router.get("/", response_model=List[TicketDetails])
+def list_tickets_endpoint(
     filters: TicketFilter = Depends(),
-) -> List[TicketDetails]:
-    return [
-        TicketDetails(
-            ticket_id=1,
-            ticket_type_id=1,
-            seat="A1",
-            owner_id=1,
-        )
-    ]
+    db: Session = Depends(get_db)
+):
+    service = TicketService(db)
+    tickets = service.list_tickets(filters)
+    return [TicketDetails.model_validate(t) for t in tickets]
 
 
 @router.get("/{ticket_id}/download", response_model=TicketPDF)
