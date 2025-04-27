@@ -10,8 +10,8 @@ class EventBase(BaseModel):
     organizer_id: int
     name: str
     description: Optional[str] = None
-    start: datetime
-    end: datetime
+    start_date: datetime
+    end_date: datetime
     minimum_age: Optional[int] = None
     location_id: int
     category: List[str]
@@ -50,9 +50,9 @@ class EventDetails(BaseModel):
 # EventUpdate is used for updating existing events
 class EventUpdate(BaseModel):
     name: Optional[str] = None
-    location: Optional[str] = None
-    start: Optional[datetime] = None
-    end: Optional[datetime] = None
+    location_id: Optional[int] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
     description: Optional[str] = None
 
 

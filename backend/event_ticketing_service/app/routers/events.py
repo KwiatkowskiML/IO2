@@ -42,26 +42,17 @@ def get_events_endpoint(
     events = service.get_events(filters)
     return [EventDetails.model_validate(e) for e in events]
 
-#
-# @router.put("/{event_id}", response_model=EventDetails)
-# async def update_event(
-#     update_data: EventUpdate,
-#     event_id: int = Path(..., title="Event ID"),
-# ):
-#     """Update an event (requires organizer authentication)"""
-#     return EventDetails(
-#         id=1,
-#         name="Sample Event",
-#         location="Warsaw",
-#         start=datetime.now(),
-#         end=datetime.now(),
-#         organizer_id=1,
-#         status="active",
-#         total_tickets=100,
-#         available_tickets=80,
-#         category=[],
-#     )
+@router.put("/{event_id}", response_model=EventDetails)
+def update_event_endpoint(
+    event_id: int = Path(..., title="Event ID"),
+    update_data: EventUpdate = Depends(),
+    db: Session = Depends(get_db),
+):
+    # TODO: use auth dependency
+    current_user_id = 1  # Placeholder for current user ID
 
+    service = EventService(db)
+    return service.update_event(event_id, update_data, current_user_id)
 
 @router.delete("/{event_id}", response_model=bool)
 async def cancel_event(

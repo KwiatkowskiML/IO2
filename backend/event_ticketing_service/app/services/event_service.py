@@ -80,12 +80,8 @@ class EventService:
                 detail="Not authorized to update this event"
             )
         updates = data.dict(exclude_unset=True)
-        if 'start' in updates:
-            event.start_date = updates['start']  # type: ignore
-        if 'end' in updates:
-            event.end_date = updates['end']  # type: ignore
         for field, value in updates.items():
-            if field in ['name', 'description']:
+            if value is not None:
                 setattr(event, field, value)
         self.db.commit()
         self.db.refresh(event)
