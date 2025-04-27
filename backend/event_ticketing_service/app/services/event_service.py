@@ -50,7 +50,7 @@ class EventService:
 
     def authorize_event(self, event_id: int) -> None:
         event = self.get_event(event_id)
-        event.status = "active"
+        event.status = "created"
         self.db.commit()
 
     def get_events(self, filters: EventsFilter) -> List[EventModel]:

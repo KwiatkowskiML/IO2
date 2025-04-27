@@ -25,8 +25,11 @@ async def create_event(
 @router.post("/authorize/{event_id}", response_model=bool)
 async def authorize_event(
     event_id: int = Path(..., title="Event ID"),
+    db: Session = Depends(get_db),
 ):
     """Authorize an event (requires admin authentication)"""
+    service = EventService(db)
+    service.authorize_event(event_id)
     return True
 
 
