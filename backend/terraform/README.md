@@ -1,10 +1,10 @@
 ## Terraform Setup:
-### On first usage: 
+### On first usage:
 
 1. Create a new project in Google Cloud Platform
 2. Authorize the Google Cloud SDK
 ```bash
-gcloud auth login 
+gcloud auth login
 ```
 (on machines without a browser the `--no-browser` flag can be used)
 2. Select the project in the Google Cloud SDK
@@ -16,9 +16,9 @@ gcloud config set project <project-id>
 
 4. Tweak the terraform [variables.tf](backend/terraform/variables.tf) file to match your project id and service account key file path
 
-5. Prepare terraform for migrating the backend to google cloud. 
+5. Prepare terraform for migrating the backend to google cloud.
    1. disable the "gcs" backend in the [terraform_backend.tf](terraform_backend.tf) file (comment it out)
-   2. run `terraform init`, then `terraform apply` once 
+   2. run `terraform init`, then `terraform apply` once
    3. Restore the gcs backend (uncomment it)
 5. Create a Google Cloud Bucket for the terraform state
 ```bash
@@ -32,4 +32,4 @@ tf.sh apply
 ```
 From now on use tf.sh as a wrapper for terraform commands. It will automatically use proper credentials without the need to set the environment variables.
 
-### On 
+### On
