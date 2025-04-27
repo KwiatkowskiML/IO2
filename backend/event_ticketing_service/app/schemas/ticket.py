@@ -1,6 +1,8 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from datetime import datetime
+
 
 
 # TicketType is a model representing a type of ticket for an event.
@@ -11,7 +13,9 @@ class TicketType(BaseModel):
     max_count: int
     price: float
     currency: str = "PLN"
-    available_from: Optional[str] = None
+    available_from: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # TicketBase is a base model for ticket-related operations.

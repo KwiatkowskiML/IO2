@@ -39,33 +39,7 @@ def get_ticket_types(
 
     # Execute and serialize
     types = query.all()
-    return [
-        TicketType(
-            type_id=t.type_id,
-            event_id=t.event_id,
-            description=t.description,
-            max_count=t.max_count,
-            price=t.price,
-            currency=t.currency,
-            available_from=t.available_from.isoformat(),
-        )
-        for t in types
-    ]
-
-@router.get("/", response_model=List[TicketType])
-def get_ticket_types(ticket_type_filter: TicketTypeFilter = Depends()):
-    return [
-        TicketType(
-            type_id=1,
-            event_id=1,
-            description="VIP Access",
-            max_count=100,
-            price=199.99,
-            currency="PLN",
-            available_from="2025-04-01T10:00:00",
-        )
-    ]
-
+    return [TicketType.model_validate(t) for t in types]
 
 @router.post("/", response_model=TicketType)
 def create_ticket_type(
