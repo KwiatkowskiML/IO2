@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.models.events import EventModel
 
-class TicketType(Base):
+class TicketTypeModel(Base):
     __tablename__ = 'ticket_types'
 
     type_id = Column(Integer, primary_key=True, index=True)
@@ -13,4 +14,4 @@ class TicketType(Base):
     currency = Column(String(3), nullable=False, default='PLN')
     available_from = Column(DateTime, nullable=False)
 
-    event = relationship('Event', back_populates='ticket_types')
+    event = relationship('EventModel', back_populates='ticket_types')

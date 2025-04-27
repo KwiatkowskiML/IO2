@@ -1,8 +1,9 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, CheckConstraint, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.models.location import LocationModel
 
-class Event(Base):
+class EventModel(Base):
     __tablename__ = 'events'
     __table_args__ = (
         CheckConstraint('start_date < end_date', name='check_start_before_end'),
@@ -18,5 +19,5 @@ class Event(Base):
     minimum_age = Column(Integer)
     status = Column(String(20), nullable=False, default='created')
 
-    location = relationship('Location', back_populates='events')
-    ticket_types = relationship('TicketType', back_populates='event', cascade='all, delete-orphan')
+    location = relationship('LocationModel', back_populates='events')
+    ticket_types = relationship('TicketTypeModel', back_populates='event', cascade='all, delete-orphan')
