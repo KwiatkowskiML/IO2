@@ -24,13 +24,13 @@ class EventService:
         # Validate location exists
         location = (
             self.db.query(LocationModel)
-            .filter(LocationModel.name == data.location)
+            .filter(LocationModel.location_id == data.location_id)
             .first()
         )
         if not location:
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND,
-                detail=f"Location '{data.location}' not found"
+                detail=f"Location '{data.location_id}' not found"
             )
 
         event = EventModel(

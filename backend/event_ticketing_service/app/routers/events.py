@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi import Path, Depends, APIRouter
 from app.filters.events_filter import EventsFilter
-from app.schemas.event import EventUpdate, EventDetails, NotificationRequest
+from app.schemas.event import EventBase, EventUpdate, EventDetails, NotificationRequest
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -12,12 +12,14 @@ from app.services.event_service import EventService
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-# @router.post("/", response_model=EventDetails)
-# async def create_event(
-#     event_data: EventBase,
-# ):
-#     """Create a new event (requires authentication)"""
-#     return EventDetails(id=1, status="Pending approval", available_tickets=100, **event_data.dict())
+@router.post("/", response_model=EventDetails)
+async def create_event(
+    event_data: EventBase,
+    db: Session = Depends(get_db)
+):
+    """Create a new event (requires authentication)"""
+    service = EventService(db)
+    return service.create_event(event_data, event_data.organizer_id)
 
 
 @router.post("/authorize/{event_id}", response_model=bool)
