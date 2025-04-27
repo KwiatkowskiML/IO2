@@ -1,14 +1,7 @@
 import uvicorn
-from common.models.user import Base
-from fastapi import Depends, FastAPI
-from common.security import get_current_user
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from event_ticketing_service.app.routers import tickets, events, ticket_types, cart
-from sqlalchemy import create_engine
-from common.database import EVENT_TICKET_DATABASE_URL
-
-engine = create_engine(EVENT_TICKET_DATABASE_URL)
-Base.metadata.create_all(bind=engine)
+from app.routers import cart, events, tickets, ticket_types
 
 app = FastAPI(
     title="Resellio Tickets & Events Service",
@@ -30,6 +23,7 @@ app.include_router(events.router)
 app.include_router(ticket_types.router)
 app.include_router(cart.router)
 
+
 @app.get("/")
 def read_root():
     """Root endpoint to verify service is running"""
@@ -46,11 +40,5 @@ def health_check():
     return {"status": "healthy"}
 
 
-@app.get("/protected")
-def protected_route(user=Depends(get_current_user)):
-    """Test endpoint to verify authentication is working"""
-    return {"message": "This is a protected route", "user_id": user.user_id, "email": user.email, "role": user.role}
-
-
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8002, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)

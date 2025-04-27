@@ -14,18 +14,29 @@ Resellio is a ticketing platform designed to simplify and automate the process o
 
 This repository marks the initial setup of the project, with more features and refinements to be added in future iterations.
 
+# Setup
+```sh
+cp backend/api_gateway/.env.template backend/api_gateway/.env
+cp backend/event_ticketing_service/.env.template backend/event_ticketing_service/.env
+```
 
 # Development
-### Local Database
-run to build postgres database:
+## Local Everything
+Run all of the services:
 ```sh
 docker-compose up
 ```
 
-You can then connect to your local db:
+You can then connect to your local dbs:
 ```sh
+# User auth db
 psql -h localhost -p 5432 -d resellio_db -U root -W
+
+# Event ticketing db
+psql -h localhost -p 5433 -d resellio_event_ticketing_db -U root -W
+
 ```
+
 You will need to enter the passord: `my_password`
 ### Code Style
 
