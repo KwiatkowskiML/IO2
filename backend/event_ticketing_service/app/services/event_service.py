@@ -96,13 +96,3 @@ class EventService:
             )
         event.status = "cancelled"
         self.db.commit()
-
-    def notify_participants(self, event_id: int, notification: NotificationRequest) -> Any:
-        event = self.get_event(event_id)
-        # Placeholder: integrate real notification system
-        return {
-            "success": True,
-            "event_id": event.event_id,
-            "message": notification.message,
-            "recipients_affected": 0
-        }

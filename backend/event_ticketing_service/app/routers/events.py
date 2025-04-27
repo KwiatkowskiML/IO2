@@ -55,12 +55,16 @@ def update_event_endpoint(
     return service.update_event(event_id, update_data, current_user_id)
 
 @router.delete("/{event_id}", response_model=bool)
-async def cancel_event(
+def cancel_event_endpoint(
     event_id: int = Path(..., title="Event ID"),
+    db: Session = Depends(get_db),
 ):
-    """Cancel an event (requires organizer authentication)"""
-    return True
+    # TODO: use auth dependency
+    current_user_id = 1
 
+    service = EventService(db)
+    service.cancel_event(event_id, current_user_id)
+    return True
 
 @router.post("/{event_id}/notify")
 async def notify_participants(
