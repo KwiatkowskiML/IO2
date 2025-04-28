@@ -1,0 +1,17 @@
+steps:
+  # Build user auth service
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/user-auth-service', './user_auth_service']
+
+  # Build event ticketing service
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/event-ticketing-service', './event_ticketing_service']
+
+  # Build API gateway
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/api-gateway', './api_gateway']
+
+images:
+  - 'gcr.io/$PROJECT_ID/user-auth-service'
+  - 'gcr.io/$PROJECT_ID/event-ticketing-service'
+  - 'gcr.io/$PROJECT_ID/api-gateway'
