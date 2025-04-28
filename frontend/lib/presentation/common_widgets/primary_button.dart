@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Color? backgroundColor;
   final Color? foregroundColor;
   final double verticalPadding;
+  final bool isLoading;
+  final IconData? icon;
+  final double height;
+  final double? width;
+  final double borderRadius;
+  final double elevation;
+  final bool fullWidth;
 
   const PrimaryButton({
     super.key,
@@ -14,31 +21,96 @@ class PrimaryButton extends StatelessWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.verticalPadding = 16,
+    this.isLoading = false,
+    this.icon,
+    this.height = 52,
+    this.width,
+    this.borderRadius = 16,
+    this.elevation = 0,
+    this.fullWidth = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? theme.colorScheme.primary,
-          foregroundColor: foregroundColor ?? theme.colorScheme.onPrimary,
-          padding: EdgeInsets.symmetric(vertical: verticalPadding),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    final colorScheme = theme.colorScheme;
+
+    Widget buttonChild;
+
+    if (isLoading) {
+      buttonChild = SizedBox(
+        height: 24,
+        width: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          color: foregroundColor ?? colorScheme.onPrimary,
+        ),
+      );
+    } else if (icon != null) {
+      buttonChild = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: theme.textTheme.labelLarge?.copyWith(
+              letterSpacing: 0.5,
+              fontWeight: FontWeight.w600,
+              color: foregroundColor ?? colorScheme.onPrimary,
+            ),
+          ),
+        ],
+      );
+    } else {
+      buttonChild = Text(
+        text,
+        style: theme.textTheme.labelLarge?.copyWith(
+          letterSpacing: 0.5,
+          fontWeight: FontWeight.w600,
+          color: foregroundColor ?? colorScheme.onPrimary,
+        ),
+      );
+    }
+
+    final button = ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      style: ButtonStyle(
+        backgroundColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.disabled)) {
+            return (backgroundColor ?? colorScheme.primary).withOpacity(0.6);
+          }
+          return backgroundColor ?? colorScheme.primary;
+        }),
+        foregroundColor: MaterialStateProperty.all<Color>(
+          foregroundColor ?? colorScheme.onPrimary,
+        ),
+        elevation: MaterialStateProperty.all<double>(elevation),
+        padding: MaterialStateProperty.all<EdgeInsets>(
+          EdgeInsets.symmetric(vertical: verticalPadding, horizontal: 24),
+        ),
+        shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(borderRadius),
           ),
         ),
-        child: Text(
-          text,
-          style: theme.textTheme.labelLarge?.copyWith(
-            letterSpacing: 1.0,
-            color: foregroundColor ?? theme.colorScheme.onPrimary,
-          ),
+        overlayColor: MaterialStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(MaterialState.pressed)) {
+            return colorScheme.onPrimary.withOpacity(0.1);
+          }
+          if (states.contains(MaterialState.hovered)) {
+            return colorScheme.onPrimary.withOpacity(0.05);
+          }
+          return null;
+        }),
+        fixedSize: MaterialStateProperty.all<Size?>(
+          Size(width ?? double.infinity, height),
         ),
+        animationDuration: const Duration(milliseconds: 200),
       ),
+      child: Center(child: buttonChild),
     );
+
+    return fullWidth ? SizedBox(width: double.infinity, child: button) : button;
   }
 }

@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:resellio/app/config/app_router.dart';
 import 'package:resellio/app/config/app_theme.dart';
+import 'package:resellio/core/services/cart_service.dart';
 
 void main() {
-  runApp(const ResellioApp());
+  runApp(
+    MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => CartService())],
+      child: const ResellioApp(),
+    ),
+  );
 }
 
 class ResellioApp extends StatelessWidget {

@@ -1,7 +1,9 @@
 version: '3.1'
 services:
   user_auth_db:
+  user_auth_db:
     image: postgres:latest
+    container_name: user_auth_db
     container_name: user_auth_db
     volumes:
       - ./backend/user_auth_service/db/sql/tables:/sql_tables
