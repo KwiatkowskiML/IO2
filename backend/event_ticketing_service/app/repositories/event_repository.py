@@ -8,7 +8,7 @@ from app.models.events import EventModel
 from app.models.location import LocationModel
 from app.schemas.event import EventBase, EventUpdate, NotificationRequest
 
-class EventService:
+class EventRepository:
     """Service layer for event operations, ensuring single responsibility and testability."""
 
     def __init__(self, db: Session):

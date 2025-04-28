@@ -7,7 +7,7 @@ from app.models.ticket import TicketModel
 from app.models.ticket_type import TicketTypeModel
 from app.schemas.ticket import TicketDetails, TicketPDF, ResellTicketRequest
 
-class TicketService:
+class TicketRepository:
     """Service layer for ticket operations."""
 
     def __init__(self, db: Session):

@@ -7,7 +7,7 @@ from app.schemas.event import EventBase, EventUpdate, EventDetails, Notification
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.services.event_service import EventService
+from app.repositories.event_repository import EventRepository
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -18,8 +18,8 @@ async def create_event(
     db: Session = Depends(get_db)
 ):
     """Create a new event (requires authentication)"""
-    service = EventService(db)
-    return service.create_event(event_data, event_data.organizer_id)
+    repository = EventRepository(db)
+    return repository.create_event(event_data, event_data.organizer_id)
 
 
 @router.post("/authorize/{event_id}", response_model=bool)
@@ -28,8 +28,8 @@ async def authorize_event(
     db: Session = Depends(get_db),
 ):
     """Authorize an event (requires admin authentication)"""
-    service = EventService(db)
-    service.authorize_event(event_id)
+    repository = EventRepository(db)
+    repository.authorize_event(event_id)
     return True
 
 
@@ -38,8 +38,8 @@ def get_events_endpoint(
     filters: EventsFilter = Depends(),
     db: Session = Depends(get_db)
 ):
-    service = EventService(db)
-    events = service.get_events(filters)
+    repository = EventRepository(db)
+    events = repository.get_events(filters)
     return [EventDetails.model_validate(e) for e in events]
 
 @router.put("/{event_id}", response_model=EventDetails)
@@ -51,8 +51,8 @@ def update_event_endpoint(
     # TODO: use auth dependency
     current_user_id = 1  # Placeholder for current user ID
 
-    service = EventService(db)
-    return service.update_event(event_id, update_data, current_user_id)
+    repository = EventRepository(db)
+    return repository.update_event(event_id, update_data, current_user_id)
 
 @router.delete("/{event_id}", response_model=bool)
 def cancel_event_endpoint(
@@ -62,8 +62,8 @@ def cancel_event_endpoint(
     # TODO: use auth dependency
     current_user_id = 1
 
-    service = EventService(db)
-    service.cancel_event(event_id, current_user_id)
+    repository = EventRepository(db)
+    repository.cancel_event(event_id, current_user_id)
     return True
 
 @router.post("/{event_id}/notify")

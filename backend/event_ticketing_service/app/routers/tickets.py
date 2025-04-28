@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.filters.ticket_filter import TicketFilter
 from app.schemas.ticket import TicketPDF, TicketDetails, ResellTicketRequest
 from app.database import get_db
-from app.services.ticket_service import TicketService
+from app.repositories.ticket_repository import TicketRepository
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -16,8 +16,8 @@ def list_tickets_endpoint(
     filters: TicketFilter = Depends(),
     db: Session = Depends(get_db)
 ):
-    service = TicketService(db)
-    tickets = service.list_tickets(filters)
+    repository = TicketRepository(db)
+    tickets = repository.list_tickets(filters)
     return [TicketDetails.model_validate(t) for t in tickets]
 
 
@@ -37,8 +37,8 @@ async def resell_ticket(
     # TODO: add authorization
     current_user_id = 101  # Placeholder for current user ID
 
-    service = TicketService(db)
-    return service.resell_ticket(resell_data, current_user_id)
+    repository = TicketRepository(db)
+    return repository.resell_ticket(resell_data, current_user_id)
 
 
 @router.delete("/{ticket_id}/resell", response_model=TicketDetails)
@@ -49,6 +49,6 @@ async def cancel_resell(
     # TODO: add authorization
     current_user_id = 101  # Placeholder for current user ID
 
-    service = TicketService(db)
-    return service.cancel_resell(ticket_id, current_user_id)
+    repository = TicketRepository(db)
+    return repository.cancel_resell(ticket_id, current_user_id)
 
