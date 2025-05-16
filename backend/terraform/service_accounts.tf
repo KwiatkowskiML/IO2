@@ -34,3 +34,10 @@ resource "google_secret_manager_secret_iam_member" "compute_sa_secret_access" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:981338991070-compute@developer.gserviceaccount.com"
 }
+
+# Grant storage access to the service account
+resource "google_project_iam_member" "cloud_run_storage_access" {
+  project = local.project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
