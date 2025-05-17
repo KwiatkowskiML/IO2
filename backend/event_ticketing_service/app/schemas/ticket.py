@@ -20,7 +20,7 @@ class TicketType(BaseModel):
 # TicketBase is a base model for ticket-related operations.
 class TicketDetails(BaseModel):
     ticket_id: int
-    type_id: int
+    type_id: Optional[int] = None
     seat: Optional[str] = None
     owner_id: Optional[int] = None
     resell_price: Optional[float] = None
