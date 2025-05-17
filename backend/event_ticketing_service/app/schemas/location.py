@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class LocationBase(BaseModel):
     name: str
     address: str
@@ -7,7 +8,9 @@ class LocationBase(BaseModel):
     city: str
     country: str
 
+
 class LocationDetails(LocationBase):
     location_id: int
+
     class Config:
         orm_mode = True

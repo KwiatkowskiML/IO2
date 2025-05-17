@@ -1,8 +1,8 @@
 import uvicorn
 from fastapi import FastAPI
+from app.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import cart, events, tickets, ticket_types
-from app.database import engine, Base
 
 Base.metadata.create_all(bind=engine)
 

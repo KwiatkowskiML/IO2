@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import List, Optional, Any
-
-from pydantic import BaseModel, ConfigDict, model_validator
+from typing import Any, List, Optional
 
 from app.models.events import EventModel
+from pydantic import BaseModel, ConfigDict, model_validator
+
 
 # EventBase is the base model for creating and handling events
 class EventBase(BaseModel):
@@ -16,6 +16,7 @@ class EventBase(BaseModel):
     location_id: int
     category: List[str]
     total_tickets: int
+
 
 # EventBase is the base model for creating and handling events
 class EventDetails(BaseModel):
@@ -46,6 +47,7 @@ class EventDetails(BaseModel):
                 "total_tickets": sum(tt.max_count for tt in data.ticket_types),
             }
         return data
+
 
 # EventUpdate is used for updating existing events
 class EventUpdate(BaseModel):

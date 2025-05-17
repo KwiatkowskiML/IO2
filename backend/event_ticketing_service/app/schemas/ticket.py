@@ -1,13 +1,12 @@
 from typing import Optional
-
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
+from pydantic import BaseModel, ConfigDict
 
 
 # TicketType is a model representing a type of ticket for an event.
 class TicketType(BaseModel):
-    type_id: int
+    type_id: Optional[int] = None
     event_id: int
     description: Optional[str] = None
     max_count: int

@@ -1,12 +1,12 @@
-# events_service.py
-from typing import List, Any
-from sqlalchemy.orm import Session
+from typing import List
 
-from fastapi import HTTPException, status
-from app.filters.events_filter import EventsFilter
+from sqlalchemy.orm import Session
 from app.models.events import EventModel
+from fastapi import HTTPException, status
 from app.models.location import LocationModel
-from app.schemas.event import EventBase, EventUpdate, NotificationRequest
+from app.filters.events_filter import EventsFilter
+from app.schemas.event import EventBase, EventUpdate
+
 
 class EventRepository:
     """Service layer for event operations, ensuring single responsibility and testability."""
@@ -22,26 +22,19 @@ class EventRepository:
 
     def create_event(self, data: EventBase, organizer_id: int) -> EventModel:
         # Validate location exists
-        location = (
-            self.db.query(LocationModel)
-            .filter(LocationModel.location_id == data.location_id)
-            .first()
-        )
+        location = self.db.query(LocationModel).filter(LocationModel.location_id == data.location_id).first()
         if not location:
-            raise HTTPException(
-                status.HTTP_404_NOT_FOUND,
-                detail=f"Location '{data.location_id}' not found"
-            )
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"Location '{data.location_id}' not found")
 
         event = EventModel(
             organiser_id=organizer_id,
             location_id=location.location_id,
             name=data.name,
             description=data.description,
-            start_date=data.start,
-            end_date=data.end,
+            start_date=data.start_date,
+            end_date=data.end_date,
             minimum_age=data.minimum_age,
-            status="pending"
+            status="pending",
         )
         self.db.add(event)
         self.db.commit()
@@ -75,10 +68,7 @@ class EventRepository:
     def update_event(self, event_id: int, data: EventUpdate, organizer_id: int) -> EventModel:
         event = self.get_event(event_id)
         if event.organiser_id != organizer_id:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to update this event"
-            )
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorized to update this event")
         updates = data.dict(exclude_unset=True)
         for field, value in updates.items():
             if value is not None:
@@ -90,9 +80,6 @@ class EventRepository:
     def cancel_event(self, event_id: int, organizer_id: int) -> None:
         event = self.get_event(event_id)
         if event.organiser_id != organizer_id:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to cancel this event"
-            )
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this event")
         event.status = "cancelled"
         self.db.commit()

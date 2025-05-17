@@ -1,16 +1,16 @@
 from typing import List
 
-from app.schemas.ticket import TicketType
-from fastapi import Path, Depends, APIRouter, status
-from fastapi.exceptions import HTTPException
-from app.filters.ticket_type_filter import TicketTypeFilter
-from sqlalchemy.orm import Session
-
 from app.database import get_db
-from app.models.ticket_type import TicketTypeModel
+from sqlalchemy.orm import Session
 from app.models.events import EventModel
+from app.schemas.ticket import TicketType
+from fastapi.exceptions import HTTPException
+from app.models.ticket_type import TicketTypeModel
+from fastapi import Path, Depends, APIRouter, status
+from app.filters.ticket_type_filter import TicketTypeFilter
 
 router = APIRouter(prefix="/ticket-types", tags=["ticket_types"])
+
 
 @router.get("/", response_model=List[TicketType])
 def get_ticket_types(
@@ -43,6 +43,7 @@ def get_ticket_types(
     types = query.all()
     return [TicketType.model_validate(t) for t in types]
 
+
 @router.post("/", response_model=TicketType)
 def create_ticket_type(
     ticket: TicketType,
@@ -50,10 +51,7 @@ def create_ticket_type(
 ):
     event = db.get(EventModel, ticket.event_id)
     if not event:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Event with id {ticket.event_id} not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event with id {ticket.event_id} not found")
 
     # Create model from request data
     model = TicketTypeModel(
@@ -72,6 +70,7 @@ def create_ticket_type(
 
     # Return response
     return TicketType.model_validate(model)
+
 
 @router.delete("/{type_id}", response_model=bool)
 def delete_ticket_type(

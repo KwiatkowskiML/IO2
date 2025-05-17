@@ -1,21 +1,17 @@
 from typing import List
 
-from fastapi import Path, Depends, APIRouter
-from sqlalchemy.orm import Session
-
-from app.filters.ticket_filter import TicketFilter
-from app.schemas.ticket import TicketPDF, TicketDetails, ResellTicketRequest
 from app.database import get_db
+from sqlalchemy.orm import Session
+from fastapi import Path, Depends, APIRouter
+from app.filters.ticket_filter import TicketFilter
 from app.repositories.ticket_repository import TicketRepository
+from app.schemas.ticket import TicketPDF, TicketDetails, ResellTicketRequest
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
 @router.get("/", response_model=List[TicketDetails])
-def list_tickets_endpoint(
-    filters: TicketFilter = Depends(),
-    db: Session = Depends(get_db)
-):
+def list_tickets_endpoint(filters: TicketFilter = Depends(), db: Session = Depends(get_db)):
     repository = TicketRepository(db)
     tickets = repository.list_tickets(filters)
     return [TicketDetails.model_validate(t) for t in tickets]
@@ -30,10 +26,7 @@ async def download_ticket(
 
 
 @router.post("/{ticket_id}/resell", response_model=TicketDetails)
-async def resell_ticket(
-    resell_data: ResellTicketRequest,
-    db: Session = Depends(get_db)
-) -> TicketDetails:
+async def resell_ticket(resell_data: ResellTicketRequest, db: Session = Depends(get_db)) -> TicketDetails:
     # TODO: add authorization
     current_user_id = 101  # Placeholder for current user ID
 
@@ -42,13 +35,9 @@ async def resell_ticket(
 
 
 @router.delete("/{ticket_id}/resell", response_model=TicketDetails)
-async def cancel_resell(
-    ticket_id: int = Path(..., title="ticket ID"),
-    db: Session = Depends(get_db)
-) -> TicketDetails:
+async def cancel_resell(ticket_id: int = Path(..., title="ticket ID"), db: Session = Depends(get_db)) -> TicketDetails:
     # TODO: add authorization
     current_user_id = 101  # Placeholder for current user ID
 
     repository = TicketRepository(db)
     return repository.cancel_resell(ticket_id, current_user_id)
-

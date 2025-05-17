@@ -1,11 +1,11 @@
-from typing import List, Any
-from sqlalchemy.orm import Session
+from typing import List
 
+from sqlalchemy.orm import Session
+from app.models.ticket import TicketModel
 from fastapi import HTTPException, status
 from app.filters.ticket_filter import TicketFilter
-from app.models.ticket import TicketModel
-from app.models.ticket_type import TicketTypeModel
-from app.schemas.ticket import TicketDetails, TicketPDF, ResellTicketRequest
+from app.schemas.ticket import TicketPDF, ResellTicketRequest
+
 
 class TicketRepository:
     """Service layer for ticket operations."""
@@ -35,7 +35,7 @@ class TicketRepository:
     def download_ticket(self, ticket_id: int) -> TicketPDF:
         ticket = self.get_ticket(ticket_id)
         # Stub: actual PDF generation logic goes here
-        return TicketPDF(pdf_data="base64_pdf_data", filename=f"ticket_{ticket_id}.pdf")
+        return TicketPDF(pdf_data=f"base64_pdf_data for ticket {ticket.ticket_id}", filename=f"ticket_{ticket_id}.pdf")
 
     def resell_ticket(self, data: ResellTicketRequest, user_id: int) -> TicketModel:
         ticket = self.get_ticket(data.ticket_id)
