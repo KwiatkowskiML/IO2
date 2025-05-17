@@ -339,7 +339,7 @@ class AuthTests(TestCase):
             self.run_test(
                 name="Get User Profile",
                 method="GET",
-                url="/api/user/me",
+                url="/api/auth/me",
                 expected_status=200,
                 headers=self.auth_header("customer"),
             )
@@ -531,7 +531,7 @@ class CartTests(TestCase):
         if TOKENS["customer"]:
             cart_item_data = {
                 "ticket_id": 1,
-                "ticket_type_id": 1,
+                "type_id": 1,
                 "seat": "A1",
             }
             self.run_test(
@@ -573,7 +573,7 @@ class ErrorTests(TestCase):
         self.run_test(
             name="Invalid Authentication",
             method="GET",
-            url="/api/user/me",
+            url="/api/auth/me",
             expected_status=401,
             headers={"Authorization": "Bearer INVALID_TOKEN"},
         )
