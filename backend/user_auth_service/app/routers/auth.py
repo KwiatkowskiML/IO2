@@ -82,7 +82,13 @@ def register_customer(
         # Generate access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": db_user.email, "role": "customer"}, expires_delta=access_token_expires
+            data={
+                "sub": db_user.email,
+                "role": "customer",
+                "user_id": db_user.user_id,
+                "name": db_user.first_name,
+            },
+            expires_delta=access_token_expires,
         )
 
         return {"token": access_token, "message": "User registered successfully"}
@@ -132,7 +138,13 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
         # This can be used for initial login to check verification status
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": db_user.email, "role": "organiser"}, expires_delta=access_token_expires
+            data={
+                "sub": user.email,
+                "role": "customer",
+                "user_id": user.user_id,
+                "name": user.first_name,
+            },
+            expires_delta=access_token_expires,
         )
 
         return {
@@ -187,7 +199,13 @@ def register_admin(user: AdminCreate, db: Session = Depends(get_db)):
         # Generate access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": db_user.email, "role": "administrator"}, expires_delta=access_token_expires
+            data={
+                "sub": user.email,
+                "role": "customer",
+                "user_id": db_user.user_id,
+                "name": user.first_name,
+            },
+            expires_delta=access_token_expires,
         )
 
         return {"token": access_token, "message": "Administrator registered successfully"}
@@ -222,7 +240,13 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     # Generate access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email, "role": user.user_type}, expires_delta=access_token_expires
+        data={
+            "sub": user.email,
+            "role": "customer",
+            "user_id": user.user_id,
+            "name": user.first_name,
+        },
+        expires_delta=access_token_expires,
     )
 
     return {"token": access_token, "message": "Login successful"}
