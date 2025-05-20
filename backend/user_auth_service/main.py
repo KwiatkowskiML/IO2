@@ -1,7 +1,6 @@
 import uvicorn
 from app.database import engine
 from app.models.base import Base
-from app.routers import auth, user
 from fastapi import Depends, FastAPI
 from app.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,9 +21,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
-app.include_router(user.router)
+api_sub_app = FastAPI()
 
+from app.routers import auth, user
+api_sub_app.include_router(auth.router)
+api_sub_app.include_router(user.router)
+
+app.mount("/api", api_sub_app)
 
 @app.get("/")
 def read_root():
@@ -32,7 +35,7 @@ def read_root():
     return {
         "service": "Resellio Auth Service",
         "status": "operational",
-        "version": "0.0.1",
+        "version": "1.0.0",
     }
 
 

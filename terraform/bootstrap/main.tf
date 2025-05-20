@@ -16,12 +16,12 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate_bucket_en
       sse_algorithm = "AES256"
     }
   }
-  
+
 }
 
 resource "aws_s3_bucket_versioning" "tfstate_bucket_versioning" {
   bucket = aws_s3_bucket.tfstate_bucket.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -53,11 +53,11 @@ resource "aws_dynamodb_table" "tfstate_lock" {
 
 resource "local_file" "backend_config_output" {
   content = jsonencode({
-    bucket      = aws_s3_bucket.tfstate_bucket.bucket
+    bucket         = aws_s3_bucket.tfstate_bucket.bucket
     dynamodb_table = aws_dynamodb_table.tfstate_lock.name
-    key = local.state_file_path
-    encrypt     = true
-    region              = local.region
+    key            = local.state_file_path
+    encrypt        = true
+    region         = local.region
   })
   filename = local.backend_config_path
 
