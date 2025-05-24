@@ -5,7 +5,9 @@ from app.database import get_db
 from sqlalchemy.orm import Session
 from app.models.events import EventModel
 from app.models.ticket import TicketModel
-from app.schemas.ticket import TicketDetails
+from app.repositories.cart_repository import CartRepository
+from app.schemas.cart_scheme import CartItemWithDetails
+from app.schemas.ticket import TicketDetails, TicketType
 from app.models.location import LocationModel
 from app.services.email import send_ticket_email
 from app.models.ticket_type import TicketTypeModel
@@ -22,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 @router.get(
     "/items",
-    response_model=List[TicketDetails],
+    response_model=List[CartItemWithDetails]
 )
 async def get_shopping_cart(
     authorization: str = Header(..., description="Bearer token"),
@@ -32,9 +34,24 @@ async def get_shopping_cart(
     # Get user info from JWT token
     user = get_user_from_token(authorization)
     logger.info(f"Get shopping cart of {user}")
-    # TODO: fetch from a cart table
-    return []
+    user_id = user["user_id"]
+    logger.info(f"Get shopping cart for user_id {user_id}")
 
+    repo = CartRepository(db)
+    cart_items_models = repo.get_cart_items_details(customer_id=user_id)
+
+    response_items: List[CartItemWithDetails] = []
+    for item_model in cart_items_models:
+        if item_model.ticket_type:
+            cart_item_detail = CartItemWithDetails(
+                ticket_type=TicketType.model_validate(item_model.ticket_type),
+                quantity=item_model.quantity
+            )
+            response_items.append(cart_item_detail)
+        else:
+            logger.warning(f"Cart item with ID {item_model.cart_item_id} for user {user_id} is missing ticket_type details.")
+
+    return response_items
 
 @router.post(
     "/items",
