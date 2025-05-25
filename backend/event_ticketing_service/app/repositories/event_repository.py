@@ -1,8 +1,10 @@
 from typing import List
 
 from sqlalchemy.orm import Session
+
+from app.database import get_db
 from app.models.events import EventModel
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from app.models.location import LocationModel
 from app.filters.events_filter import EventsFilter
 from app.schemas.event import EventBase, EventUpdate
@@ -83,3 +85,7 @@ class EventRepository:
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this event")
         event.status = "cancelled"
         self.db.commit()
+
+# Dependency to get the EventRepository instance
+def get_event_repository(db: Session = Depends(get_db)) -> EventRepository:
+    return EventRepository(db)
