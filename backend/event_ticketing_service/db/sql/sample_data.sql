@@ -3,7 +3,7 @@ INSERT INTO locations (name, address, zipcode, city, country) VALUES
   ('Open Arena',  '45 Stadium Rd',      NULL,     'Gdansk',    'Poland'),
   ('Conference X','789 Tech Parkway',   '10-200', 'Krakow',    'Poland');
 
-INSERT INTO events (organiser_id, location_id, name,               description,                         start_date,          end_date,            minimum_age)
+INSERT INTO events (organizer_id, location_id, name,               description,                         start_date,          end_date,            minimum_age)
 VALUES
   (1, 1, 'Spring Gala',    'An evening of music & dance',       '2025-05-10 19:00',  '2025-05-10 23:00',     0),
   (2, 2, 'Open-Air Concert','Rock bands under the stars',         '2025-06-20 18:00',  '2025-06-20 22:30',    12),

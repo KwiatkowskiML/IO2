@@ -8,7 +8,7 @@ class EventModel(Base):
     __table_args__ = (CheckConstraint("start_date < end_date", name="check_start_before_end"),)
 
     event_id = Column(Integer, primary_key=True, index=True)
-    organiser_id = Column(Integer, nullable=False)
+    organizer_id = Column(Integer, nullable=False)
     location_id = Column(Integer, ForeignKey("locations.location_id", ondelete="RESTRICT"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text)

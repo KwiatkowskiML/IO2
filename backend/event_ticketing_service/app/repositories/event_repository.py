@@ -27,7 +27,7 @@ class EventRepository:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"Location '{data.location_id}' not found")
 
         event = EventModel(
-            organiser_id=organizer_id,
+            organizer_id=organizer_id,
             location_id=location.location_id,
             name=data.name,
             description=data.description,
@@ -57,7 +57,7 @@ class EventRepository:
         if filters.start_date_to:
             query = query.filter(EventModel.end_date <= filters.start_date_to)
         if filters.organizer_id:
-            query = query.filter(EventModel.organiser_id == filters.organizer_id)
+            query = query.filter(EventModel.organizer_id == filters.organizer_id)
         if filters.minimum_age:
             query = query.filter(EventModel.minimum_age >= filters.minimum_age)
 
@@ -67,7 +67,7 @@ class EventRepository:
 
     def update_event(self, event_id: int, data: EventUpdate, organizer_id: int) -> EventModel:
         event = self.get_event(event_id)
-        if event.organiser_id != organizer_id:
+        if event.organizer_id != organizer_id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorized to update this event")
         updates = data.dict(exclude_unset=True)
         for field, value in updates.items():
@@ -79,7 +79,7 @@ class EventRepository:
 
     def cancel_event(self, event_id: int, organizer_id: int) -> None:
         event = self.get_event(event_id)
-        if event.organiser_id != organizer_id:
+        if event.organizer_id != organizer_id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this event")
         event.status = "cancelled"
         self.db.commit()

@@ -9,7 +9,7 @@ CREATE TABLE locations (
 
 CREATE TABLE events (
     event_id SERIAL PRIMARY KEY,
-    organiser_id INTEGER NOT NULL,
+    organizer_id INTEGER NOT NULL,
     location_id INTEGER NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -50,7 +50,7 @@ CREATE TABLE cart_items (
     cart_item_id SERIAL PRIMARY KEY,
     cart_id INTEGER NOT NULL,
     ticket_id INTEGER NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 1
+    quantity INTEGER NOT NULL DEFAULT 1,
 
     CONSTRAINT fk_cart
         FOREIGN KEY(cart_id)
