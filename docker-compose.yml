@@ -1,9 +1,7 @@
 version: '3.1'
 services:
   user_auth_db:
-  user_auth_db:
     image: postgres:latest
-    container_name: user_auth_db
     container_name: user_auth_db
     volumes:
       - ./backend/user_auth_service/db/sql/tables:/sql_tables
@@ -49,6 +47,8 @@ services:
       - backend/user_auth_service/.env
     expose:
       - "8000"
+    ports:
+      - "8000:8000"
     volumes:
       - ./backend/user_auth_service:/app
 
@@ -63,6 +63,8 @@ services:
       - backend/event_ticketing_service/.env
     expose:
       - "8001"
+    ports:
+      - "8001:8001"
     volumes:
       - ./backend/event_ticketing_service:/app
 

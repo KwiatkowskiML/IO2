@@ -258,13 +258,6 @@ def logout():
     """Logout (client should discard the token)"""
     return {"message": "Logout successful"}
 
-
-@router.get("/me", response_model=UserResponse)
-def read_users_me(current_user: User = Depends(get_current_user)):
-    """Get current user information"""
-    return current_user
-
-
 @router.post("/verify-organizer", response_model=OrganizerResponse)
 def verify_organizer(
     verification: VerificationRequest, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
@@ -308,7 +301,7 @@ def list_pending_organizers(db: Session = Depends(get_db), admin: User = Depends
     unverified_organisers = (
         db.query(User, Organiser)
         .join(Organiser, User.user_id == Organiser.user_id)
-        .filter(User.user_type == "organiser", not Organiser.is_verified, User.is_active)
+        .filter(User.user_type == "organiser", ~Organiser.is_verified, User.is_active)
         .all()
     )
 
