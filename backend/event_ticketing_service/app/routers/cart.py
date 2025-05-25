@@ -128,7 +128,7 @@ async def remove_from_cart(
 )
 async def checkout_cart(
     authorization: str = Header(..., description="Bearer token"),
-    db: Session = Depends(get_db),
+    cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     # Get user info from JWT token
     user = get_user_from_token(authorization)
@@ -137,72 +137,8 @@ async def checkout_cart(
     user_name = user["name"]
 
     logger.info(f"Processing checkout for user {user_id} ({user_email})")
-
-    try:
-        # Get the ticket type
-        ticket_type = db.query(TicketTypeModel).filter(TicketTypeModel.type_id == 1).first()
-
-        if not ticket_type:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Ticket type with ID {1} not found",
-            )
-
-        # Get event info
-        event = db.query(EventModel).filter(EventModel.event_id == ticket_type.event_id).first()
-
-        if not event:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Event not found for ticket type",
-            )
-
-        # Get venue info
-        location = db.query(LocationModel).filter(LocationModel.location_id == event.location_id).first()
-
-        if not location:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Location not found for event",
-            )
-
-        # Create a new ticket record
-        new_ticket = TicketModel(
-            type_id=ticket_type.type_id,
-            owner_id=user_id,
-            seat=None,
-            resell_price=None,
-        )
-
-        db.add(new_ticket)
-        db.commit()
-        db.refresh(new_ticket)
-
-        # Format date and time
-        event_date = event.start_date.strftime("%B %d, %Y")
-        event_time = event.start_date.strftime("%I:%M %p")
-
-        # Send confirmation email
-        email_sent = send_ticket_email(
-            to_email=user_email,
-            user_name=user_name,
-            event_name=event.name,
-            ticket_id=str(new_ticket.ticket_id),
-            event_date=event_date,
-            event_time=event_time,
-            venue=location.name,
-            seat=new_ticket.seat,
-        )
-
-        if not email_sent:
-            logger.error(f"Failed to send confirmation email to {user_email}")
-            # We don't fail the purchase if the email fails
-
-        return True
-
-    except Exception as e:
-        logger.error(f"Error during checkout: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Checkout failed: {str(e)}",
-        )
+    return cart_repo.checkout(
+        customer_id=user_id,
+        user_email=user_email,
+        user_name=user_name,
+    )
