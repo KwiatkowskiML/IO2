@@ -5,6 +5,18 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_DIR="$SCRIPT_DIR/venv"
 
+SEPARATOR=$(cat <<EOF
+ _________________
+< Praca, praca... >
+ -----------------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\_
+                ||----w |
+                ||     ||
+EOF
+)
+
 # Create venv if it doesn't exist
 if [ ! -d "$VENV_DIR" ]; then
     echo "Creating virtual environment..."
@@ -28,9 +40,8 @@ echo "API URL: $API_BASE_URL"
 cd "$SCRIPT_DIR"
 pytest -v "$@"
 
-echo "Running tests directly against API..."
+echo "$SEPARATOR"
+
+echo "Running tests directly against AUTH API..."
 export API_BASE_URL="http://localhost:8000" # AUTH service docker port
 pytest -v test_auth.py
-
-export API_BASE_URL="http://localhost:8001" # Ticket/event service docker port
-pytest -v test_events_tickets_cart.py
