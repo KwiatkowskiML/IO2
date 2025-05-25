@@ -9,6 +9,8 @@ from fastapi import Header, HTTPException, status
 SECRET_KEY = os.getenv("SECRET_KEY", "your-256-bit-secret")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
+print(f"Secret: {SECRET_KEY}")
+
 logger = logging.getLogger(__name__)
 
 
@@ -114,6 +116,7 @@ def get_user_from_token(
         )
 
     token = get_token_from_header(authorization)
+    print(token)
     payload = decode_jwt(token)
     print(payload)
 

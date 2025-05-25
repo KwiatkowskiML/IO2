@@ -8,7 +8,7 @@ import os
 import random
 import string
 from datetime import datetime
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 
 import pytest
 import requests
@@ -167,27 +167,46 @@ class TestDataGenerator:
 
     @classmethod
     def event_data(cls, organizer_id: int = 1) -> Dict[str, Any]:
-        """Generate event data"""
+        """Generate event data matching EventBase schema"""
         now = datetime.now()
+        end_time = now.replace(hour=23, minute=59)  # Same day, later time
+
         return {
             "organizer_id": organizer_id,
             "name": f"Test Concert {cls.random_string(4)}",
-            "description": "A test concert event",
+            "description": "A test concert event for automated testing",
             "start_date": now.isoformat(),
-            "end": now.isoformat(),
+            "end_date": end_time.isoformat(),
             "minimum_age": 18,
-            "location": "Test Venue",
-            "category": ["Music", "Live"],
+            "location_id": 1,  # Assuming location with ID 1 exists
+            "category": ["Music", "Live", "Entertainment"],
             "total_tickets": 100,
+        }
+
+    @classmethod
+    def event_update_data(cls) -> Dict[str, Any]:
+        """Generate event update data matching EventUpdate schema"""
+        return {
+            "name": f"Updated Event {cls.random_string(4)}",
+            "description": "Updated event description",
+            "location_id": 2,
+            "minimum_age": 21,
+        }
+
+    @classmethod
+    def notification_data(cls, urgent: bool = False) -> Dict[str, Any]:
+        """Generate notification data matching NotificationRequest schema"""
+        return {
+            "message": f"Important update about the event - {cls.random_string(6)}",
+            "urgent": urgent
         }
 
     @classmethod
     def ticket_type_data(cls, event_id: int = 1) -> Dict[str, Any]:
         """Generate ticket type data"""
         return {
-            "type_id": 1,
             "event_id": event_id,
-            "description": "VIP Access",
+            "description": f"VIP Access {cls.random_string(3)}",
             "max_count": 50,
             "price": 149.99,
             "currency": "PLN",
@@ -195,12 +214,11 @@ class TestDataGenerator:
         }
 
     @classmethod
-    def cart_item_data(cls, ticket_id: int = 1, ticket_type_id: int = 1) -> Dict[str, Any]:
+    def cart_item_data(cls, ticket_type_id: int = 1, quantity: int = 1) -> Dict[str, Any]:
         """Generate cart item data"""
         return {
-            "ticket_id": ticket_id,
             "ticket_type_id": ticket_type_id,
-            "seat": f"{random.choice('ABCDEFGH')}{random.randint(1, 20)}",
+            "quantity": quantity,
         }
 
 
@@ -367,9 +385,12 @@ class EventManager:
         self.token_manager = token_manager
         self.data_generator = TestDataGenerator()
 
-    def create_event(self, organizer_id: int = 1) -> Dict[str, Any]:
-        """Create an event as organizer"""
-        event_data = self.data_generator.event_data(organizer_id)
+    def create_event(self, organizer_id: int = 1, custom_data: Dict = None) -> Dict[str, Any]:
+        """Create an event as organizer using EventBase schema"""
+        if custom_data:
+            event_data = custom_data
+        else:
+            event_data = self.data_generator.event_data(organizer_id)
 
         response = self.api_client.post(
             "/events/",
@@ -379,10 +400,9 @@ class EventManager:
             },
             json_data=event_data
         )
-
         return response.json()
 
-    def get_events(self, filters: Dict = None) -> list:
+    def get_events(self, filters: Dict = None) -> List[Dict[str, Any]]:
         """Get list of events with optional filters"""
         url = "/events"
         if filters:
@@ -392,8 +412,16 @@ class EventManager:
         response = self.api_client.get(url)
         return response.json()
 
-    def update_event(self, event_id: int, update_data: Dict) -> Dict[str, Any]:
-        """Update an event"""
+    def get_event_by_id(self, event_id: int) -> Dict[str, Any]:
+        """Get specific event details by ID"""
+        response = self.api_client.get(f"/events/{event_id}")
+        return response.json()
+
+    def update_event(self, event_id: int, update_data: Dict = None) -> Dict[str, Any]:
+        """Update an event using EventUpdate schema"""
+        if update_data is None:
+            update_data = self.data_generator.event_update_data()
+
         response = self.api_client.put(
             f"/events/{event_id}",
             headers={
@@ -420,9 +448,16 @@ class EventManager:
         )
         return response.json()
 
-    def notify_participants(self, event_id: int, message: str = None) -> Dict[str, Any]:
-        """Notify participants of an event"""
-        notification_data = {"message": message} if message else {}
+    def notify_participants(self, event_id: int, message: str = None, urgent: bool = False) -> Dict[
+        str, Any]:
+        """Notify participants of an event using NotificationRequest schema"""
+        if message is None:
+            notification_data = self.data_generator.notification_data(urgent)
+        else:
+            notification_data = {
+                "message": message,
+                "urgent": urgent
+            }
 
         response = self.api_client.post(
             f"/events/{event_id}/notify",
@@ -434,9 +469,12 @@ class EventManager:
         )
         return response.json()
 
-    def create_ticket_type(self, event_id: int = 1) -> Dict[str, Any]:
+    def create_ticket_type(self, event_id: int = 1, custom_data: Dict = None) -> Dict[str, Any]:
         """Create a ticket type for an event"""
-        ticket_data = self.data_generator.ticket_type_data(event_id)
+        if custom_data:
+            ticket_data = custom_data
+        else:
+            ticket_data = self.data_generator.ticket_type_data(event_id)
 
         response = self.api_client.post(
             "/ticket-types/",
@@ -446,10 +484,9 @@ class EventManager:
             },
             json_data=ticket_data
         )
-
         return response.json()
 
-    def get_ticket_types(self, filters: Dict = None) -> list:
+    def get_ticket_types(self, filters: Dict = None) -> List[Dict[str, Any]]:
         """Get list of ticket types with optional filters"""
         url = "/ticket-types/"
         if filters:
@@ -466,6 +503,63 @@ class EventManager:
             headers=self.token_manager.get_auth_header("organizer")
         )
         return response.json()
+
+    # Helper methods for testing specific scenarios
+    def create_event_with_valid_dates(self, organizer_id: int = 1) -> Dict[str, Any]:
+        """Create event with properly sequenced dates"""
+        now = datetime.now()
+        start_date = now.replace(hour=19, minute=0, second=0, microsecond=0)  # 7 PM today
+        end_date = now.replace(hour=23, minute=0, second=0, microsecond=0)  # 11 PM today
+
+        event_data = {
+            "organizer_id": organizer_id,
+            "name": f"Evening Concert {self.data_generator.random_string(4)}",
+            "description": "An evening concert with proper timing",
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "minimum_age": 18,
+            "location_id": 1,
+            "category": ["Music", "Live"],
+            "total_tickets": 200,
+        }
+
+        return self.create_event(organizer_id, event_data)
+
+    def create_event_minimal(self, organizer_id: int = 1) -> Dict[str, Any]:
+        """Create event with minimal required fields"""
+        now = datetime.now()
+
+        minimal_event = {
+            "organizer_id": organizer_id,
+            "name": f"Minimal Event {self.data_generator.random_string(4)}",
+            "start_date": now.isoformat(),
+            "end_date": (now.replace(hour=23, minute=59)).isoformat(),
+            "location_id": 1,
+            "category": ["General"],
+            "total_tickets": 50,
+        }
+
+        return self.create_event(organizer_id, minimal_event)
+
+    def create_multi_day_event(self, organizer_id: int = 1) -> Dict[str, Any]:
+        """Create a multi-day event"""
+        now = datetime.now()
+        start_date = now.replace(hour=10, minute=0, second=0, microsecond=0)
+        end_date = start_date.replace(day=start_date.day + 2, hour=18, minute=0)  # 3 days later
+
+        multi_day_event = {
+            "organizer_id": organizer_id,
+            "name": f"3-Day Festival {self.data_generator.random_string(4)}",
+            "description": "A comprehensive 3-day music festival",
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "minimum_age": 16,
+            "location_id": 1,
+            "category": ["Music", "Festival", "Outdoor"],
+            "total_tickets": 1000,
+        }
+
+        return self.create_event(organizer_id, multi_day_event)
 
 
 class TicketManager:
