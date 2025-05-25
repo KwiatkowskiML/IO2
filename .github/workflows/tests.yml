@@ -22,7 +22,7 @@ jobs:
 
     - name: Start services with Docker Compose
       run: |
-        docker-compose up -d --build
+        docker compose up -d --build
 
     - name: Wait for API to be ready
       run: |
@@ -32,7 +32,7 @@ jobs:
 
     - name: Show service status
       run: |
-        docker-compose ps
+        docker compose ps
         curl -f http://localhost:8080/health || echo "Health check failed"
 
     - name: Run pytest tests
@@ -44,9 +44,9 @@ jobs:
       if: failure()
       run: |
         echo "=== Service Logs ==="
-        docker-compose logs
+        docker compose logs
 
     - name: Cleanup
       if: always()
       run: |
-        docker-compose down -v
+        docker compose down -v
