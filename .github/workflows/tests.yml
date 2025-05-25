@@ -20,6 +20,13 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Prepare .env files
+      run: |
+        echo "Creating .env files..."
+        cp backend/api_gateway/.env.template backend/api_gateway/.env
+        cp backend/event_ticketing_service/.env.template backend/event_ticketing_service/.env
+        cp backend/user_auth_service/.env.template backend/user_auth_service/.env
+
     - name: Start services with Docker Compose
       run: |
         docker compose up -d --build
