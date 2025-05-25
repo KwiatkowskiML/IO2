@@ -173,7 +173,7 @@ class TestDataGenerator:
             "organizer_id": organizer_id,
             "name": f"Test Concert {cls.random_string(4)}",
             "description": "A test concert event",
-            "start": now.isoformat(),
+            "start_date": now.isoformat(),
             "end": now.isoformat(),
             "minimum_age": 18,
             "location": "Test Venue",
@@ -382,6 +382,58 @@ class EventManager:
 
         return response.json()
 
+    def get_events(self, filters: Dict = None) -> list:
+        """Get list of events with optional filters"""
+        url = "/events"
+        if filters:
+            query_params = "&".join([f"{k}={v}" for k, v in filters.items()])
+            url = f"{url}?{query_params}"
+
+        response = self.api_client.get(url)
+        return response.json()
+
+    def update_event(self, event_id: int, update_data: Dict) -> Dict[str, Any]:
+        """Update an event"""
+        response = self.api_client.put(
+            f"/events/{event_id}",
+            headers={
+                **self.token_manager.get_auth_header("organizer"),
+                "Content-Type": "application/json"
+            },
+            json_data=update_data
+        )
+        return response.json()
+
+    def delete_event(self, event_id: int) -> bool:
+        """Cancel/delete an event"""
+        response = self.api_client.delete(
+            f"/events/{event_id}",
+            headers=self.token_manager.get_auth_header("organizer")
+        )
+        return response.json()
+
+    def authorize_event(self, event_id: int) -> bool:
+        """Admin authorizes an event"""
+        response = self.api_client.post(
+            f"/events/authorize/{event_id}",
+            headers=self.token_manager.get_auth_header("admin")
+        )
+        return response.json()
+
+    def notify_participants(self, event_id: int, message: str = None) -> Dict[str, Any]:
+        """Notify participants of an event"""
+        notification_data = {"message": message} if message else {}
+
+        response = self.api_client.post(
+            f"/events/{event_id}/notify",
+            headers={
+                **self.token_manager.get_auth_header("organizer"),
+                "Content-Type": "application/json"
+            },
+            json_data=notification_data
+        )
+        return response.json()
+
     def create_ticket_type(self, event_id: int = 1) -> Dict[str, Any]:
         """Create a ticket type for an event"""
         ticket_data = self.data_generator.ticket_type_data(event_id)
@@ -397,6 +449,106 @@ class EventManager:
 
         return response.json()
 
+    def get_ticket_types(self, filters: Dict = None) -> list:
+        """Get list of ticket types with optional filters"""
+        url = "/ticket-types/"
+        if filters:
+            query_params = "&".join([f"{k}={v}" for k, v in filters.items()])
+            url = f"{url}?{query_params}"
+
+        response = self.api_client.get(url)
+        return response.json()
+
+    def delete_ticket_type(self, type_id: int) -> bool:
+        """Delete a ticket type"""
+        response = self.api_client.delete(
+            f"/ticket-types/{type_id}",
+            headers=self.token_manager.get_auth_header("organizer")
+        )
+        return response.json()
+
+
+class TicketManager:
+    """Manages ticket operations"""
+
+    def __init__(self, api_client: APIClient, token_manager: TokenManager):
+        self.api_client = api_client
+        self.token_manager = token_manager
+
+    def list_tickets(self, filters: Dict = None) -> list:
+        """List tickets with optional filters"""
+        url = "/tickets/"
+        if filters:
+            query_params = "&".join([f"{k}={v}" for k, v in filters.items()])
+            url = f"{url}?{query_params}"
+
+        response = self.api_client.get(
+            url,
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
+    def download_ticket(self, ticket_id: int) -> Dict[str, Any]:
+        """Download ticket PDF"""
+        response = self.api_client.get(
+            f"/tickets/{ticket_id}/download",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
+    def resell_ticket(self, ticket_id: int, resale_price: float = None, description: str = None) -> \
+            Dict[str, Any]:
+        """Put ticket up for resale"""
+        resell_data = {
+            "ticket_id": ticket_id,
+            "resale_price": resale_price or 150.00,
+            "resale_description": description or "Selling due to scheduling conflict"
+        }
+
+        response = self.api_client.post(
+            f"/tickets/{ticket_id}/resell",
+            headers={
+                **self.token_manager.get_auth_header("customer"),
+                "Content-Type": "application/json"
+            },
+            json_data=resell_data
+        )
+        return response.json()
+
+    def cancel_resell(self, ticket_id: int) -> Dict[str, Any]:
+        """Cancel ticket resale"""
+        response = self.api_client.delete(
+            f"/tickets/{ticket_id}/resell",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
+    def get_ticket_details(self, ticket_id: int) -> Dict[str, Any]:
+        """Get detailed information about a specific ticket"""
+        # This would be a GET /tickets/{ticket_id} endpoint if it exists
+        response = self.api_client.get(
+            f"/tickets/{ticket_id}",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
+    def transfer_ticket(self, ticket_id: int, recipient_email: str) -> Dict[str, Any]:
+        """Transfer ticket to another user"""
+        transfer_data = {
+            "recipient_email": recipient_email,
+            "transfer_message": "Ticket transfer"
+        }
+
+        response = self.api_client.post(
+            f"/tickets/{ticket_id}/transfer",
+            headers={
+                **self.token_manager.get_auth_header("customer"),
+                "Content-Type": "application/json"
+            },
+            json_data=transfer_data
+        )
+        return response.json()
+
 
 class CartManager:
     """Manages shopping cart operations"""
@@ -406,19 +558,12 @@ class CartManager:
         self.token_manager = token_manager
         self.data_generator = TestDataGenerator()
 
-    def add_item_to_cart(self, ticket_id: int = 1, ticket_type_id: int = 1) -> Dict[str, Any]:
-        """Add item to customer's cart"""
-        cart_item = self.data_generator.cart_item_data(ticket_id, ticket_type_id)
-
+    def add_item_to_cart(self, ticket_type_id: int = 1, quantity: int = 1) -> Dict[str, Any]:
+        """Add item to customer's cart using query parameters"""
         response = self.api_client.post(
-            "/cart/items",
-            headers={
-                **self.token_manager.get_auth_header("customer"),
-                "Content-Type": "application/json"
-            },
-            json_data=cart_item
+            f"/cart/items?ticket_type_id={ticket_type_id}&quantity={quantity}",
+            headers=self.token_manager.get_auth_header("customer")
         )
-
         return response.json()
 
     def get_cart_items(self) -> list:
@@ -427,17 +572,81 @@ class CartManager:
             "/cart/items",
             headers=self.token_manager.get_auth_header("customer")
         )
-
         return response.json()
 
-    def checkout(self) -> Dict[str, Any]:
+    def remove_item_from_cart(self, cart_item_id: int) -> bool:
+        """Remove specific item from customer's cart"""
+        response = self.api_client.delete(
+            f"/cart/items/{cart_item_id}",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
+    def update_cart_item_quantity(self, cart_item_id: int, new_quantity: int) -> Dict[str, Any]:
+        """Update quantity of item in cart"""
+        # This would be a PUT/PATCH endpoint if it exists
+        response = self.api_client.put(
+            f"/cart/items/{cart_item_id}",
+            headers={
+                **self.token_manager.get_auth_header("customer"),
+                "Content-Type": "application/json"
+            },
+            json_data={"quantity": new_quantity}
+        )
+        return response.json()
+
+    def clear_cart(self) -> bool:
+        """Clear all items from cart"""
+        response = self.api_client.delete(
+            "/cart/items",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
+    def checkout(self) -> bool:
         """Checkout customer's cart"""
         response = self.api_client.post(
             "/cart/checkout",
             headers=self.token_manager.get_auth_header("customer")
         )
-
         return response.json()
+
+    def get_cart_total(self) -> Dict[str, Any]:
+        """Get cart total and summary"""
+        response = self.api_client.get(
+            "/cart/total",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
+    def apply_discount_code(self, discount_code: str) -> Dict[str, Any]:
+        """Apply discount code to cart"""
+        response = self.api_client.post(
+            "/cart/discount",
+            headers={
+                **self.token_manager.get_auth_header("customer"),
+                "Content-Type": "application/json"
+            },
+            json_data={"discount_code": discount_code}
+        )
+        return response.json()
+
+    def save_cart_for_later(self) -> bool:
+        """Save current cart for later"""
+        response = self.api_client.post(
+            "/cart/save",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
+    def restore_saved_cart(self) -> bool:
+        """Restore previously saved cart"""
+        response = self.api_client.post(
+            "/cart/restore",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        return response.json()
+
 
 # Utility functions
 def print_test_config():

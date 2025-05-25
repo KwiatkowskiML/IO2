@@ -141,7 +141,7 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
             data={
                 "sub": user.email,
                 "role": "customer",
-                "user_id": user.user_id,
+                "user_id": db_user.user_id,
                 "name": user.first_name,
             },
             expires_delta=access_token_expires,
