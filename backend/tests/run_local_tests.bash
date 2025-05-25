@@ -11,7 +11,7 @@ SEPARATOR=$(cat <<EOF
  -----------------
         \   ^__^
          \  (oo)\_______
-            (__)\       )\/\
+            (__)\       )\/\_
                 ||----w |
                 ||     ||
 EOF
@@ -42,11 +42,6 @@ pytest -v "$@"
 
 echo "$SEPARATOR"
 
-echo "Running tests directly against API..."
+echo "Running tests directly against AUTH API..."
 export API_BASE_URL="http://localhost:8000" # AUTH service docker port
 pytest -v test_auth.py
-
-echo "$SEPARATOR"
-
-export API_BASE_URL="http://localhost:8001" # Ticket/event service docker port
-pytest -v test_events_tickets_cart.py
