@@ -37,6 +37,7 @@ def get_token_data(token: str = Depends(oauth2_scheme)):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
         role: str = payload.get("role")
+        print("Decoded payload:", payload)  # Debugging line
         if email is None:
             raise credentials_exception
         return {"email": email, "role": role}
