@@ -120,7 +120,7 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
             password_hash=hashed_password,
             first_name=user.first_name,
             last_name=user.last_name,
-            user_type="organiser",
+            user_type="organizer",
             is_active=True,
         )
 
@@ -140,8 +140,8 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
         access_token = create_access_token(
             data={
                 "sub": user.email,
-                "role": "customer",
-                "user_id": user.user_id,
+                "role": "organizer",
+                "user_id": db_user.user_id,
                 "name": user.first_name,
             },
             expires_delta=access_token_expires,
@@ -201,7 +201,7 @@ def register_admin(user: AdminCreate, db: Session = Depends(get_db)):
         access_token = create_access_token(
             data={
                 "sub": user.email,
-                "role": "customer",
+                "role": "administrator",
                 "user_id": db_user.user_id,
                 "name": user.first_name,
             },
@@ -239,10 +239,11 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 
     # Generate access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    print(user.user_type)
     access_token = create_access_token(
         data={
             "sub": user.email,
-            "role": "customer",
+            "role": user.user_type,
             "user_id": user.user_id,
             "name": user.first_name,
         },
