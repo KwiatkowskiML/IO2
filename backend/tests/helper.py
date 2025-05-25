@@ -273,7 +273,7 @@ class UserManager:
 
             if organizer_record:
                 # Verify the organizer
-                self.verify_organizer_by_admin(organizer_record["organiser_id"], True)
+                self.verify_organizer_by_admin(organizer_record["organizer_id"], True)
 
                 # Now login the verified organizer
                 login_token = self.login_user(organizer_data, "organizer")

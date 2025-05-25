@@ -418,7 +418,7 @@ class TestAdminOperations:
                 "Content-Type": "application/json"
             },
             json_data={
-                "organizer_id": organizer_record["organiser_id"],
+                "organizer_id": organizer_record["organizer_id"],
                 "approve": True,
             }
         )
@@ -451,7 +451,7 @@ class TestAdminOperations:
                 "Content-Type": "application/json"
             },
             json_data={
-                "organizer_id": organizer_record["organiser_id"],
+                "organizer_id": organizer_record["organizer_id"],
                 "approve": False,
             }
         )
@@ -739,7 +739,7 @@ class TestCompleteAuthFlow:
                 "Content-Type": "application/json"
             },
             json_data={
-                "organizer_id": organizer_record["organiser_id"],
+                "organizer_id": organizer_record["organizer_id"],
                 "approve": True,
             }
         )
