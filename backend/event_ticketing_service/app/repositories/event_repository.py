@@ -60,7 +60,6 @@ class EventRepository:
             query = query.filter(EventModel.organiser_id == filters.organizer_id)
         if filters.minimum_age:
             query = query.filter(EventModel.minimum_age >= filters.minimum_age)
-        if filters.limit
 
         # TODO: add price filters (join ticket_types) and availability checks
 
