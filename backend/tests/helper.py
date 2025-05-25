@@ -232,8 +232,8 @@ class UserManager:
 
         return user_data
 
-    def register_and_login_organizer(self) -> Dict[str, str]:
-        """Register and login an organizer user"""
+    def register_organizer(self) -> Dict[str, str]:
+        """Register an organizer user (returns unverified organizer)"""
         user_data = self.data_generator.organizer_data()
 
         # Register organizer
@@ -244,13 +244,50 @@ class UserManager:
             expected_status=201
         )
 
-        # Extract and store token
+        # Extract token (organizer gets token but is unverified)
         token = response.json().get("token")
         if token:
-            self.token_manager.set_token("organizer", token)
+            self.token_manager.set_token("organizer_unverified", token)
             self.token_manager.set_user("organizer", user_data)
 
         return user_data
+
+    def register_and_login_organizer(self) -> Dict[str, str]:
+        """Register organizer and get them verified by admin"""
+        # First register organizer
+        organizer_data = self.register_organizer()
+
+        # Register admin if not exists
+        if not self.token_manager.tokens.get("admin"):
+            self.register_and_login_admin()
+
+        print(f"Registered organizer: {organizer_data}")
+
+        # Get pending organizers and verify the one we just created
+        pending_organizers = self.get_pending_organizers()
+        print(f"Pending organizers: {pending_organizers}")
+
+        if pending_organizers:
+            # Find our organizer by email
+            organizer_record = None
+            for org in pending_organizers:
+                if org["email"] == organizer_data["email"]:
+                    organizer_record = org
+                    break
+
+            print(f"Pending organizers: {pending_organizers}")
+            print(f"Organizer record found: {organizer_record}")
+            if organizer_record:
+                # Verify the organizer
+                self.verify_organizer_by_admin(organizer_record["organiser_id"], True)
+
+                # Now login the verified organizer
+                login_token = self.login_user(organizer_data, "organizer")
+                print(f"Login token for organizer: {login_token}")
+                if login_token:
+                    self.token_manager.set_token("organizer", login_token)
+
+        return organizer_data
 
     def register_and_login_admin(self) -> Dict[str, str]:
         """Register and login an admin user"""
@@ -288,6 +325,45 @@ class UserManager:
             self.token_manager.set_token(user_type, token)
 
         return token
+
+    def verify_organizer_by_admin(self, organizer_id: int, approve: bool = True) -> Dict:
+        """Admin verifies or rejects an organizer"""
+        response = self.api_client.post(
+            "/auth/verify-organizer",
+            headers={
+                **self.token_manager.get_auth_header("admin"),
+                "Content-Type": "application/json"
+            },
+            json_data={
+                "organizer_id": organizer_id,
+                "approve": approve,
+            }
+        )
+        return response.json()
+
+    def get_pending_organizers(self) -> list:
+        """Admin gets list of pending organizers"""
+        response = self.api_client.get(
+            "/auth/pending-organizers",
+            headers=self.token_manager.get_auth_header("admin")
+        )
+        return response.json()
+
+    def ban_user(self, user_id: int) -> Dict:
+        """Admin bans a user"""
+        response = self.api_client.post(
+            f"/auth/ban-user/{user_id}",
+            headers=self.token_manager.get_auth_header("admin")
+        )
+        return response.json()
+
+    def unban_user(self, user_id: int) -> Dict:
+        """Admin unbans a user"""
+        response = self.api_client.post(
+            f"/auth/unban-user/{user_id}",
+            headers=self.token_manager.get_auth_header("admin")
+        )
+        return response.json()
 
 
 class EventManager:

@@ -276,7 +276,7 @@ def list_pending_organizers(db: Session = Depends(get_db), admin: User = Depends
     unverified_organisers = (
         db.query(User, Organiser)
         .join(Organiser, User.user_id == Organiser.user_id)
-        .filter(User.user_type == "organiser", not Organiser.is_verified, User.is_active)
+        .filter(User.user_type == "organiser", ~Organiser.is_verified, User.is_active)
         .all()
     )
 
