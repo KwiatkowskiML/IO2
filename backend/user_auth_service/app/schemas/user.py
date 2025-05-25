@@ -27,7 +27,7 @@ class UserResponse(BaseModel):
 
 
 class OrganizerResponse(UserResponse):
-    organiser_id: int
+    organizer_id: int
     company_name: str
     is_verified: bool
 

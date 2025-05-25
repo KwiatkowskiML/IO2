@@ -16,9 +16,9 @@ class User(Base):
     last_name = Column(String)
     creation_date = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    user_type = Column(String)  # 'customer', 'organiser', 'administrator'
+    user_type = Column(String)  # 'customer', 'organizer', 'administrator'
 
     # Define relationships
     customer = relationship("Customer", back_populates="user", uselist=False)
-    organiser = relationship("Organiser", back_populates="user", uselist=False)
+    organizer = relationship("Organizer", back_populates="user", uselist=False)
     administrator = relationship("Administrator", back_populates="user", uselist=False)
