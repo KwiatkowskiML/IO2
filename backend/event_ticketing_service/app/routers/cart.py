@@ -5,7 +5,8 @@ from app.database import get_db
 from sqlalchemy.orm import Session
 from app.models.events import EventModel
 from app.models.ticket import TicketModel
-from app.repositories.cart_repository import CartRepository
+from app.repositories.cart_repository import CartRepository, get_cart_repository
+from app.repositories.ticket_repository import TicketRepository, get_ticket_repository
 from app.schemas.cart_scheme import CartItemWithDetails
 from app.schemas.ticket import TicketDetails, TicketType
 from app.models.location import LocationModel
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 )
 async def get_shopping_cart(
     authorization: str = Header(..., description="Bearer token"),
-    db: Session = Depends(get_db),
+    cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     """Get items in the user's shopping cart"""
     # Get user info from JWT token
@@ -37,8 +38,7 @@ async def get_shopping_cart(
     user_id = user["user_id"]
     logger.info(f"Get shopping cart for user_id {user_id}")
 
-    repo = CartRepository(db)
-    cart_items_models = repo.get_cart_items_details(customer_id=user_id)
+    cart_items_models = cart_repo.get_cart_items_details(customer_id=user_id)
 
     response_items: List[CartItemWithDetails] = []
     for item_model in cart_items_models:
@@ -55,27 +55,56 @@ async def get_shopping_cart(
 
 @router.post(
     "/items",
-    response_model=bool,
+    response_model=CartItemWithDetails,
 )
 async def add_to_cart(
-    item: TicketDetails,
+    ticket_type_id: int,
+    quantity: int = 1,
     authorization: str = Header(..., description="Bearer token"),
-    db: Session = Depends(get_db),
+    ticket_repo: TicketRepository = Depends(get_ticket_repository),
+    cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     """Add a ticket to the user's shopping cart"""
     # Get user info from JWT token
     user = get_user_from_token(authorization)
+    user_id = user["user_id"]
 
     # Verify the ticket type exists
-    ticket_type = db.query(TicketTypeModel).filter(TicketTypeModel.type_id == item.type_id).first()
+    ticket_type = ticket_repo.get_ticket_type_by_id(ticket_type_id)
     if not ticket_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Ticket type with ID {item.type_id} not found",
+            detail=f"Ticket type with ID {ticket_type_id} not found",
         )
-    logger.info(f"Add item {item} to cart of {user}")
-    # TODO: add the item to a cart table
-    return True
+    logger.info(f"Add item {ticket_type} to cart of {user}")
+
+    try:
+        cart_item_model = cart_repo.add_item(
+            customer_id=user_id,
+            ticket_type_id=ticket_type_id,
+            quantity=quantity
+        )
+
+        if not cart_item_model.ticket_type:
+            # This should ideally not happen if add_item works correctly and ticket_type exists
+            logger.error(
+                f"Ticket type details not found for cart_item_id {cart_item_model.cart_item_id} after adding to cart.")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Error retrieving ticket type details after adding to cart.")
+
+        return CartItemWithDetails(
+            ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
+            quantity=cart_item_model.quantity
+        )
+    except HTTPException as e:
+        # Re-raise HTTPExceptions from the repository (e.g., not found, bad request)
+        raise e
+    except Exception as e:
+        logger.error(f"Error adding item to cart for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not add item to cart.",
+        )
 
 
 @router.delete(

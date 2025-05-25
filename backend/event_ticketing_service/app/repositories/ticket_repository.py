@@ -1,9 +1,12 @@
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
+
+from app.database import get_db
 from app.models.ticket import TicketModel
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from app.filters.ticket_filter import TicketFilter
+from app.models.ticket_type import TicketTypeModel
 from app.schemas.ticket import TicketPDF, ResellTicketRequest
 
 
@@ -26,11 +29,17 @@ class TicketRepository:
                 query = query.filter(TicketModel.resell_price.is_(None))
         return query.all()
 
-    def get_ticket(self, ticket_id: int) -> TicketModel:
+    def get_ticket(self, ticket_id: int) -> Optional[TicketModel]:
         ticket = self.db.get(TicketModel, ticket_id)
         if not ticket:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Ticket not found")
         return ticket
+
+    def get_ticket_type_by_id(self, type_id: int) -> Optional[TicketTypeModel]:
+        """
+        Retrieves a ticket type by its ID.
+        """
+        return self.db.get(TicketTypeModel, type_id)
 
     def download_ticket(self, ticket_id: int) -> TicketPDF:
         ticket = self.get_ticket(ticket_id)
@@ -56,3 +65,7 @@ class TicketRepository:
         self.db.commit()
         self.db.refresh(ticket)
         return ticket
+
+# Dependency to get the TicketRepository instance
+def get_ticket_repository(db: Session = Depends(get_db)) -> TicketRepository:
+    return TicketRepository(db)

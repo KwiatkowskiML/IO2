@@ -1,15 +1,16 @@
 import logging
 from typing import List, Dict, Any
+from fastapi import Depends
+from fastapi import HTTPException, status
 
 from sqlalchemy.orm import Session, joinedload, selectinload
 from app.models.shopping_cart_model import ShoppingCartModel
 from app.models.cart_item_model import CartItemModel
 from app.models.ticket_type import TicketTypeModel
 from app.models.ticket import TicketModel
-from app.models.events import EventModel # For type hinting, if needed for event details
-from app.models.location import LocationModel # For type hinting
+from app.models.events import EventModel
 from app.services.email import send_ticket_email
-from fastapi import HTTPException, status
+from app.database import get_db
 
 logger = logging.getLogger(__name__)
 
@@ -199,3 +200,7 @@ class CartRepository:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Checkout failed due to an internal error.",
             )
+
+# Dependency to get the CartRepository instance
+def get_cart_repository(db: Session = Depends(get_db)) -> CartRepository:
+    return CartRepository(db)
