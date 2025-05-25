@@ -86,7 +86,7 @@ def register_customer(
                 "sub": db_user.email,
                 "role": "customer",
                 "user_id": db_user.user_id,
-                "customer_id": db_customer.customer_id,
+                "role_id": db_customer.customer_id,
                 "name": db_user.first_name,
             },
             expires_delta=access_token_expires,
@@ -143,7 +143,7 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
                 "sub": user.email,
                 "role": "organizer",
                 "user_id": db_user.user_id,
-                "organizer_id": db_organizer.organizer_id,
+                "role_id": db_organizer.organizer_id,
                 "name": user.first_name,
             },
             expires_delta=access_token_expires,
@@ -205,7 +205,7 @@ def register_admin(user: AdminCreate, db: Session = Depends(get_db)):
                 "sub": user.email,
                 "role": "administrator",
                 "user_id": db_user.user_id,
-                "admin_id": db_admin.admin_id,
+                "role_id": db_admin.admin_id,
                 "name": user.first_name,
             },
             expires_delta=access_token_expires,
@@ -234,11 +234,23 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account banned")
 
+
+    role_id = None
+
     # Check if the organizer is verified
     if user.user_type == "organizer":
         organizer = db.query(Organizer).filter(Organizer.user_id == user.user_id).first()
+        role_id = organizer.organizer_id
         if not organizer.is_verified:
             return {"token": "", "message": "Your account is pending verification by an administrator"}
+
+    if user.user_type == "administrator":
+        role_id = db.query(Administrator).filter(Administrator.user_id == user.user_id).first().admin_id
+    elif user.user_type == "customer":
+        role_id = db.query(Customer).filter(Customer.user_id == user.user_id).first().customer_id
+
+    if role_id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect user role")
 
     # Generate access token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -248,6 +260,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
             "sub": user.email,
             "role": user.user_type,
             "user_id": user.user_id,
+            "role_id": role_id,
             "name": user.first_name,
         },
         expires_delta=access_token_expires,
