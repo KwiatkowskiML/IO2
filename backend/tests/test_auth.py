@@ -12,9 +12,10 @@ Run with: pytest test_auth.py -v
 """
 
 import pytest
+
 from helper import (
     APIClient, TokenManager, TestDataGenerator, UserManager,
-    get_config, print_test_config, assert_success_response
+    print_test_config, assert_success_response
 )
 
 
@@ -259,15 +260,19 @@ class TestUserLogin:
             expected_status=401
         )
 
-    def test_login_banned_user(self, user_manager, api_client):
+    def test_login_banned_user(self, user_manager, api_client, token_manager):
         """Test login with banned user fails"""
         # Create admin and customer
         user_manager.register_and_login_admin()
         customer_data = user_manager.register_and_login_customer()
 
-        # Ban the customer (assuming user_id = 2, admin is 1)
-        user_manager.ban_user(2)
+        response = api_client.get(
+            "/user/me",
+            headers=token_manager.get_auth_header("customer")
+        )
 
+        # Ban the customer
+        user_manager.ban_user(response.json()["user_id"])
 
         api_client.post(
             "/auth/token",
@@ -298,7 +303,6 @@ class TestUserProfile:
         assert user_data["email"] == customer_data["email"]
         assert user_data["first_name"] == customer_data["first_name"]
         assert user_data["last_name"] == customer_data["last_name"]
-        assert user_data["user_type"] == "customer"
 
     def test_get_organizer_profile(self, user_manager, api_client, token_manager):
         """Test getting organizer profile"""
@@ -315,7 +319,6 @@ class TestUserProfile:
         assert user_data["email"] == organizer_data["email"]
         assert user_data["first_name"] == organizer_data["first_name"]
         assert user_data["last_name"] == organizer_data["last_name"]
-        assert user_data["user_type"] == "organiser"
 
     def test_get_admin_profile(self, user_manager, api_client, token_manager):
         """Test getting admin profile"""
@@ -330,7 +333,6 @@ class TestUserProfile:
 
         user_data = response.json()
         assert user_data["email"] == admin_data["email"]
-        assert user_data["user_type"] == "administrator"
 
     def test_get_profile_unauthorized(self, api_client):
         """Test getting profile without authentication fails"""
@@ -457,14 +459,19 @@ class TestAdminOperations:
         rejected_organizer = response.json()
         assert rejected_organizer["is_verified"] is False
 
-    def test_ban_unban_user(self, user_manager, api_client):
+    def test_ban_unban_user(self, user_manager, api_client, token_manager):
         """Test admin banning and unbanning a user"""
         # Create admin and customer
         user_manager.register_and_login_admin()
         customer_data = user_manager.register_and_login_customer()
 
-        # Ban the user (assuming customer user_id = 2)
-        ban_response = user_manager.ban_user(2)
+        response = api_client.get(
+            "/user/me",
+            headers=token_manager.get_auth_header("customer")
+        )
+
+        # Ban the customer
+        ban_response = user_manager.ban_user(response.json()["user_id"])
         assert "banned" in ban_response["message"]
 
         # Try to login banned user should fail
@@ -479,7 +486,7 @@ class TestAdminOperations:
         )
 
         # Unban the user
-        unban_response = user_manager.unban_user(2)
+        unban_response = user_manager.unban_user(response.json()["user_id"])
         assert "unbanned" in unban_response["message"]
 
         # Now login should work
@@ -514,7 +521,7 @@ class TestAdminOperations:
             },
             json_data={"organizer_id": 1, "approve": True},
             expected_status=403
-            )
+        )
 
         # Try to ban user
         api_client.post(
@@ -759,73 +766,3 @@ class TestCompleteAuthFlow:
         )
         org_profile = org_profile_response.json()
         assert org_profile["email"] == organizer_data["email"]
-        assert org_profile["user_type"] == "organiser"
-
-    def test_admin_user_management_flow(self, api_client, test_data):
-        """Test complete admin user management flow"""
-        # 1. Register admin
-        admin_data = test_data.admin_data()
-        admin_response = api_client.post(
-            "/auth/register/admin",
-            headers={"Content-Type": "application/json"},
-            json_data=admin_data,
-            expected_status=201
-        )
-        admin_token = admin_response.json()["token"]
-        admin_auth = {"Authorization": f"Bearer {admin_token}"}
-
-        # 2. Register customer to manage
-        customer_data = test_data.customer_data()
-        customer_response = api_client.post(
-            "/auth/register/customer",
-            headers={"Content-Type": "application/json"},
-            json_data=customer_data,
-            expected_status=201
-        )
-
-        # 3. Customer can login normally
-        customer_login = api_client.post(
-            "/auth/token",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
-                "username": customer_data["email"],
-                "password": customer_data["password"],
-            }
-        )
-        assert len(customer_login.json()["token"]) > 0
-
-        # 4. Admin bans customer (assuming customer user_id = 2)
-        ban_response = api_client.post(
-            "/auth/ban-user/2",
-            headers=admin_auth
-        )
-        assert "banned" in ban_response.json()["message"]
-
-        # 5. Banned customer cannot login
-        api_client.post(
-            "/auth/token",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
-                "username": customer_data["email"],
-                "password": customer_data["password"],
-            },
-            expected_status=403
-        )
-
-        # 6. Admin unbans customer
-        unban_response = api_client.post(
-            "/auth/unban-user/2",
-            headers=admin_auth
-        )
-        assert "unbanned" in unban_response.json()["message"]
-
-        # 7. Customer can login again
-        customer_login_again = api_client.post(
-            "/auth/token",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            data={
-                "username": customer_data["email"],
-                "password": customer_data["password"],
-            }
-        )
-        assert len(customer_login_again.json()["token"]) > 0

@@ -261,12 +261,8 @@ class UserManager:
         if not self.token_manager.tokens.get("admin"):
             self.register_and_login_admin()
 
-        print(f"Registered organizer: {organizer_data}")
-
         # Get pending organizers and verify the one we just created
         pending_organizers = self.get_pending_organizers()
-        print(f"Pending organizers: {pending_organizers}")
-
         if pending_organizers:
             # Find our organizer by email
             organizer_record = None
@@ -275,15 +271,12 @@ class UserManager:
                     organizer_record = org
                     break
 
-            print(f"Pending organizers: {pending_organizers}")
-            print(f"Organizer record found: {organizer_record}")
             if organizer_record:
                 # Verify the organizer
                 self.verify_organizer_by_admin(organizer_record["organiser_id"], True)
 
                 # Now login the verified organizer
                 login_token = self.login_user(organizer_data, "organizer")
-                print(f"Login token for organizer: {login_token}")
                 if login_token:
                     self.token_manager.set_token("organizer", login_token)
 
