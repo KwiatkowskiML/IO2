@@ -108,21 +108,19 @@ async def add_to_cart(
 
 
 @router.delete(
-    "/items/{ticket_id}",
+    "/items/{cart_item_id}",
     response_model=bool,
 )
 async def remove_from_cart(
-    ticket_id: int = Path(..., title="Ticket ID", ge=1),
+    cart_item_id: int = Path(..., title="Cart Item ID", ge=1),
     authorization: str = Header(..., description="Bearer token"),
-    db: Session = Depends(get_db),
+    cart_repo = Depends(get_cart_repository)
 ):
     """Remove a ticket from the user's shopping cart"""
     # Get user info from JWT token
     user = get_user_from_token(authorization)
-    logger.info(f"Remove {ticket_id} from cart of {user}")
-    # TODO: remove the item from a cart table
-    return True
-
+    logger.info(f"Remove {cart_item_id} from cart of {user}")
+    return cart_repo.remove_item(customer_id=user["user_id"], cart_item_id=cart_item_id)
 
 @router.post(
     "/checkout",
