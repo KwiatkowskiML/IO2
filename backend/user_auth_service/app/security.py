@@ -20,8 +20,6 @@ ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin-secret-key")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
-print(f"Secret: {SECRET_KEY}")  # For debugging purposes, remove in production
-
 def decode_token(token: str):
     """Decode a JWT token and return the payload"""
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
