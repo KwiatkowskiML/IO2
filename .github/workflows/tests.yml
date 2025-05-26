@@ -1,0 +1,59 @@
+name: API Tests
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Prepare .env files
+      run: |
+        echo "Creating .env files..."
+        cp backend/api_gateway/.env.template backend/api_gateway/.env
+        cp backend/event_ticketing_service/.env.template backend/event_ticketing_service/.env
+        cp backend/user_auth_service/.env.template backend/user_auth_service/.env
+
+    - name: Start services with Docker Compose
+      run: |
+        docker compose up -d --build
+
+    - name: Wait for API to be ready
+      run: |
+        echo "Waiting for API service..."
+        timeout 120s bash -c 'until curl -f http://localhost:8080/health; do echo "Waiting..."; sleep 5; done'
+        echo "API is ready!"
+
+    - name: Show service status
+      run: |
+        docker compose ps
+        curl -f http://localhost:8080/health || echo "Health check failed"
+
+    - name: Run pytest tests
+      run: |
+        cd backend/tests
+        ./run_local_tests.bash
+
+    - name: Show logs on failure
+      if: failure()
+      run: |
+        echo "=== Service Logs ==="
+        docker compose logs
+
+    - name: Cleanup
+      if: always()
+      run: |
+        docker compose down -v

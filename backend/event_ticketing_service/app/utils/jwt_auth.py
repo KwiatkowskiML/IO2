@@ -115,7 +115,6 @@ def get_user_from_token(
 
     token = get_token_from_header(authorization)
     payload = decode_jwt(token)
-    print(payload)
 
     # Extract user information
     user_id = payload.get("user_id")
