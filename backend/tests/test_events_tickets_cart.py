@@ -259,7 +259,7 @@ class TestEvents:
 
         # Validate specific creation requirements
         assert created_event["name"] is not None, "Event name cannot be None"
-        assert created_event["organiser_id"] is not None, "Organiser ID cannot be None"
+        assert created_event["organizer_id"] is not None, "Organizer ID cannot be None"
         assert created_event["event_id"] > 0, "Event ID must be positive"
 
         # Validate dates are properly formatted
