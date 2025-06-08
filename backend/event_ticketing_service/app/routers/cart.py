@@ -79,7 +79,7 @@ async def add_to_cart(
     logger.info(f"Add item {ticket_type} to cart of {user}")
 
     try:
-        cart_item_model = cart_repo.add_item(
+        cart_item_model = cart_repo.add_item_from_detailed_sell(
             customer_id=user_id,
             ticket_type_id=ticket_type_id,
             quantity=quantity
