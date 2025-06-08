@@ -590,13 +590,10 @@ class TicketManager:
         )
         return response.json()
 
-    def resell_ticket(self, ticket_id: int, resale_price: float = None, description: str = None) -> \
-            Dict[str, Any]:
+    def resell_ticket(self, ticket_id: int, price: float) -> Dict[str, Any]:
         """Put ticket up for resale"""
         resell_data = {
-            "ticket_id": ticket_id,
-            "resale_price": resale_price or 150.00,
-            "resale_description": description or "Selling due to scheduling conflict"
+            "price": price
         }
 
         response = self.api_client.post(
@@ -640,6 +637,44 @@ class TicketManager:
                 "Content-Type": "application/json"
             },
             json_data=transfer_data
+        )
+        return response.json()
+
+
+class ResaleManager:
+    """Manages ticket resale marketplace operations"""
+
+    def __init__(self, api_client: APIClient, token_manager: TokenManager):
+        self.api_client = api_client
+        self.token_manager = token_manager
+
+    def get_marketplace(self, filters: Dict = None) -> list:
+        """Get resale marketplace listings"""
+        url = "/resale/marketplace"
+        if filters:
+            query_params = "&".join([f"{k}={v}" for k, v in filters.items()])
+            url = f"{url}?{query_params}"
+
+        response = self.api_client.get(url)
+        return response.json()
+
+    def purchase_resale_ticket(self, ticket_id: int) -> Dict[str, Any]:
+        """Purchase a ticket from resale marketplace"""
+        response = self.api_client.post(
+            "/resale/purchase",
+            headers={
+                **self.token_manager.get_auth_header("customer"),
+                "Content-Type": "application/json"
+            },
+            json_data={"ticket_id": ticket_id}
+        )
+        return response.json()
+
+    def get_my_listings(self) -> list:
+        """Get user's own resale listings"""
+        response = self.api_client.get(
+            "/resale/my-listings",
+            headers=self.token_manager.get_auth_header("customer")
         )
         return response.json()
 
