@@ -46,6 +46,30 @@ class TicketRepository:
         # Stub: actual PDF generation logic goes here
         return TicketPDF(pdf_data=f"base64_pdf_data for ticket {ticket.ticket_id}", filename=f"ticket_{ticket_id}.pdf")
 
+    def list_resale_tickets(self, event_id: Optional[int] = None) -> List[TicketModel]:
+        query = self.db.query(TicketModel).filter(TicketModel.resell_price.isnot(None))
+
+        if event_id:
+            query = query.join(TicketTypeModel).filter(TicketTypeModel.event_id == event_id)
+
+        return query.all()
+
+    def buy_resale_ticket(self, ticket_id: int, buyer_id: int) -> TicketModel:
+        ticket = self.get_ticket(ticket_id)
+
+        if ticket.resell_price is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Ticket is not for resale")
+
+        if ticket.owner_id == buyer_id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Cannot buy your own ticket")
+
+        ticket.owner_id = buyer_id
+        ticket.resell_price = None
+
+        self.db.commit()
+        self.db.refresh(ticket)
+        return ticket
+
     def resell_ticket(self, data: ResellTicketRequest, user_id: int) -> TicketModel:
         ticket = self.get_ticket(data.ticket_id)
         if ticket.owner_id != user_id:

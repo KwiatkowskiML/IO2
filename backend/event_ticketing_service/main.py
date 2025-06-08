@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from app.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import cart, events, tickets, ticket_types
+from app.routers import cart, events, tickets, ticket_types, resale
 
 Base.metadata.create_all(bind=engine)
 
@@ -25,6 +25,8 @@ app.include_router(tickets.router)
 app.include_router(events.router)
 app.include_router(ticket_types.router)
 app.include_router(cart.router)
+app.include_router(resale.router)
+
 
 
 @app.get("/")
