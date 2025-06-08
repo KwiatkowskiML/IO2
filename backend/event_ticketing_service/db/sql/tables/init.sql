@@ -50,6 +50,7 @@ CREATE TABLE cart_items (
     cart_item_id SERIAL PRIMARY KEY,
     cart_id INTEGER NOT NULL,
     ticket_id INTEGER NOT NULL,
+    ticket_type_id INTEGER NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
 
     CONSTRAINT fk_cart
@@ -60,6 +61,11 @@ CREATE TABLE cart_items (
     CONSTRAINT fk_ticket
         FOREIGN KEY(ticket_id)
         REFERENCES tickets(ticket_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_ticket_type
+        FOREIGN KEY(ticket_type_id)
+        REFERENCES ticket_types(type_id)
         ON DELETE CASCADE,
 
     UNIQUE (cart_id, ticket_id)

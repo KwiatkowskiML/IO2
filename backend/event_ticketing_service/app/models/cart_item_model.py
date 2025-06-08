@@ -9,7 +9,8 @@ class CartItemModel(Base):
 
     cart_item_id = Column(Integer, primary_key=True, index=True)
     cart_id = Column(Integer, ForeignKey("shopping_carts.cart_id", ondelete="CASCADE"), nullable=False)
-    ticket_type_id = Column(Integer, ForeignKey("ticket_types.type_id", ondelete="CASCADE"), nullable=False)
+    ticket_id = Column(Integer, ForeignKey("tickets.ticket_id", ondelete="CASCADE"), nullable=True)
+    ticket_type_id = Column(Integer, ForeignKey("ticket_types.type_id", ondelete="CASCADE"), nullable=True)
     quantity = Column(Integer, nullable=False, default=1)
 
     cart = relationship("ShoppingCartModel", back_populates="items")
