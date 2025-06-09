@@ -35,13 +35,13 @@ if [[ "$TARGET_ENV" == "local" ]]; then
     pretty_info "Configuring for local Docker Compose environment..."
     
     # Ensure .env file exists
-    if [[ ! -f "$PROJECT_ROOT/backend/.env" ]]; then
-        pretty_warn "backend/.env file not found. Copying from template."
-        cp "$PROJECT_ROOT/backend/.env.template" "$PROJECT_ROOT/backend/.env"
+    if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
+        pretty_warn ".env file not found. Copying from template."
+        cp "$PROJECT_ROOT/.env.template" "$PROJECT_ROOT/.env"
     fi
 
     # Load ADMIN_SECRET_KEY from .env file
-    export ADMIN_SECRET_KEY=$(grep ADMIN_SECRET_KEY "$PROJECT_ROOT/backend/.env" | cut -d '=' -f2)
+    export ADMIN_SECRET_KEY=$(grep ADMIN_SECRET_KEY "$PROJECT_ROOT/.env" | cut -d '=' -f2)
     BASE_URL="http://localhost:8080"
     
     pretty_info "Target URL: ${BASE_URL}"
