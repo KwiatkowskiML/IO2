@@ -1,4 +1,3 @@
-=== .github/workflows/tests.yml ===
 name: API Tests
 
 on:
