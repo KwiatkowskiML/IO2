@@ -1,87 +1,64 @@
 from typing import List
 from datetime import datetime, timedelta
 
+from app.database import get_db
+from sqlalchemy.orm import Session
 from fastapi import Path, Depends, APIRouter
 from app.filters.events_filter import EventsFilter
+from app.repositories.event_repository import EventRepository
 from app.schemas.event import EventBase, EventUpdate, EventDetails, NotificationRequest
 
 router = APIRouter(prefix="/events", tags=["events"])
 
 
 @router.post("/", response_model=EventDetails)
-async def create_event(
-    event_data: EventBase,
-):
+async def create_event(event_data: EventBase, db: Session = Depends(get_db)):
     """Create a new event (requires authentication)"""
-    # Create a valid EventDetails response from the input
-    return EventDetails(
-        id=1, 
-        status="Pending approval", 
-        available_tickets=event_data.total_tickets, 
-        **event_data.model_dump()
-    )
+    repository = EventRepository(db)
+    return repository.create_event(event_data, event_data.organizer_id)
 
 
 @router.post("/authorize/{event_id}", response_model=bool)
 async def authorize_event(
     event_id: int = Path(..., title="Event ID"),
+    db: Session = Depends(get_db),
 ):
     """Authorize an event (requires admin authentication)"""
+    repository = EventRepository(db)
+    repository.authorize_event(event_id)
     return True
 
 
 @router.get("", response_model=List[EventDetails])
-async def get_events(
-    event_filter: EventsFilter = Depends(),
-):
-    """Get events with optional filtering"""
-    # Create a fully valid mock response
-    return [
-        EventDetails(
-            id=1,
-            name="Sample Event",
-            description="This is a fantastic sample event.",
-            location="Warsaw",
-            start=datetime.now(),
-            end=datetime.now() + timedelta(hours=2),
-            organiser_id=1,
-            status="active",
-            total_tickets=100,
-            available_tickets=80,
-            category=["music", "live"],
-            minimum_age=18
-        )
-    ]
+def get_events_endpoint(filters: EventsFilter = Depends(), db: Session = Depends(get_db)):
+    repository = EventRepository(db)
+    events = repository.get_events(filters)
+    return [EventDetails.model_validate(e) for e in events]
 
 
 @router.put("/{event_id}", response_model=EventDetails)
-async def update_event(
-    update_data: EventUpdate,
+def update_event_endpoint(
     event_id: int = Path(..., title="Event ID"),
+    update_data: EventUpdate = Depends(),
+    db: Session = Depends(get_db),
 ):
-    """Update an event (requires organizer authentication)"""
-    # Create a fully valid mock response for an update
-    return EventDetails(
-        id=event_id,
-        name=update_data.name or "Updated Sample Event",
-        description=update_data.description or "An updated description.",
-        location=update_data.location or "Krakow",
-        start=update_data.start or datetime.now(),
-        end=update_data.end or datetime.now() + timedelta(hours=3),
-        organiser_id=1,
-        status="active",
-        total_tickets=100,
-        available_tickets=80,
-        category=["music", "live"],
-        minimum_age=18
-    )
+    # TODO: use auth dependency
+    current_user_id = 1  # Placeholder for current user ID
+
+    repository = EventRepository(db)
+    return repository.update_event(event_id, update_data, current_user_id)
 
 
 @router.delete("/{event_id}", response_model=bool)
-async def cancel_event(
+def cancel_event_endpoint(
     event_id: int = Path(..., title="Event ID"),
+    db: Session = Depends(get_db),
 ):
-    """Cancel an event (requires organizer authentication)"""
+    # TODO: use auth dependency
+    current_user_id = 1
+
+    repository = EventRepository(db)
+    repository.cancel_event(event_id, current_user_id)
     return True
 
 

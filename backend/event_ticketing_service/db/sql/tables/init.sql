@@ -45,3 +45,28 @@ CREATE TABLE shopping_carts (
     cart_id SERIAL PRIMARY KEY,
     customer_id INTEGER NOT NULL UNIQUE
 );
+
+CREATE TABLE cart_items (
+    cart_item_id SERIAL PRIMARY KEY,
+    cart_id INTEGER NOT NULL,
+    ticket_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1
+
+    CONSTRAINT fk_cart
+        FOREIGN KEY(cart_id)
+        REFERENCES shopping_carts(cart_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_ticket
+        FOREIGN KEY(ticket_id)
+        REFERENCES tickets(ticket_id)
+        ON DELETE CASCADE,
+
+    UNIQUE (cart_id, ticket_id)
+);
+
+-- TODO: Sample data for locations
+INSERT INTO locations (name, address, zipcode, city, country) VALUES
+  ('Main Hall',   '123 Center St',      '00-100', 'Warsaw',    'Poland'),
+  ('Open Arena',  '45 Stadium Rd',      NULL,     'Gdansk',    'Poland'),
+  ('Conference X','789 Tech Parkway',   '10-200', 'Krakow',    'Poland');

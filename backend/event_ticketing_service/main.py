@@ -1,6 +1,9 @@
 import uvicorn
 from fastapi import FastAPI
+from app.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Resellio Tickets & Events Service",
