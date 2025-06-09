@@ -47,7 +47,8 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
     depends_on:
-      - db-init
+      db-init:
+        condition: service_completed_successfully
 
   events-service:
     build:
@@ -61,8 +62,10 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
     depends_on:
-      - db-init
+      db-init:
+        condition: service_completed_successfully
 
   api-gateway:
     image: nginx:1.25-alpine

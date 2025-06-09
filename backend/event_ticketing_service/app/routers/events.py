@@ -15,7 +15,7 @@ router = APIRouter(prefix="/events", tags=["events"])
 async def create_event(event_data: EventBase, db: Session = Depends(get_db)):
     """Create a new event (requires authentication)"""
     repository = EventRepository(db)
-    return repository.create_event(event_data, event_data.organizer_id)
+    return repository.create_event(event_data, event_data.organiser_id)
 
 
 @router.post("/authorize/{event_id}", response_model=bool)

@@ -1,4 +1,4 @@
-CREATE TABLE locations (
+CREATE TABLE IF NOT EXISTS locations (
     location_id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     address VARCHAR(255) NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE locations (
     country VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     event_id SERIAL PRIMARY KEY,
     organiser_id INTEGER NOT NULL,
     location_id INTEGER NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE events (
     CHECK (start_date < end_date)
 );
 
-CREATE TABLE ticket_types (
+CREATE TABLE IF NOT EXISTS ticket_types (
     type_id SERIAL PRIMARY KEY,
     event_id INTEGER NOT NULL,
     description VARCHAR(255),
@@ -32,7 +32,7 @@ CREATE TABLE ticket_types (
     FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
 );
 
-CREATE TABLE tickets (
+CREATE TABLE IF NOT EXISTS tickets (
     ticket_id SERIAL PRIMARY KEY,
     type_id INTEGER NOT NULL,
     owner_id INTEGER,
@@ -41,7 +41,26 @@ CREATE TABLE tickets (
     FOREIGN KEY (type_id) REFERENCES ticket_types(type_id) ON DELETE CASCADE
 );
 
-CREATE TABLE shopping_carts (
+CREATE TABLE IF NOT EXISTS shopping_carts (
     cart_id SERIAL PRIMARY KEY,
     customer_id INTEGER NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS cart_items (
+    cart_item_id SERIAL PRIMARY KEY,
+    cart_id INTEGER NOT NULL,
+    ticket_type_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+
+    CONSTRAINT fk_cart
+        FOREIGN KEY(cart_id)
+        REFERENCES shopping_carts(cart_id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_ticket_type
+        FOREIGN KEY(ticket_type_id)
+        REFERENCES ticket_types(type_id)
+        ON DELETE CASCADE,
+
+    UNIQUE (cart_id, ticket_type_id)
 );

@@ -88,9 +88,3 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db), current_user: Us
         response.login = None
 
     return response
-
-
-@router.get("/me", response_model=UserResponse)
-def read_users_me(current_user: User = Depends(get_current_user)):
-    """Get current user information"""
-    return current_user

@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     login VARCHAR(255) NOT NULL UNIQUE,
@@ -10,13 +10,13 @@ CREATE TABLE users (
     user_type VARCHAR(20) NOT NULL -- 'customer', 'organiser', 'administrator'
 );
 
-CREATE TABLE customers (
+CREATE TABLE IF NOT EXISTS customers (
     customer_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL UNIQUE,
     FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 );
 
-CREATE TABLE organisers (
+CREATE TABLE IF NOT EXISTS organisers (
     organiser_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL UNIQUE,
     company_name VARCHAR(255) NOT NULL,
@@ -24,14 +24,14 @@ CREATE TABLE organisers (
     FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 );
 
-CREATE TABLE administrators (
+CREATE TABLE IF NOT EXISTS administrators (
     admin_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL UNIQUE,
     FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
-CREATE INDEX idx_users_login ON users (login);
+CREATE INDEX IF NOT EXISTS idx_users_login ON users (login);
 
-CREATE INDEX idx_users_type ON users (user_type);
+CREATE INDEX IF NOT EXISTS idx_users_type ON users (user_type);

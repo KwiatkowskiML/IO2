@@ -12,3 +12,8 @@ output "db_endpoint" {
   description = "Writer endpoint of the Aurora cluster"
   value       = module.db.endpoint
 }
+
+output "project_name" {
+  description = "The project name used for all resources"
+  value       = var.project_name
+}
