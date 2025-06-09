@@ -11,10 +11,16 @@ bold='\033[1m'
 
 gen_separator() {
     local separator=${1:-'='}
-    _cols=$(stty size | cut -d' ' -f2)
+    local _cols
+    # Check if stdout is connected to a terminal
+    if [ -t 1 ]; then
+        _cols=$(stty size | cut -d' ' -f2)
+    else
+        # Fallback to a default width if not in a terminal
+        _cols=80
+    fi
     printf '%*s\n' "$_cols" '' | tr ' ' "${separator}"
 }
-
 pretty_echo() {
     local type=$1
     shift
