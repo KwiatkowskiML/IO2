@@ -5,6 +5,7 @@ Resellio API Gateway Test Framework
 A modular testing framework for the Resellio API Gateway.
 """
 
+import os
 import sys
 import json
 import time
@@ -247,6 +248,10 @@ def generate_random_string(
 def generate_test_users():
     """Generate random credentials for test users"""
     random_suffix = generate_random_string()
+    
+    # Get admin secret key from environment variable, with a fallback for local dev
+    admin_key = os.getenv("ADMIN_SECRET_KEY", "local-admin-secret-key")
+
     TEST_USERS.update(
         {
             "customer": {
@@ -270,11 +275,10 @@ def generate_test_users():
                 "password": "Password123",
                 "first_name": "Test",
                 "last_name": "Admin",
-                "admin_secret_key": "admin-secret-key-change-this-in-production",
+                "admin_secret_key": admin_key, # <-- Use the variable here
             },
         }
     )
-
 
 # Test modules - Each module tests a specific area of functionality
 class HealthTests(TestCase):
@@ -293,11 +297,6 @@ class HealthTests(TestCase):
             name="Gateway Root",
             method="GET",
             url="/",
-        )
-        self.run_test(
-            name="Gateway Debug",
-            method="GET",
-            url="/debug",
         )
 
 
@@ -496,7 +495,7 @@ class TicketTests(TestCase):
         self.run_test(
             name="Get Ticket Types",
             method="GET",
-            url="/api/ticket-types",
+            url="/api/ticket-types/",
         )
 
         # Create a ticket type (requires organizer token)

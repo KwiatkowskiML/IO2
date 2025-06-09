@@ -1,11 +1,7 @@
 import uvicorn
-from app.database import engine
-from app.models.base import Base
 from fastapi import Depends, FastAPI
 from app.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Resellio Auth Service",

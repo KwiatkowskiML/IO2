@@ -24,6 +24,21 @@ resource "aws_secretsmanager_secret_version" "db_master_password" {
   secret_string = random_password.db_master_password.result
 }
 
+resource "random_string" "admin_secret_key" {
+  length  = 32
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "admin_secret_key" {
+  name = "${var.project_name}-admin-secret-key"
+}
+
+resource "aws_secretsmanager_secret_version" "admin_secret_key" {
+  secret_id     = aws_secretsmanager_secret.admin_secret_key.id
+  secret_string = random_string.admin_secret_key.result
+}
+
+
 # Database
 module "db" {
   source                 = "../modules/rds"
@@ -34,6 +49,19 @@ module "db" {
   master_password        = random_password.db_master_password.result
   db_subnet_ids          = module.network.private_subnet_ids
   vpc_security_group_ids = [module.network.rds_security_group_id]
+}
+
+# Data Sources to look up ECR repositories created by the build script
+data "aws_ecr_repository" "auth" {
+  name = "${var.project_name}-auth"
+}
+
+data "aws_ecr_repository" "tickets" {
+  name = "${var.project_name}-tickets"
+}
+
+data "aws_ecr_repository" "db_init" {
+  name = "${var.project_name}-db-init"
 }
 
 # ECS & Load Balancer
@@ -47,8 +75,60 @@ module "ecs_cluster" {
   alb_security_group_id  = module.network.alb_security_group_id
   db_endpoint            = module.db.endpoint
   db_password_secret_arn = aws_secretsmanager_secret.db_master_password.arn
-  auth_image             = var.auth_image
-  ticket_image           = var.ticket_image
+  admin_secret_key_arn   = aws_secretsmanager_secret.admin_secret_key.arn
+  auth_image             = "${data.aws_ecr_repository.auth.repository_url}:latest"
+  ticket_image           = "${data.aws_ecr_repository.tickets.repository_url}:latest"
+  db_init_image          = "${data.aws_ecr_repository.db_init.repository_url}:latest"
   db_user                = var.db_username
   db_name                = var.db_name
+}
+
+# One-off task to initialize the database schema
+resource "null_resource" "db_initializer" {
+  triggers = {
+    db_endpoint  = module.db.endpoint
+    task_def_arn = module.ecs_cluster.db_init_task_definition_arn
+  }
+
+  depends_on = [
+    module.db,
+    module.ecs_cluster,
+    # Ensure this runs only after the images have been found
+    data.aws_ecr_repository.db_init
+  ]
+
+  provisioner "local-exec" {
+    when    = create
+    command = <<-EOT
+      NETWORK_CONFIG=$(cat <<EOF
+      {
+          "awsvpcConfiguration": {
+              "subnets": ${jsonencode(module.network.private_subnet_ids)},
+              "securityGroups": ["${module.network.ecs_security_group_id}"],
+              "assignPublicIp": "DISABLED"
+          }
+      }
+      EOF
+      )
+
+      echo "Running DB init task..."
+      TASK_ARN=$(aws ecs run-task \
+        --cluster ${module.ecs_cluster.ecs_cluster_arn} \
+        --task-definition ${self.triggers.task_def_arn} \
+        --launch-type FARGATE \
+        --network-configuration "$NETWORK_CONFIG" \
+        --region ${var.aws_region} \
+        --query 'tasks[0].taskArn' \
+        --output text)
+      
+      echo "Waiting for DB init task ($TASK_ARN) to complete..."
+      
+      aws ecs wait tasks-stopped \
+        --cluster ${module.ecs_cluster.ecs_cluster_arn} \
+        --tasks $TASK_ARN \
+        --region ${var.aws_region}
+        
+      echo "DB init task finished."
+    EOT
+  }
 }

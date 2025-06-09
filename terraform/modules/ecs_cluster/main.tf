@@ -24,10 +24,11 @@ data "aws_iam_policy_document" "task_secrets_access" {
     effect = "Allow"
     actions = [
       "secretsmanager:GetSecretValue",
-      "secretsmanager:DescribeSecret",
-      "kms:Decrypt"
     ]
-    resources = [var.db_password_secret_arn]
+    resources = [
+      var.db_password_secret_arn,
+      var.admin_secret_key_arn
+    ]
   }
 }
 
@@ -47,13 +48,18 @@ resource "aws_iam_role_policy_attachment" "task_exec_attach" {
 }
 
 resource "aws_iam_policy" "task_secrets_access_policy" {
-  name = "${var.project_name}-ecsTaskSecretsAccessPolicy"
+  name        = "${var.project_name}-ecsTaskSecretsAccessPolicy"
   description = "Allows ECS tasks to access secrets"
-  policy = data.aws_iam_policy_document.task_secrets_access.json
+  policy      = data.aws_iam_policy_document.task_secrets_access.json
 }
 
 resource "aws_iam_role_policy_attachment" "task_role_secrets_attach" {
   role       = aws_iam_role.task_role.name
+  policy_arn = aws_iam_policy.task_secrets_access_policy.arn
+}
+
+resource "aws_iam_role_policy_attachment" "task_exec_secrets_attach" {
+  role       = aws_iam_role.task_exec.name
   policy_arn = aws_iam_policy.task_secrets_access_policy.arn
 }
 
@@ -89,12 +95,8 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    type = "fixed-response"
-    fixed_response {
-      status_code  = "404"
-      content_type = "text/plain"
-      message_body = "Not found"
-    }
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.auth.arn
   }
 }
 
@@ -132,35 +134,6 @@ resource "aws_cloudwatch_log_group" "lg" {
   retention_in_days = 14
 }
 
-locals {
-  common_env = [
-    {
-      name  = "DB_URL"
-      value = var.db_endpoint
-    },
-    {
-      name  = "DB_PASSWORD_SECRET_ARN"
-      value = var.db_password_secret_arn
-    },
-    {
-      name  = "DB_USER"
-      value = var.db_user
-    },
-    {
-      name  = "DB_NAME"
-      value = var.db_name
-    },
-    {
-      name  = "DB_PORT"
-      value = tostring(var.db_port)
-    },
-    {
-      name = "AWS_REGION"
-      value = var.aws_region
-    }
-  ]
-}
-
 # Task definitions
 resource "aws_ecs_task_definition" "auth" {
   family                   = "${var.project_name}-auth"
@@ -180,7 +153,17 @@ resource "aws_ecs_task_definition" "auth" {
           hostPort      = 8000
         protocol = "tcp" }
       ]
-      environment = local.common_env
+      environment = [
+        { name = "DB_URL", value = var.db_endpoint },
+        { name = "DB_USER", value = var.db_user },
+        { name = "DB_NAME", value = var.db_name },
+        { name = "DB_PORT", value = tostring(var.db_port) },
+        { name = "AWS_REGION", value = var.aws_region }
+      ]
+      secrets = [
+        { name = "DB_PASSWORD", valueFrom = var.db_password_secret_arn },
+        { name = "ADMIN_SECRET_KEY", valueFrom = var.admin_secret_key_arn }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -212,7 +195,16 @@ resource "aws_ecs_task_definition" "tickets" {
           protocol      = "tcp"
         }
       ]
-      environment = local.common_env
+      environment = [
+        { name = "DB_URL", value = var.db_endpoint },
+        { name = "DB_USER", value = var.db_user },
+        { name = "DB_NAME", value = var.db_name },
+        { name = "DB_PORT", value = tostring(var.db_port) },
+        { name = "AWS_REGION", value = var.aws_region }
+      ]
+      secrets = [
+        { name = "DB_PASSWORD", valueFrom = var.db_password_secret_arn }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -234,9 +226,8 @@ resource "aws_ecs_service" "auth" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.private_subnet_ids
-    security_groups  = [var.ecs_security_group_id]
-    assign_public_ip = false
+    subnets         = var.private_subnet_ids
+    security_groups = [var.ecs_security_group_id]
   }
 
   load_balancer {
@@ -256,9 +247,8 @@ resource "aws_ecs_service" "tickets" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.private_subnet_ids
-    security_groups  = [var.ecs_security_group_id]
-    assign_public_ip = false
+    subnets         = var.private_subnet_ids
+    security_groups = [var.ecs_security_group_id]
   }
 
   load_balancer {
@@ -268,4 +258,40 @@ resource "aws_ecs_service" "tickets" {
   }
 
   depends_on = [aws_lb_listener_rule.tickets]
+}
+
+resource "aws_ecs_task_definition" "db_init" {
+  family                   = "${var.project_name}-db-init"
+  cpu                      = "256"
+  memory                   = "512"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  execution_role_arn       = aws_iam_role.task_exec.arn
+  task_role_arn            = aws_iam_role.task_role.arn
+
+  container_definitions = jsonencode([{
+    name      = "db-init"
+    image     = var.db_init_image
+    essential = true
+    environment = [
+      { name = "DB_HOST", value = var.db_endpoint },
+      { name = "DB_NAME", value = var.db_name },
+      { name = "DB_USER", value = var.db_user },
+      { name = "DB_PORT", value = tostring(var.db_port) }
+    ]
+    secrets = [
+      {
+        name      = "PGPASSWORD"
+        valueFrom = var.db_password_secret_arn
+      }
+    ]
+    logConfiguration = {
+      logDriver = "awslogs",
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.lg.name,
+        awslogs-region        = var.aws_region,
+        awslogs-stream-prefix = "db-init"
+      }
+    }
+  }])
 }

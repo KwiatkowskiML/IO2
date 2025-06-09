@@ -32,11 +32,3 @@ variable "db_username" {
   description = "Master username"
   default     = "resellio"
 }
-variable "auth_image" {
-  type        = string
-  description = "Docker image for Auth service"
-}
-variable "ticket_image" {
-  type        = string
-  description = "Docker image for Ticket service"
-}

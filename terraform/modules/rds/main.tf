@@ -19,11 +19,12 @@ resource "aws_rds_cluster" "this" {
 }
 
 resource "aws_rds_cluster_instance" "writer" {
-  identifier          = "${var.project_name}-aurora-writer"
-  cluster_identifier  = aws_rds_cluster.this.id
-  instance_class      = var.instance_class
-  engine              = aws_rds_cluster.this.engine
-  engine_version      = aws_rds_cluster.this.engine_version
-  publicly_accessible = false
-  tags                = { Name = "${var.project_name}-aurora-writer" }
+  identifier                 = "${var.project_name}-aurora-writer"
+  cluster_identifier         = aws_rds_cluster.this.id
+  instance_class             = var.instance_class
+  engine                     = aws_rds_cluster.this.engine
+  engine_version             = aws_rds_cluster.this.engine_version
+  publicly_accessible        = false
+  auto_minor_version_upgrade = false
+  tags                       = { Name = "${var.project_name}-aurora-writer" }
 }

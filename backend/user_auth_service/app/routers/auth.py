@@ -5,7 +5,7 @@ from app.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi.security import OAuth2PasswordRequestForm
-from app.schemas.user import UserResponse, OrganizerResponse
+from app.schemas.user import OrganizerResponse
 from app.models import User, Customer, Organiser, Administrator
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status
 from app.schemas.auth import (
@@ -20,7 +20,6 @@ from app.schemas.auth import (
 from app.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     verify_password,
-    get_current_user,
     get_current_admin,
     get_password_hash,
     create_access_token,
@@ -232,12 +231,6 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 def logout():
     """Logout (client should discard the token)"""
     return {"message": "Logout successful"}
-
-
-@router.get("/me", response_model=UserResponse)
-def read_users_me(current_user: User = Depends(get_current_user)):
-    """Get current user information"""
-    return current_user
 
 
 @router.post("/verify-organizer", response_model=OrganizerResponse)

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 # EventBase is the base model for creating and handling events
 class EventBase(BaseModel):
-    organizer_id: int
+    organiser_id: int
     name: str
     description: Optional[str] = None
     start: datetime

@@ -1,5 +1,5 @@
 from typing import List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import Path, Depends, APIRouter
 from app.filters.events_filter import EventsFilter
@@ -13,7 +13,13 @@ async def create_event(
     event_data: EventBase,
 ):
     """Create a new event (requires authentication)"""
-    return EventDetails(id=1, status="Pending approval", available_tickets=100, **event_data.dict())
+    # Create a valid EventDetails response from the input
+    return EventDetails(
+        id=1, 
+        status="Pending approval", 
+        available_tickets=event_data.total_tickets, 
+        **event_data.model_dump()
+    )
 
 
 @router.post("/authorize/{event_id}", response_model=bool)
@@ -29,19 +35,21 @@ async def get_events(
     event_filter: EventsFilter = Depends(),
 ):
     """Get events with optional filtering"""
-    # Example mock response
+    # Create a fully valid mock response
     return [
         EventDetails(
             id=1,
             name="Sample Event",
+            description="This is a fantastic sample event.",
             location="Warsaw",
             start=datetime.now(),
-            end=datetime.now(),
-            organizer_id=1,
+            end=datetime.now() + timedelta(hours=2),
+            organiser_id=1,
             status="active",
             total_tickets=100,
             available_tickets=80,
-            category=[],
+            category=["music", "live"],
+            minimum_age=18
         )
     ]
 
@@ -52,17 +60,20 @@ async def update_event(
     event_id: int = Path(..., title="Event ID"),
 ):
     """Update an event (requires organizer authentication)"""
+    # Create a fully valid mock response for an update
     return EventDetails(
-        id=1,
-        name="Sample Event",
-        location="Warsaw",
-        start=datetime.now(),
-        end=datetime.now(),
-        organizer_id=1,
+        id=event_id,
+        name=update_data.name or "Updated Sample Event",
+        description=update_data.description or "An updated description.",
+        location=update_data.location or "Krakow",
+        start=update_data.start or datetime.now(),
+        end=update_data.end or datetime.now() + timedelta(hours=3),
+        organiser_id=1,
         status="active",
         total_tickets=100,
         available_tickets=80,
-        category=[],
+        category=["music", "live"],
+        minimum_age=18
     )
 
 

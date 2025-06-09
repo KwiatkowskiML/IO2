@@ -1,4 +1,14 @@
 #!/bin/env bash
+
+# Global Style Variables 
+red='\033[0;31m'
+yellow='\033[1;33m'
+green='\033[0;32m'
+blue='\033[0;34m'
+cyan='\033[0;36m'
+nc='\033[0m' # No Color
+bold='\033[1m'
+
 gen_separator() {
     local separator=${1:-'='}
     _cols=$(stty size | cut -d' ' -f2)
@@ -9,14 +19,6 @@ pretty_echo() {
     local type=$1
     shift
     local message="$@"
-
-    local red='\033[0;31m'
-    local yellow='\033[1;33m'
-    local green='\033[0;32m'
-    local blue='\033[0;34m'
-    local cyan='\033[0;36m'
-    local nc='\033[0m'
-    local bold='\033[1m'
 
     local label_width=12
 

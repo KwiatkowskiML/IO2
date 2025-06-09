@@ -36,7 +36,7 @@ variable "vpc_security_group_ids" {
 variable "engine_version" {
   description = "Aurora‑PostgreSQL engine version"
   type        = string
-  default     = "15.4"
+  default     = "15.10"
 }
 
 variable "instance_class" {
