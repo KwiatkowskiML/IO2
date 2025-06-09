@@ -18,42 +18,64 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12' 
 
-    - name: Prepare .env files
+    - name: Create .env file for Docker Compose
       run: |
-        echo "Creating .env files..."
-        cp backend/api_gateway/.env.template backend/api_gateway/.env
-        cp backend/event_ticketing_service/.env.template backend/event_ticketing_service/.env
-        cp backend/user_auth_service/.env.template backend/user_auth_service/.env
+        echo "Creating root .env file for Docker Compose..."
+        cp .env.template .env
+        echo "✓ .env file created successfully."
+        echo "--- .env content ---"
+        cat .env
+        echo "--------------------"
 
     - name: Start services with Docker Compose
       run: |
+        # The .env file in the root directory will be automatically used by Docker Compose.
         docker compose up -d --build
 
     - name: Wait for API to be ready
       run: |
-        echo "Waiting for API service..."
-        timeout 120s bash -c 'until curl -f http://localhost:8080/health; do echo "Waiting..."; sleep 5; done'
-        echo "API is ready!"
+        echo "Waiting for API Gateway to become healthy..."
+        # The API gateway has a /health endpoint. We poll it until it returns 200 OK.
+        timeout 120s bash -c 'until curl -fs http://localhost:8080/health &>/dev/null; do echo "Waiting..."; sleep 5; done'
+        echo "✓ API Gateway is ready!"
 
-    - name: Show service status
+    - name: Show running service status
       run: |
+        echo "--- Docker Compose Status ---"
         docker compose ps
-        curl -f http://localhost:8080/health || echo "Health check failed"
+        echo "---------------------------"
+        echo "Pinging health check endpoint again:"
+        curl -f http://localhost:8080/health
 
     - name: Run pytest tests
       run: |
+        # Export the admin secret key so the test helper (helper.py) can read it via os.getenv().
+        # This ensures the tests use the same key as the running auth-service container.
+        export ADMIN_SECRET_KEY=$(grep ADMIN_SECRET_KEY .env | cut -d '=' -f2)
+        if [ -z "$ADMIN_SECRET_KEY" ]; then
+          echo "::error::ADMIN_SECRET_KEY could not be read from .env file."
+          exit 1
+        fi
+        echo "✓ ADMIN_SECRET_KEY exported to the test environment."
+
+        # The test script handles venv creation, dependency installation, and running pytest.
         cd backend/tests
         ./run_local_tests.bash
 
     - name: Show logs on failure
       if: failure()
       run: |
-        echo "=== Service Logs ==="
+        echo "::error::Tests failed. Dumping service logs..."
+        echo "========================= Service Logs ========================="
         docker compose logs
+        echo "================================================================"
 
-    - name: Cleanup
+    - name: Cleanup services
       if: always()
       run: |
+        echo "Cleaning up Docker Compose services and volumes..."
+        # The -v flag removes the named volume (postgres-data) to ensure a clean slate for the next run.
         docker compose down -v
+        echo "✓ Cleanup complete."
