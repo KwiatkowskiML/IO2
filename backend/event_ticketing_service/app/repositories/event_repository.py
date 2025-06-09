@@ -20,14 +20,14 @@ class EventRepository:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Event not found")
         return event
 
-    def create_event(self, data: EventBase, organizer_id: int) -> EventModel:
+    def create_event(self, data: EventBase, organiser_id: int) -> EventModel:
         # Validate location exists
         location = self.db.query(LocationModel).filter(LocationModel.location_id == data.location_id).first()
         if not location:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"Location '{data.location_id}' not found")
 
         event = EventModel(
-            organiser_id=organizer_id,
+            organiser_id=organiser_id,
             location_id=location.location_id,
             name=data.name,
             description=data.description,

@@ -49,20 +49,8 @@ jobs:
         echo "Pinging health check endpoint again:"
         curl -f http://localhost:8080/health
 
-    - name: Run pytest tests
-      run: |
-        # Export the admin secret key so the test helper (helper.py) can read it via os.getenv().
-        # This ensures the tests use the same key as the running auth-service container.
-        export ADMIN_SECRET_KEY=$(grep ADMIN_SECRET_KEY .env | cut -d '=' -f2)
-        if [ -z "$ADMIN_SECRET_KEY" ]; then
-          echo "::error::ADMIN_SECRET_KEY could not be read from .env file."
-          exit 1
-        fi
-        echo "✓ ADMIN_SECRET_KEY exported to the test environment."
-
-        # The test script handles venv creation, dependency installation, and running pytest.
-        cd backend/tests
-        ./run_local_tests.bash
+    - name: Run API tests
+      run: ./scripts/actions/run_tests.bash local
 
     - name: Show logs on failure
       if: failure()
