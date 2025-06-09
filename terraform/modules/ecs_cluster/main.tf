@@ -94,9 +94,50 @@ resource "aws_lb_listener" "http" {
   port              = 80
   protocol          = "HTTP"
 
+  # Default action for requests that don't match any rules.
   default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "root" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 50
+
+  action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "API Gateway is up\n"
+      status_code  = "200"
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/"]
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "health" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 60
+
+  action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.auth.arn
+    target_group_arn = aws_lb_target_group.auth.arn # Both services have /health
+  }
+
+  condition {
+    path_pattern {
+      values = ["/health"]
+    }
   }
 }
 

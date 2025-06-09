@@ -1,6 +1,6 @@
 from typing import List
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from app.models.events import EventModel
 from fastapi import HTTPException, status
 from app.models.location import LocationModel
@@ -15,7 +15,12 @@ class EventRepository:
         self.db = db
 
     def get_event(self, event_id: int) -> EventModel:
-        event = self.db.get(EventModel, event_id)
+        event = (
+            self.db.query(EventModel)
+            .options(joinedload(EventModel.location), selectinload(EventModel.ticket_types))
+            .filter(EventModel.event_id == event_id)
+            .first()
+        )
         if not event:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Event not found")
         return event
@@ -38,8 +43,8 @@ class EventRepository:
         )
         self.db.add(event)
         self.db.commit()
-        self.db.refresh(event)
-        return event
+        # After commit, re-query the event to get eager-loaded relationships for the response model.
+        return self.get_event(event.event_id)
 
     def authorize_event(self, event_id: int) -> None:
         event = self.get_event(event_id)
@@ -47,7 +52,14 @@ class EventRepository:
         self.db.commit()
 
     def get_events(self, filters: EventsFilter) -> List[EventModel]:
-        query = self.db.query(EventModel).join(LocationModel)
+        query = self.db.query(EventModel).options(
+            joinedload(EventModel.location), selectinload(EventModel.ticket_types)
+        )
+
+        if filters.location:
+            # Add explicit join when filtering on location name
+            query = query.join(LocationModel)
+
         if filters.name:
             query = query.filter(EventModel.name.ilike(f"%{filters.name}%"))
         if filters.location:
@@ -74,8 +86,8 @@ class EventRepository:
             if value is not None:
                 setattr(event, field, value)
         self.db.commit()
-        self.db.refresh(event)
-        return event
+        # Re-fetch with eager loading for the response
+        return self.get_event(event_id)
 
     def cancel_event(self, event_id: int, organizer_id: int) -> None:
         event = self.get_event(event_id)

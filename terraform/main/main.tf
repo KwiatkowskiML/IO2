@@ -86,14 +86,14 @@ module "ecs_cluster" {
 # One-off task to initialize the database schema
 resource "null_resource" "db_initializer" {
   triggers = {
-    db_endpoint  = module.db.endpoint
-    task_def_arn = module.ecs_cluster.db_init_task_definition_arn
+    db_endpoint    = module.db.endpoint
+    task_def_arn   = module.ecs_cluster.db_init_task_definition_arn
+    force_db_reset = var.force_db_reset
   }
 
   depends_on = [
     module.db,
     module.ecs_cluster,
-    # Ensure this runs only after the images have been found
     data.aws_ecr_repository.db_init
   ]
 
@@ -111,12 +111,33 @@ resource "null_resource" "db_initializer" {
       EOF
       )
 
+      OVERRIDES_CONFIG="{}" # Default to an empty JSON object
+      if ${var.force_db_reset}; then
+        echo "DB reset is enabled. Preparing container overrides to set DB_RESET=true..."
+        OVERRIDES_CONFIG='{
+          "containerOverrides": [
+            {
+              "name": "db-init",
+              "environment": [
+                {
+                  "name": "DB_RESET",
+                  "value": "true"
+                }
+              ]
+            }
+          ]
+        }'
+      else
+        echo "DB reset is not enabled. Running task without overrides."
+      fi
+
       echo "Running DB init task..."
       TASK_ARN=$(aws ecs run-task \
         --cluster ${module.ecs_cluster.ecs_cluster_arn} \
         --task-definition ${self.triggers.task_def_arn} \
         --launch-type FARGATE \
         --network-configuration "$NETWORK_CONFIG" \
+        --overrides "$OVERRIDES_CONFIG" \
         --region ${var.aws_region} \
         --query 'tasks[0].taskArn' \
         --output text)

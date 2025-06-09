@@ -32,3 +32,8 @@ variable "db_username" {
   description = "Master username"
   default     = "resellio"
 }
+variable "force_db_reset" {
+  type        = bool
+  description = "If true, forces the db-init task to wipe the public schema before initializing. Use with caution."
+  default     = false
+}
