@@ -1,0 +1,1 @@
+{"bucket":"tfstate-zuq34luv","dynamodb_table":"tfstate-lock-zuq34luv","encrypt":true,"key":"terraform.tfstate","region":"eu-west-3"}

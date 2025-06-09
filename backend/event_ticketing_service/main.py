@@ -1,10 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from app.database import Base, engine
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import cart, events, tickets, ticket_types
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Resellio Tickets & Events Service",
@@ -14,18 +10,21 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For production, restrict this to specific origins
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers for different functionalities
-app.include_router(tickets.router)
-app.include_router(events.router)
-app.include_router(ticket_types.router)
-app.include_router(cart.router)
+api_sub_app = FastAPI()
 
+from app.routers import cart, events, tickets, ticket_types
+api_sub_app.include_router(tickets.router)
+api_sub_app.include_router(events.router)
+api_sub_app.include_router(ticket_types.router)
+api_sub_app.include_router(cart.router)
+
+app.mount("/api", api_sub_app)
 
 @app.get("/")
 def read_root():
@@ -33,7 +32,7 @@ def read_root():
     return {
         "service": "Resellio Tickets & Events Service",
         "status": "operational",
-        "version": "0.0.1",
+        "version": "1.0.0",
     }
 
 

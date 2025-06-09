@@ -20,7 +20,6 @@ from app.schemas.auth import (
 from app.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     verify_password,
-    get_current_user,
     get_current_admin,
     get_password_hash,
     create_access_token,
@@ -84,7 +83,7 @@ def register_customer(
         access_token = create_access_token(
             data={
                 "sub": db_user.email,
-                "role": "customer",
+                "role": db_user.user_type,
                 "user_id": db_user.user_id,
                 "name": db_user.first_name,
             },
@@ -140,7 +139,7 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
         access_token = create_access_token(
             data={
                 "sub": user.email,
-                "role": "customer",
+                "role": db_user.user_type,
                 "user_id": db_user.user_id,
                 "name": user.first_name,
             },
@@ -201,7 +200,7 @@ def register_admin(user: AdminCreate, db: Session = Depends(get_db)):
         access_token = create_access_token(
             data={
                 "sub": user.email,
-                "role": "customer",
+                "role": db_user.user_type,
                 "user_id": db_user.user_id,
                 "name": user.first_name,
             },
@@ -242,7 +241,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     access_token = create_access_token(
         data={
             "sub": user.email,
-            "role": "customer",
+            "role": user.user_type,
             "user_id": user.user_id,
             "name": user.first_name,
         },
@@ -256,6 +255,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
 def logout():
     """Logout (client should discard the token)"""
     return {"message": "Logout successful"}
+
 
 @router.post("/verify-organizer", response_model=OrganizerResponse)
 def verify_organizer(
