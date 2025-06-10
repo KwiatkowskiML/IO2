@@ -1,5 +1,5 @@
 from typing import Union
-from app.models import User, Organiser
+from app.models import User, Organizer
 from app.database import get_db
 from sqlalchemy.orm import Session
 from app.security import get_current_user
@@ -13,12 +13,12 @@ router = APIRouter(prefix="/user", tags=["user"])
 @router.get("/me", response_model=Union[OrganizerResponse, UserResponse])
 def read_users_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get current user's profile information"""
-    if current_user.user_type == "organiser":
-        organiser = db.query(Organiser).filter(Organiser.user_id == current_user.user_id).first()
-        if not organiser:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organiser record not found for this user")
+    if current_user.user_type == "organizer":
+        organizer = db.query(Organizer).filter(Organizer.user_id == current_user.user_id).first()
+        if not organizer:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizer record not found for this user")
 
-        # The ORM object for a user doesn't contain the organiser-specific fields directly,
+        # The ORM object for a user doesn't contain the organizer-specific fields directly,
         # so we must construct the response model instance manually with all required fields.
         return OrganizerResponse(
             user_id=current_user.user_id,
@@ -28,9 +28,9 @@ def read_users_me(current_user: User = Depends(get_current_user), db: Session = 
             last_name=current_user.last_name,
             user_type=current_user.user_type,
             is_active=current_user.is_active,
-            organiser_id=organiser.organiser_id,
-            company_name=organiser.company_name,
-            is_verified=organiser.is_verified,
+            organizer_id=organizer.organizer_id,
+            company_name=organizer.company_name,
+            is_verified=organizer.is_verified,
         )
 
     # For customers and admins, returning the ORM object works because the fixed

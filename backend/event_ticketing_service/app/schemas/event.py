@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, model_validator
 
 # EventBase is the base model for creating and handling events
 class EventBase(BaseModel):
-    organiser_id: int
     name: str
     description: Optional[str] = None
     start_date: datetime
@@ -15,12 +14,13 @@ class EventBase(BaseModel):
     minimum_age: Optional[int] = None
     location_id: int
     category: List[str]
+    total_tickets: int
 
 
 # EventBase is the base model for creating and handling events
 class EventDetails(BaseModel):
     event_id: int
-    organiser_id: int
+    organizer_id: int
     name: str
     description: str | None = None
     start_date: datetime

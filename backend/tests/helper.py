@@ -175,13 +175,13 @@ class TestDataGenerator:
         }
 
     @classmethod
-    def event_data(cls, organiser_id: int = 1) -> Dict[str, Any]:
+    def event_data(cls, organizer_id: int = 1) -> Dict[str, Any]:
         """Generate event data matching EventBase schema"""
         now = datetime.now()
         end_time = now.replace(hour=23, minute=59)  # Same day, later time
 
         return {
-            "organiser_id": organiser_id,
+            "organizer_id": organizer_id,
             "name": f"Test Concert {cls.random_string(4)}",
             "description": "A test concert event for automated testing",
             "start_date": now.isoformat(),
@@ -300,7 +300,7 @@ class UserManager:
 
             if organizer_record:
                 # Verify the organizer
-                self.verify_organizer_by_admin(organizer_record["organiser_id"], True)
+                self.verify_organizer_by_admin(organizer_record["organizer_id"], True)
 
                 # Now login the verified organizer
                 login_token = self.login_user(organizer_data, "organizer")
@@ -394,12 +394,12 @@ class EventManager:
         self.token_manager = token_manager
         self.data_generator = TestDataGenerator()
 
-    def create_event(self, organiser_id: int = 1, custom_data: Dict = None) -> Dict[str, Any]:
+    def create_event(self, organizer_id: int = 1, custom_data: Dict = None) -> Dict[str, Any]:
         """Create an event as organizer using EventBase schema"""
         if custom_data:
             event_data = custom_data
         else:
-            event_data = self.data_generator.event_data(organiser_id)
+            event_data = self.data_generator.event_data(organizer_id)
 
         response = self.api_client.post(
             "/api/events/",
@@ -515,14 +515,14 @@ class EventManager:
         return response.json()
 
     # Helper methods for testing specific scenarios
-    def create_event_with_valid_dates(self, organiser_id: int = 1) -> Dict[str, Any]:
+    def create_event_with_valid_dates(self, organizer_id: int = 1) -> Dict[str, Any]:
         """Create event with properly sequenced dates"""
         now = datetime.now()
         start_date = now.replace(hour=19, minute=0, second=0, microsecond=0)  # 7 PM today
         end_date = now.replace(hour=23, minute=0, second=0, microsecond=0)  # 11 PM today
 
         event_data = {
-            "organiser_id": organiser_id,
+            "organizer_id": organizer_id,
             "name": f"Evening Concert {self.data_generator.random_string(4)}",
             "description": "An evening concert with proper timing",
             "start_date": start_date.isoformat(),
@@ -533,14 +533,14 @@ class EventManager:
             "total_tickets": 200,
         }
 
-        return self.create_event(organiser_id, event_data)
+        return self.create_event(organizer_id, event_data)
 
-    def create_event_minimal(self, organiser_id: int = 1) -> Dict[str, Any]:
+    def create_event_minimal(self, organizer_id: int = 1) -> Dict[str, Any]:
         """Create event with minimal required fields"""
         now = datetime.now()
 
         minimal_event = {
-            "organiser_id": organiser_id,
+            "organizer_id": organizer_id,
             "name": f"Minimal Event {self.data_generator.random_string(4)}",
             "start_date": now.isoformat(),
             "end_date": (now.replace(hour=23, minute=59)).isoformat(),
@@ -549,16 +549,16 @@ class EventManager:
             "total_tickets": 50,
         }
 
-        return self.create_event(organiser_id, minimal_event)
+        return self.create_event(organizer_id, minimal_event)
 
-    def create_multi_day_event(self, organiser_id: int = 1) -> Dict[str, Any]:
+    def create_multi_day_event(self, organizer_id: int = 1) -> Dict[str, Any]:
         """Create a multi-day event"""
         now = datetime.now()
         start_date = now.replace(hour=10, minute=0, second=0, microsecond=0)
         end_date = start_date.replace(day=start_date.day + 2, hour=18, minute=0)  # 3 days later
 
         multi_day_event = {
-            "organiser_id": organiser_id,
+            "organizer_id": organizer_id,
             "name": f"3-Day Festival {self.data_generator.random_string(4)}",
             "description": "A comprehensive 3-day music festival",
             "start_date": start_date.isoformat(),
@@ -569,7 +569,7 @@ class EventManager:
             "total_tickets": 1000,
         }
 
-        return self.create_event(organiser_id, multi_day_event)
+        return self.create_event(organizer_id, multi_day_event)
 
 
 class TicketManager:

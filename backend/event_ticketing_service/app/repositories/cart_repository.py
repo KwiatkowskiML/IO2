@@ -2,8 +2,9 @@ import logging
 from typing import List, Dict, Any
 from fastapi import Depends
 from fastapi import HTTPException, status
-
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, selectinload
+
 from app.models.shopping_cart_model import ShoppingCartModel
 from app.models.cart_item_model import CartItemModel
 from app.models.ticket_type import TicketTypeModel
@@ -46,7 +47,7 @@ class CartRepository:
             .all()
         )
 
-    def add_item(self, customer_id: int, ticket_type_id: int, quantity: int = 1) -> CartItemModel:
+    def add_item_from_detailed_sell(self, customer_id: int, ticket_type_id: int, quantity: int = 1) -> CartItemModel:
         if quantity < 1:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quantity must be at least 1")
 
@@ -109,7 +110,6 @@ class CartRepository:
         return True
 
 
-    # TODO: solve concurrency issues with multiple users checking out at the same time
     # TODO: Stripe integration for payment processing
     def checkout(self, customer_id: int, user_email: str, user_name: str) -> bool:
         # Get or create the shopping cart for the customer to handle cases where the user has never had a cart.
@@ -144,7 +144,26 @@ class CartRepository:
                                  f"TicketType: {bool(ticket_type)}, Event: {bool(event)}, Location: {bool(location)}")
                     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error processing cart item details.")
 
-                # TODO: check if it's possible to create tickets for this type
+                # Check if there are enough tickets available
+                existing_tickets_count = (
+                    self.db.query(func.count(TicketModel.ticket_id))
+                    .filter(TicketModel.type_id == ticket_type.type_id)
+                    .scalar()  # Gets the single count value
+                )
+
+                if existing_tickets_count + item.quantity > ticket_type.max_count:
+                    available_tickets = ticket_type.max_count - existing_tickets_count
+                    logger.warning(
+                        f"Not enough tickets for event '{event.name}', type '{ticket_type.description if hasattr(ticket_type, 'description') else ticket_type.type_id}'. "
+                        f"Requested: {item.quantity}, Available: {available_tickets if available_tickets >= 0 else 0}, "
+                        f"Existing: {existing_tickets_count}, Max: {ticket_type.max_count}"
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Not enough tickets available for '{event.name} - {ticket_type.description if hasattr(ticket_type, 'description') else 'selected type'}'. "
+                               f"Only {available_tickets if available_tickets >= 0 else 0} left."
+                    )
+
                 for _ in range(item.quantity):
                     new_ticket = TicketModel(
                         type_id=ticket_type.type_id,
@@ -162,7 +181,10 @@ class CartRepository:
                         "seat": new_ticket.seat,
                     })
 
-            self.db.commit() # Commit all new tickets
+            # Clear the cart items after successful checkout
+            for item in cart_items:
+                self.db.delete(item)
+            self.db.commit()
 
             # Refresh tickets to get their IDs and send emails
             for info in processed_tickets_info:
@@ -179,11 +201,6 @@ class CartRepository:
                 )
                 if not email_sent:
                     logger.error(f"Failed to send confirmation email for ticket {info['ticket_model'].ticket_id} to {user_email}")
-
-            # Clear the cart items after successful checkout
-            for item in cart_items:
-                self.db.delete(item)
-            self.db.commit()
 
             logger.info(f"Checkout successful for user_id {customer_id}. {len(processed_tickets_info)} ticket(s) created.")
             return True

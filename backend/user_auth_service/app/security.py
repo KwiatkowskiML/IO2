@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
-from app.models import User, Organiser, Administrator
+from app.models import User, Organizer, Administrator
 
 # Get security settings from environment variables or use defaults
 SECRET_KEY = os.getenv("SECRET_KEY", "your-256-bit-secret")
@@ -91,11 +91,11 @@ def get_current_active_user(current_user: User = Depends(get_current_user)):
 
 def get_current_organizer(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Check if the current user is a verified organizer"""
-    if current_user.user_type != "organiser":
+    if current_user.user_type != "organizer":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an organizer")
 
-    organiser = db.query(Organiser).filter(Organiser.user_id == current_user.user_id).first()
-    if not organiser or not organiser.is_verified:
+    organizer = db.query(Organizer).filter(Organizer.user_id == current_user.user_id).first()
+    if not organizer or not organizer.is_verified:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Organizer not verified yet")
 
     return current_user

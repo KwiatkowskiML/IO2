@@ -24,7 +24,7 @@ from helper import (
 def validate_event_details_response(event_data: Dict[str, Any]) -> None:
     """Validate EventDetails response structure"""
     required_fields = [
-        "event_id", "organiser_id", "name", "start_date", "end_date",
+        "event_id", "organizer_id", "name", "start_date", "end_date",
         "location_name", "status", "categories", "total_tickets"
     ]
 
@@ -33,7 +33,7 @@ def validate_event_details_response(event_data: Dict[str, Any]) -> None:
 
     # Type validations
     assert isinstance(event_data["event_id"], int), "event_id must be integer"
-    assert isinstance(event_data["organiser_id"], int), "organiser_id must be integer"
+    assert isinstance(event_data["organizer_id"], int), "organizer_id must be integer"
     assert isinstance(event_data["name"], str), "name must be string"
     assert isinstance(event_data["categories"], list), "categories must be list"
     assert isinstance(event_data["total_tickets"], int), "total_tickets must be integer"
@@ -216,7 +216,7 @@ class TestEvents:
 
         # Validate specific creation requirements
         assert created_event["name"] is not None, "Event name cannot be None"
-        assert created_event["organiser_id"] is not None, "Organiser ID cannot be None"
+        assert created_event["organizer_id"] is not None, "Organizer ID cannot be None"
         assert created_event["event_id"] > 0, "Event ID must be positive"
 
         # Validate dates are properly formatted
@@ -230,7 +230,7 @@ class TestEvents:
     def test_create_event_with_custom_data(self, event_manager):
         """Test creating event with custom data and validate all fields"""
         custom_event_data = {
-            "organiser_id": 1,
+            "organizer_id": 1,
             "name": "Custom Test Event",
             "description": "A custom event for testing validation",
             "start_date": "2025-06-01T19:00:00",

@@ -3,7 +3,10 @@ import logging
 from typing import Dict, Optional
 
 import jwt
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, status, Depends
+from sqlalchemy.orm import Session
+
+from app.database import get_db
 
 # JWT Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-256-bit-secret")
@@ -120,6 +123,8 @@ def get_user_from_token(
     user_id = payload.get("user_id")
     email = payload.get("sub")
     name = payload.get("name")
+    role = payload.get("role")
+    role_id = payload.get("role_id")
 
     # Validate required fields
     if not user_id:
@@ -134,6 +139,18 @@ def get_user_from_token(
             detail="Email not found in token",
         )
 
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Role not found in token",
+        )
+
+    if not role_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Role ID not found in token",
+        )
+
     # Name can be optional, use email username as fallback
     if not name:
         name = email.split("@")[0]
@@ -142,4 +159,22 @@ def get_user_from_token(
         "user_id": user_id,
         "email": email,
         "name": name,
+        "role": role,
+        "role_id": role_id
     }
+
+
+def get_current_organizer(user=Depends(get_user_from_token)) -> Dict:
+    if user["role"] != "organizer":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an organizer")
+    return user
+
+def get_current_admin(user=Depends(get_user_from_token)) -> Dict:
+    if user["role"] != "administrator":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an administrator")
+    return user
+
+def get_current_customer(user=Depends(get_user_from_token)) -> Dict:
+    if user["role"] != "customer":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a customer")
+    return user

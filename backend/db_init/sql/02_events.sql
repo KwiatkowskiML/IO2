@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS locations (
 
 CREATE TABLE IF NOT EXISTS events (
     event_id SERIAL PRIMARY KEY,
-    organiser_id INTEGER NOT NULL,
+    organizer_id INTEGER NOT NULL,
     location_id INTEGER NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS shopping_carts (
 CREATE TABLE IF NOT EXISTS cart_items (
     cart_item_id SERIAL PRIMARY KEY,
     cart_id INTEGER NOT NULL,
-    ticket_type_id INTEGER NOT NULL,
+    ticket_id INTEGER NULL,
+    ticket_type_id INTEGER NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
 
     CONSTRAINT fk_cart
@@ -57,10 +58,19 @@ CREATE TABLE IF NOT EXISTS cart_items (
         REFERENCES shopping_carts(cart_id)
         ON DELETE CASCADE,
 
+    CONSTRAINT fk_ticket
+        FOREIGN KEY(ticket_id)
+        REFERENCES tickets(ticket_id)
+        ON DELETE CASCADE,
+
     CONSTRAINT fk_ticket_type
         FOREIGN KEY(ticket_type_id)
         REFERENCES ticket_types(type_id)
-        ON DELETE CASCADE,
-
-    UNIQUE (cart_id, ticket_type_id)
+        ON DELETE CASCADE
 );
+
+-- TODO: Sample data for locations
+INSERT INTO locations (name, address, zipcode, city, country) VALUES
+  ('Main Hall',   '123 Center St',      '00-100', 'Warsaw',    'Poland'),
+  ('Open Arena',  '45 Stadium Rd',      NULL,     'Gdansk',    'Poland'),
+  ('Conference X','789 Tech Parkway',   '10-200', 'Krakow',    'Poland');
