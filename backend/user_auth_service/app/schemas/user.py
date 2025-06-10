@@ -9,6 +9,8 @@ class UserResponse(BaseModel):
     login: Optional[str] = None
     first_name: str
     last_name: str
+    user_type: str
+    is_active: bool
 
     class Config:
         orm_mode = True

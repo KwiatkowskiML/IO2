@@ -12,8 +12,8 @@ from app.schemas.ticket import TicketDetails, TicketType
 from app.models.location import LocationModel
 from app.services.email import send_ticket_email
 from app.models.ticket_type import TicketTypeModel
-from app.utils.jwt_auth import get_user_from_token
-from fastapi import Path, Header, Depends, APIRouter, HTTPException, status
+from app.utils.jwt_auth import get_user_from_token 
+from fastapi import Path, Depends, APIRouter, HTTPException, status
 
 router = APIRouter(
     prefix="/cart",
@@ -28,12 +28,10 @@ logger = logging.getLogger(__name__)
     response_model=List[CartItemWithDetails]
 )
 async def get_shopping_cart(
-    authorization: str = Header(..., description="Bearer token"),
+    user: dict = Depends(get_user_from_token),
     cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     """Get items in the user's shopping cart"""
-    # Get user info from JWT token
-    user = get_user_from_token(authorization)
     logger.info(f"Get shopping cart of {user}")
     user_id = user["user_id"]
     logger.info(f"Get shopping cart for user_id {user_id}")
@@ -60,13 +58,11 @@ async def get_shopping_cart(
 async def add_to_cart(
     ticket_type_id: int,
     quantity: int = 1,
-    authorization: str = Header(..., description="Bearer token"),
+    user: dict = Depends(get_user_from_token),
     ticket_repo: TicketRepository = Depends(get_ticket_repository),
     cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     """Add a ticket to the user's shopping cart"""
-    # Get user info from JWT token
-    user = get_user_from_token(authorization)
     user_id = user["user_id"]
 
     # Verify the ticket type exists
@@ -113,12 +109,10 @@ async def add_to_cart(
 )
 async def remove_from_cart(
     cart_item_id: int = Path(..., title="Cart Item ID", ge=1),
-    authorization: str = Header(..., description="Bearer token"),
+    user: dict = Depends(get_user_from_token),
     cart_repo = Depends(get_cart_repository)
 ):
     """Remove a ticket from the user's shopping cart"""
-    # Get user info from JWT token
-    user = get_user_from_token(authorization)
     logger.info(f"Remove {cart_item_id} from cart of {user}")
     return cart_repo.remove_item(customer_id=user["user_id"], cart_item_id=cart_item_id)
 
@@ -127,11 +121,9 @@ async def remove_from_cart(
     response_model=bool,
 )
 async def checkout_cart(
-    authorization: str = Header(..., description="Bearer token"),
+    user: dict = Depends(get_user_from_token),
     cart_repo: CartRepository = Depends(get_cart_repository)
 ):
-    # Get user info from JWT token
-    user = get_user_from_token(authorization)
     user_id = user["user_id"]
     user_email = user["email"]
     user_name = user["name"]

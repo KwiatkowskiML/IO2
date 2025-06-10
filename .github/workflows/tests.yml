@@ -18,42 +18,70 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12'
 
-    - name: Prepare .env files
+    - name: Make scripts executable
+      run: chmod +x ./scripts/utils/print.bash ./scripts/actions/run_tests.bash
+
+    - name: Create .env file for Docker Compose
       run: |
-        echo "Creating .env files..."
-        cp backend/api_gateway/.env.template backend/api_gateway/.env
-        cp backend/event_ticketing_service/.env.template backend/event_ticketing_service/.env
-        cp backend/user_auth_service/.env.template backend/user_auth_service/.env
+        source ./scripts/utils/print.bash
+        pretty_info "Creating root .env file for Docker Compose..."
+        cp .env.template .env
+        pretty_success ".env file created successfully."
+        gen_separator '-'
+        pretty_info ".env content"
+        cat .env
+        gen_separator '-'
 
     - name: Start services with Docker Compose
       run: |
+        source ./scripts/utils/print.bash
+        pretty_info "Starting services with Docker Compose..."
         docker compose up -d --build
+        pretty_success "Services started."
 
     - name: Wait for API to be ready
       run: |
-        echo "Waiting for API service..."
-        timeout 120s bash -c 'until curl -f http://localhost:8080/health; do echo "Waiting..."; sleep 5; done'
-        echo "API is ready!"
+        source ./scripts/utils/print.bash
+        pretty_info "Waiting for API Gateway to become healthy..."
+        timeout 120s bash -c '
+          source ./scripts/utils/print.bash
+          until curl -fs http://localhost:8080/health &>/dev/null; do
+            pretty_info "Waiting for API Gateway...";
+            sleep 5;
+          done
+        '
+        pretty_success "API Gateway is ready!"
 
-    - name: Show service status
+    - name: Show running service status
       run: |
+        source ./scripts/utils/print.bash
+        gen_separator '='
+        pretty_info "Docker Compose Status"
         docker compose ps
-        curl -f http://localhost:8080/health || echo "Health check failed"
+        gen_separator '='
+        pretty_info "Pinging health check endpoint again:"
+        curl -f http://localhost:8080/health
 
-    - name: Run pytest tests
-      run: |
-        cd backend/tests
-        ./run_local_tests.bash
+    - name: Run API tests
+      run: ./scripts/actions/run_tests.bash local
 
     - name: Show logs on failure
       if: failure()
       run: |
-        echo "=== Service Logs ==="
+        source ./scripts/utils/print.bash
+        pretty_error "Tests failed. Dumping service logs..."
+        gen_separator '='
+        pretty_info "Service Logs"
+        gen_separator '='
         docker compose logs
+        gen_separator '='
 
-    - name: Cleanup
+    - name: Cleanup services
       if: always()
       run: |
+        source ./scripts/utils/print.bash
+        pretty_info "Cleaning up Docker Compose services and volumes..."
         docker compose down -v
+        pretty_success "Cleanup complete."

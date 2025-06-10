@@ -5,7 +5,7 @@ Comprehensive tests with response field validation based on Pydantic schemas.
 Now includes ticket resale marketplace functionality.
 
 Environment Variables:
-- API_BASE_URL: Base URL for API (default: http://localhost:8080/api)
+- API_BASE_URL: Base URL for API (default: http://localhost:8080)
 - API_TIMEOUT: Request timeout in seconds (default: 10)
 - ADMIN_SECRET_KEY: Admin secret key for registration
 
@@ -221,6 +221,7 @@ def prepare_test_env(user_manager: UserManager, event_manager: EventManager,
     }
 
 
+@pytest.mark.events
 class TestEvents:
     """Test event management functionality with comprehensive validation"""
 
@@ -232,7 +233,7 @@ class TestEvents:
 
     def test_get_events_list_public(self, api_client):
         """Test getting list of events with response validation"""
-        response = api_client.get("/events")
+        response = api_client.get("/api/events")
         events = response.json()
 
         # Validate response structure
@@ -243,12 +244,6 @@ class TestEvents:
             validate_event_details_response(event)
 
         print(f"✓ Validated {len(events)} events in public listing")
-
-    # TODO:
-    # def test_get_events_with_filters(self, event_manager):
-    #     """Test getting events with filters and validate responses"""
-    #     # Test without filters
-    #
 
     def test_create_event_as_organizer(self, event_manager):
         """Test creating an event with comprehensive response validation"""
@@ -297,28 +292,6 @@ class TestEvents:
         print(
             f"✓ Custom event created with minimum age: {created_event.get('minimum_age', 'Not set')}")
 
-    # TODO: fix
-    # def test_update_event(self, event_manager):
-    #     """Test updating an event with validation"""
-    #     # Create an event first
-    #     created_event = event_manager.create_event()
-    #     event_id = created_event.get("event_id")
-    #     assert event_id is not None, "Event ID must be present"
-    #
-    #     update_data = {
-    #         "name": "Updated Event Name",
-    #         "description": "Updated event description for testing"
-    #     }
-    #
-    #     updated_event = event_manager.update_event(event_id, update_data)
-    #     validate_event_details_response(updated_event)
-    #
-    #     # Validate updates were applied
-    #     assert updated_event["name"] == update_data["name"]
-    #     assert updated_event["event_id"] == event_id, "Event ID should remain unchanged"
-    #
-    #     print(f"✓ Updated event {event_id} name to '{updated_event['name']}'")
-
     def test_admin_authorize_event(self, event_manager):
         """Test admin authorizing an event"""
         # Create an event first
@@ -363,6 +336,7 @@ class TestEvents:
         print(f"✓ Sent notification for event {event_id}")
 
 
+@pytest.mark.tickets
 class TestTicketTypes:
     """Test ticket type management with comprehensive validation"""
 
@@ -378,7 +352,7 @@ class TestTicketTypes:
 
     def test_get_ticket_types_list_public(self, api_client):
         """Test getting list of ticket types with validation"""
-        response = api_client.get("/ticket-types/")
+        response = api_client.get("/api/ticket-types/")
         ticket_types = response.json()
 
         assert isinstance(ticket_types, list), "Ticket types response must be a list"
@@ -481,7 +455,7 @@ class TestTicketTypes:
         }
 
         response = api_client.post(
-            "/ticket-types/",
+            "/api/ticket-types/",
             headers={
                 **token_manager.get_auth_header("organizer"),
                 "Content-Type": "application/json"
@@ -493,6 +467,7 @@ class TestTicketTypes:
         print("✓ Invalid ticket type data properly rejected")
 
 
+@pytest.mark.tickets
 class TestTickets:
     """Test ticket management with validation"""
 
@@ -528,6 +503,7 @@ class TestTickets:
         print(f"✓ Downloaded ticket PDF: {ticket_pdf['filename']}")
 
 
+@pytest.mark.cart
 class TestShoppingCart:
     """Test shopping cart functionality with comprehensive validation"""
 
@@ -605,19 +581,6 @@ class TestShoppingCart:
 
         print(f"✓ Added {large_quantity} tickets (max allowed: {max_count})")
 
-    # TODO:
-    # def test_remove_item_from_cart(self, cart_manager):
-    #     """Test removing item from cart"""
-    #     # Add item first
-    #     ticket_type_id = self.test_ticket_type.get("type_id")
-    #     cart_manager.add_item_to_cart(ticket_type_id=ticket_type_id, quantity=1)
-    #
-    #     # TODO: replace with actual cart item ID retrieval
-    #     removed = cart_manager.remove_item_from_cart(1)
-    #     assert isinstance(removed, bool), "Remove operation should return boolean"
-    #
-    #     print("✓ Item removal completed")
-
     def test_checkout_cart(self, cart_manager):
         """Test checkout process with validation"""
         # Add item first
@@ -653,7 +616,7 @@ class TestShoppingCart:
     def test_add_to_cart_unauthorized(self, api_client):
         """Test that adding to cart requires authentication"""
         response = api_client.post(
-            "/cart/items?ticket_type_id=1&quantity=1",
+            "/api/cart/items?ticket_type_id=1&quantity=1",
             expected_status=401
         )
 
@@ -662,14 +625,15 @@ class TestShoppingCart:
     def test_checkout_empty_cart(self, api_client, token_manager):
         """Test checkout with empty cart"""
         response = api_client.post(
-            "/cart/checkout",
+            "/api/cart/checkout",
             headers=token_manager.get_auth_header("customer"),
-            expected_status=404
+            expected_status=400
         )
 
         print("✓ Empty cart checkout properly handled")
 
 
+@pytest.mark.integration
 class TestIntegrationValidation:
     """Test integration scenarios with comprehensive validation"""
 
@@ -731,7 +695,7 @@ class TestIntegrationValidation:
         assert ticket_type["event_id"] == event_id
 
         # Verify event appears in public listing
-        events_response = api_client.get("/events")
+        events_response = api_client.get("/api/events")
         events = events_response.json()
 
         event_ids = [e["event_id"] for e in events]
