@@ -7,15 +7,22 @@ source "$SCRIPT_DIR/../utils/print.bash"
 
 # Script parameters
 TARGET_ENV="${1:-}"
+TEST_SELECTOR="${2:-}"
 
 # Validation
 if [[ -z "$TARGET_ENV" || ("$TARGET_ENV" != "local" && "$TARGET_ENV" != "aws") ]]; then
     pretty_error "Invalid target environment. Usage: $0 <local|aws>"
+    pretty_info "Usage: $0 <local|aws> [pytest_test_selector]"
+    pretty_info "Example for specific test: $0 local \"tests/test_authentication.py::test_user_login\""
+    pretty_info "Example for tests with keyword: $0 local \"-k login\""
     exit 1
 fi
 
 gen_separator '='
 pretty_info "Starting API tests for environment: ${bold}${TARGET_ENV}${nc}"
+if [[ -n "$TEST_SELECTOR" ]]; then
+    pretty_info "Targeting specific test(s)/selector: ${bold}${TEST_SELECTOR}${nc}"
+fi
 gen_separator '='
 
 # Setup Test Environment
@@ -77,8 +84,14 @@ gen_separator
 pretty_info "Executing pytest tests..."
 gen_separator
 
-# Pytest will automatically pick up the tests
-pytest -v
+PYTEST_CMD="pytest -v"
+if [[ -n "$TEST_SELECTOR" ]]; then
+    PYTEST_CMD="$PYTEST_CMD \"$TEST_SELECTOR\"" # Add selector if provided, ensure it's quoted
+fi
+
+# Execute the command
+# Using eval to correctly interpret the quoted selector if it contains spaces or special pytest syntax (like -k "some name")
+eval $PYTEST_CMD
 
 TEST_EXIT_CODE=$?
 

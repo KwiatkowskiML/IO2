@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(255) NOT NULL,
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    user_type VARCHAR(20) NOT NULL -- 'customer', 'organiser', 'administrator'
+    user_type VARCHAR(20) NOT NULL -- 'customer', 'organizer', 'administrator'
 );
 
 CREATE TABLE IF NOT EXISTS customers (
@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS customers (
     FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS organisers (
-    organiser_id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS organizers (
+    organizer_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL UNIQUE,
     company_name VARCHAR(255) NOT NULL,
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,

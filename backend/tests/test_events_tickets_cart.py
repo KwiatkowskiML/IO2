@@ -230,7 +230,7 @@ class TestEvents:
     def test_create_event_with_custom_data(self, event_manager):
         """Test creating event with custom data and validate all fields"""
         custom_event_data = {
-            "organiser_id": 1,
+            "organizer_id": 1,
             "name": "Custom Test Event",
             "description": "A custom event for testing validation",
             "start_date": "2025-06-01T19:00:00",
