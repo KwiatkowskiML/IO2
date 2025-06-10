@@ -112,10 +112,8 @@ class CartRepository:
 
     # TODO: Stripe integration for payment processing
     def checkout(self, customer_id: int, user_email: str, user_name: str) -> bool:
-        # Get the shopping cart for the customer
-        cart = self.db.query(ShoppingCartModel).filter(ShoppingCartModel.customer_id == customer_id).first()
-        if not cart:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shopping cart not found")
+        # Get or create the shopping cart for the customer to handle cases where the user has never had a cart.
+        cart = self.get_or_create_cart(customer_id)
 
         # Get all items in the cart with eager loading of related data
         cart_items = (

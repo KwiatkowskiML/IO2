@@ -4,7 +4,7 @@ test_auth.py - Comprehensive Authentication and User Management Tests
 Tests for user registration, login, admin operations, and organizer verification.
 
 Environment Variables:
-- API_BASE_URL: Base URL for API (default: http://localhost:8080/api)
+- API_BASE_URL: Base URL for API (default: http://localhost:8080)
 - API_TIMEOUT: Request timeout in seconds (default: 10)
 - ADMIN_SECRET_KEY: Admin secret key for registration
 
@@ -50,6 +50,7 @@ def prepare_test_env(user_manager: UserManager):
     return {}
 
 
+@pytest.mark.auth
 class TestUserRegistration:
     """Test user registration endpoints"""
 
@@ -57,7 +58,7 @@ class TestUserRegistration:
         """Test successful customer user registration"""
         user_data = test_data.customer_data()
         response = api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=user_data,
             expected_status=201
@@ -73,7 +74,7 @@ class TestUserRegistration:
         """Test successful organizer user registration"""
         user_data = test_data.organizer_data()
         response = api_client.post(
-            "/auth/register/organizer",
+            "/api/auth/register/organizer",
             headers={"Content-Type": "application/json"},
             json_data=user_data,
             expected_status=201
@@ -89,7 +90,7 @@ class TestUserRegistration:
         """Test successful admin user registration"""
         user_data = test_data.admin_data()
         response = api_client.post(
-            "/auth/register/admin",
+            "/api/auth/register/admin",
             headers={"Content-Type": "application/json"},
             json_data=user_data,
             expected_status=201
@@ -107,7 +108,7 @@ class TestUserRegistration:
         user_data["admin_secret_key"] = "invalid_secret"
 
         api_client.post(
-            "/auth/register/admin",
+            "/api/auth/register/admin",
             headers={"Content-Type": "application/json"},
             json_data=user_data,
             expected_status=403  # Should fail
@@ -119,7 +120,7 @@ class TestUserRegistration:
 
         # First registration should succeed
         api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=user_data,
             expected_status=201
@@ -127,7 +128,7 @@ class TestUserRegistration:
 
         # Second registration with same email should fail
         api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=user_data,
             expected_status=400  # Email already registered
@@ -141,7 +142,7 @@ class TestUserRegistration:
 
         # First registration should succeed
         api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=user_data1,
             expected_status=201
@@ -149,7 +150,7 @@ class TestUserRegistration:
 
         # Second registration with same login should fail
         api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=user_data2,
             expected_status=400  # Login already taken
@@ -163,13 +164,14 @@ class TestUserRegistration:
         }
 
         api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=invalid_data,
             expected_status=422  # Validation error
         )
 
 
+@pytest.mark.auth
 class TestUserLogin:
     """Test user login endpoints"""
 
@@ -192,7 +194,7 @@ class TestUserLogin:
 
         # Try to login unverified organizer
         response = api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": organizer_data["email"],
@@ -207,7 +209,7 @@ class TestUserLogin:
     def test_organizer_login_verified(self, user_manager, token_manager):
         """Test organizer login after admin verification"""
         # Register and verify organizer
-        organizer_data = user_manager.register_and_login_organizer()
+        user_manager.register_and_login_organizer()
 
         # Should have valid token now
         assert token_manager.tokens["organizer"] is not None
@@ -231,7 +233,7 @@ class TestUserLogin:
 
         # Register user first
         api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=user_data,
             expected_status=201
@@ -239,7 +241,7 @@ class TestUserLogin:
 
         # Try login with wrong password
         api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": user_data["email"],
@@ -251,7 +253,7 @@ class TestUserLogin:
     def test_login_nonexistent_user(self, api_client):
         """Test login with non-existent user fails"""
         api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": "nonexistent@example.com",
@@ -267,7 +269,7 @@ class TestUserLogin:
         customer_data = user_manager.register_and_login_customer()
 
         response = api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers=token_manager.get_auth_header("customer")
         )
 
@@ -275,7 +277,7 @@ class TestUserLogin:
         user_manager.ban_user(response.json()["user_id"])
 
         api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": customer_data["email"],
@@ -285,6 +287,7 @@ class TestUserLogin:
         )
 
 
+@pytest.mark.auth
 class TestUserProfile:
     """Test user profile management"""
 
@@ -295,7 +298,7 @@ class TestUserProfile:
 
         # Get profile
         response = api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers=token_manager.get_auth_header("customer")
         )
 
@@ -311,7 +314,7 @@ class TestUserProfile:
 
         # Get profile
         response = api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers=token_manager.get_auth_header("organizer")
         )
 
@@ -327,7 +330,7 @@ class TestUserProfile:
 
         # Get profile
         response = api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers=token_manager.get_auth_header("admin")
         )
 
@@ -337,19 +340,21 @@ class TestUserProfile:
     def test_get_profile_unauthorized(self, api_client):
         """Test getting profile without authentication fails"""
         api_client.get(
-            "/user/me",
+            "/api/user/me",
             expected_status=401
         )
 
     def test_get_profile_invalid_token(self, api_client):
         """Test getting profile with invalid token fails"""
         api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers={"Authorization": "Bearer INVALID_TOKEN"},
             expected_status=401
         )
 
 
+@pytest.mark.auth
+@pytest.mark.admin
 class TestAdminOperations:
     """Test admin-specific operations"""
 
@@ -360,7 +365,7 @@ class TestAdminOperations:
 
         # Get pending organizers (should be empty)
         response = api_client.get(
-            "/auth/pending-organizers",
+            "/api/auth/pending-organizers",
             headers=token_manager.get_auth_header("admin")
         )
 
@@ -375,7 +380,7 @@ class TestAdminOperations:
 
         # Get pending organizers
         response = api_client.get(
-            "/auth/pending-organizers",
+            "/api/auth/pending-organizers",
             headers=token_manager.get_auth_header("admin")
         )
 
@@ -412,7 +417,7 @@ class TestAdminOperations:
 
         # Verify the organizer
         response = api_client.post(
-            "/auth/verify-organizer",
+            "/api/auth/verify-organizer",
             headers={
                 **token_manager.get_auth_header("admin"),
                 "Content-Type": "application/json"
@@ -445,7 +450,7 @@ class TestAdminOperations:
 
         # Reject the organizer
         response = api_client.post(
-            "/auth/verify-organizer",
+            "/api/auth/verify-organizer",
             headers={
                 **token_manager.get_auth_header("admin"),
                 "Content-Type": "application/json"
@@ -466,7 +471,7 @@ class TestAdminOperations:
         customer_data = user_manager.register_and_login_customer()
 
         response = api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers=token_manager.get_auth_header("customer")
         )
 
@@ -476,7 +481,7 @@ class TestAdminOperations:
 
         # Try to login banned user should fail
         api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": customer_data["email"],
@@ -491,7 +496,7 @@ class TestAdminOperations:
 
         # Now login should work
         login_response = api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": customer_data["email"],
@@ -507,14 +512,14 @@ class TestAdminOperations:
 
         # Try to access admin endpoint
         api_client.get(
-            "/auth/pending-organizers",
+            "/api/auth/pending-organizers",
             headers=token_manager.get_auth_header("customer"),
             expected_status=403
         )
 
         # Try to verify organizer
         api_client.post(
-            "/auth/verify-organizer",
+            "/api/auth/verify-organizer",
             headers={
                 **token_manager.get_auth_header("customer"),
                 "Content-Type": "application/json"
@@ -525,23 +530,25 @@ class TestAdminOperations:
 
         # Try to ban user
         api_client.post(
-            "/auth/ban-user/1",
+            "/api/auth/ban-user/1",
             headers=token_manager.get_auth_header("customer"),
             expected_status=403
         )
 
 
+@pytest.mark.auth
 class TestLogout:
     """Test logout functionality"""
 
     def test_logout_endpoint(self, api_client):
         """Test logout endpoint (stateless - just returns message)"""
-        response = api_client.post("/auth/logout")
+        response = api_client.post("/api/auth/logout")
 
         logout_data = response.json()
         assert "Logout successful" in logout_data["message"]
 
 
+@pytest.mark.auth
 class TestPasswordReset:
     """Test password reset functionality"""
 
@@ -551,7 +558,7 @@ class TestPasswordReset:
 
         # Register user first
         api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=user_data,
             expected_status=201
@@ -559,7 +566,7 @@ class TestPasswordReset:
 
         # Request password reset
         response = api_client.post(
-            "/auth/request-password-reset",
+            "/api/auth/request-password-reset",
             headers={"Content-Type": "application/json"},
             json_data={"email": user_data["email"]}
         )
@@ -570,7 +577,7 @@ class TestPasswordReset:
     def test_request_password_reset_nonexistent_email(self, api_client):
         """Test password reset request for non-existent email"""
         response = api_client.post(
-            "/auth/request-password-reset",
+            "/api/auth/request-password-reset",
             headers={"Content-Type": "application/json"},
             json_data={"email": "nonexistent@example.com"}
         )
@@ -581,7 +588,7 @@ class TestPasswordReset:
     def test_reset_password_not_implemented(self, api_client):
         """Test password reset endpoint returns not implemented"""
         response = api_client.post(
-            "/auth/reset-password",
+            "/api/auth/reset-password",
             headers={"Content-Type": "application/json"},
             json_data={"token": "fake_token", "new_password": "NewPassword123"}
         )
@@ -590,6 +597,7 @@ class TestPasswordReset:
         assert "not implemented" in reset_data["message"]
 
 
+@pytest.mark.auth
 class TestTokenValidation:
     """Test token validation and security"""
 
@@ -614,7 +622,7 @@ class TestTokenValidation:
         # Make multiple requests with same token
         for _ in range(3):
             response = api_client.get(
-                "/user/me",
+                "/api/user/me",
                 headers=token_manager.get_auth_header("customer")
             )
             assert response.status_code == 200
@@ -623,19 +631,20 @@ class TestTokenValidation:
         """Test handling of malformed/expired tokens"""
         # Test with obviously fake token
         api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers={"Authorization": "Bearer fake.token.here"},
             expected_status=401
         )
 
         # Test with malformed authorization header
         api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers={"Authorization": "InvalidFormat"},
             expected_status=401
         )
 
 
+@pytest.mark.integration
 class TestCompleteAuthFlow:
     """Test complete authentication workflows"""
 
@@ -645,7 +654,7 @@ class TestCompleteAuthFlow:
 
         # 1. Register
         reg_response = api_client.post(
-            "/auth/register/customer",
+            "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
             json_data=customer_data,
             expected_status=201
@@ -656,7 +665,7 @@ class TestCompleteAuthFlow:
 
         # 2. Login
         login_response = api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": customer_data["email"],
@@ -669,7 +678,7 @@ class TestCompleteAuthFlow:
 
         # 3. Access profile
         profile_response = api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers={"Authorization": f"Bearer {login_token}"}
         )
 
@@ -677,7 +686,7 @@ class TestCompleteAuthFlow:
         assert profile_data["email"] == customer_data["email"]
 
         # 4. Logout (stateless)
-        logout_response = api_client.post("/auth/logout")
+        logout_response = api_client.post("/api/auth/logout")
         assert "successful" in logout_response.json()["message"]
 
     def test_complete_organizer_verification_flow(self, api_client, test_data):
@@ -685,7 +694,7 @@ class TestCompleteAuthFlow:
         # 1. Register admin
         admin_data = test_data.admin_data()
         admin_reg_response = api_client.post(
-            "/auth/register/admin",
+            "/api/auth/register/admin",
             headers={"Content-Type": "application/json"},
             json_data=admin_data,
             expected_status=201
@@ -695,7 +704,7 @@ class TestCompleteAuthFlow:
         # 2. Register organizer
         organizer_data = test_data.organizer_data()
         org_reg_response = api_client.post(
-            "/auth/register/organizer",
+            "/api/auth/register/organizer",
             headers={"Content-Type": "application/json"},
             json_data=organizer_data,
             expected_status=201
@@ -704,7 +713,7 @@ class TestCompleteAuthFlow:
 
         # 3. Try to login unverified organizer
         unverified_login_response = api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": organizer_data["email"],
@@ -717,7 +726,7 @@ class TestCompleteAuthFlow:
 
         # 4. Admin checks pending organizers
         pending_response = api_client.get(
-            "/auth/pending-organizers",
+            "/api/auth/pending-organizers",
             headers={"Authorization": f"Bearer {admin_token}"}
         )
         pending_organizers = pending_response.json()
@@ -733,7 +742,7 @@ class TestCompleteAuthFlow:
 
         # 5. Admin verifies organizer
         verify_response = api_client.post(
-            "/auth/verify-organizer",
+            "/api/auth/verify-organizer",
             headers={
                 "Authorization": f"Bearer {admin_token}",
                 "Content-Type": "application/json"
@@ -748,7 +757,7 @@ class TestCompleteAuthFlow:
 
         # 6. Now organizer can login successfully
         verified_login_response = api_client.post(
-            "/auth/token",
+            "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
                 "username": organizer_data["email"],
@@ -761,7 +770,7 @@ class TestCompleteAuthFlow:
 
         # 7. Organizer can access profile
         org_profile_response = api_client.get(
-            "/user/me",
+            "/api/user/me",
             headers={"Authorization": f"Bearer {verified_result['token']}"}
         )
         org_profile = org_profile_response.json()
