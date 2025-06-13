@@ -259,6 +259,26 @@ class UserManager:
 
         return user_data
 
+    def register_and_login_customer2(self) -> Dict[str, str]:
+        """Register and login a second customer user for testing purposes"""
+        user_data = self.data_generator.customer_data()
+
+        # Register customer
+        response = self.api_client.post(
+            "/api/auth/register/customer",
+            headers={"Content-Type": "application/json"},
+            json_data=user_data,
+            expected_status=201
+        )
+
+        # Extract and store token
+        token = response.json().get("token")
+        if token:
+            self.token_manager.set_token("customer2", token)
+            self.token_manager.set_user("customer2", user_data)
+
+        return user_data
+
     def register_organizer(self) -> Dict[str, str]:
         """Register an organizer user (returns unverified organizer)"""
         user_data = self.data_generator.organizer_data()
@@ -683,7 +703,7 @@ class ResaleManager:
     def get_my_listings(self) -> list:
         """Get user's own resale listings"""
         response = self.api_client.get(
-            "/resale/my-listings",
+            "/api/resale/my-listings",
             headers=self.token_manager.get_auth_header("customer")
         )
         return response.json()

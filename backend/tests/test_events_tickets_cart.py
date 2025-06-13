@@ -208,10 +208,7 @@ def prepare_test_env(user_manager: UserManager, event_manager: EventManager,
     organizer_data = user_manager.register_and_login_organizer()
     admin_data = user_manager.register_and_login_admin()
 
-    # Create a second customer for resale testing
-    customer2_data = user_manager.register_and_login_customer()
-    user_manager.token_manager.set_token("customer2", user_manager.token_manager.tokens["customer"])
-    user_manager.token_manager.set_user("customer2", customer2_data)
+    customer2_data = user_manager.register_and_login_customer2()
 
     return {
         "customer": customer_data,
@@ -885,7 +882,7 @@ class TestTicketResale:
 
         # Try to purchase own ticket
         response = api_client.post(
-            "/resale/purchase",
+            "/api/resale/purchase",
             headers={
                 **token_manager.get_auth_header("customer"),
                 "Content-Type": "application/json"
