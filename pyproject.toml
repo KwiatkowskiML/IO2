@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+markers = [
+    "smoke: marks tests as smoke tests (basic health checks)",
+    "auth: marks tests related to authentication and user management",
+    "admin: marks tests for admin-specific operations",
+    "events: marks tests for event management",
+    "tickets: marks tests for ticket management",
+    "cart: marks tests for shopping cart functionality",
+    "integration: marks tests for integration between components",
+]

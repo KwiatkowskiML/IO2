@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: resellio_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-init:
+    build:
+      context: ./backend/db_init
+    container_name: resellio_db_init
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - PGPASSWORD=${DB_PASSWORD}
+      - DB_RESET=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  auth-service:
+    build:
+      context: ./backend/user_auth_service
+    container_name: resellio_auth_service
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_URL=postgres
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
+  events-service:
+    build:
+      context: ./backend/event_ticketing_service
+    container_name: resellio_events_service
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_URL=postgres
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
+  api-gateway:
+    image: nginx:1.25-alpine
+    container_name: resellio_api_gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend/api_gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - events-service
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --fail http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:

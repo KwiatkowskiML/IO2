@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*__pycache__*
+
+# Distribution / packaging
+build/
+dist/
+downloads/
+
+.env
+*.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+credentials.json
+.idea/
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+
+# Temporary files / Misc
+tmp/
+tmp

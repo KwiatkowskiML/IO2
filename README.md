@@ -1,3 +1,5 @@
+
+
 # Resellio
 
 Resellio is a ticketing platform designed to simplify and automate the process of buying and selling tickets for various events such as concerts, sports matches, theater performances, and conferences. The platform caters to three primary roles:
@@ -14,9 +16,30 @@ Resellio is a ticketing platform designed to simplify and automate the process o
 
 This repository marks the initial setup of the project, with more features and refinements to be added in future iterations.
 
+# Setup
+```sh
+cp backend/api_gateway/.env.template backend/api_gateway/.env
+cp backend/event_ticketing_service/.env.template backend/event_ticketing_service/.env
+```
 
 # Development
+## Local Everything
+Run all of the services:
+```sh
+docker-compose up
+```
 
+You can then connect to your local dbs:
+```sh
+# User auth db
+psql -h localhost -p 5432 -d resellio_db -U root -W
+
+# Event ticketing db
+psql -h localhost -p 5433 -d resellio_event_ticketing_db -U root -W
+
+```
+
+You will need to enter the passord: `my_password`
 ### Code Style
 
 This repository uses pre-commit hooks with forced Python formatting ([black](https://github.com/psf/black), [flake8](https://flake8.pycqa.org/en/latest/), and [isort](https://pycqa.github.io/isort/)):
@@ -32,4 +55,36 @@ To run the hooks against all files without running a commit:
 
 ```sh
 pre-commit run --all-files
+```
+
+# Usage
+
+## Run User Service
+```sh
+cd backend
+uvicorn user_service.main:app --reload --port 8001
+```
+
+## Run Events & Tickets Service
+Run docker compose
+```sh
+cd backend/event_ticketing_service/db
+docker-compose up
+```
+
+Connect to the database
+```sh
+psql -h localhost -p 5432 -U root -d resellio_event_ticketing_db
+```
+
+Then run the service
+```sh
+cd backend
+uvicorn event_ticketing_service.main:app --port 8002
+```
+
+## Run Auth Service
+```sh
+cd backend
+uvicorn auth_service.main:app --reload --port 8000
 ```
