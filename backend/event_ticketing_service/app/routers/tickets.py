@@ -37,9 +37,6 @@ async def resell_ticket(
     user = get_user_from_token(authorization)
     user_id = user["user_id"]
 
-    if resell_data is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Resell price required")
-
     resell_data.ticket_id = ticket_id
 
     repository = TicketRepository(db)

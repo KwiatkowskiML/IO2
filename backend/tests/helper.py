@@ -660,7 +660,7 @@ class ResaleManager:
 
     def get_marketplace(self, filters: Dict = None) -> list:
         """Get resale marketplace listings"""
-        url = "/resale/marketplace"
+        url = "/api/resale/marketplace"
         if filters:
             query_params = "&".join([f"{k}={v}" for k, v in filters.items()])
             url = f"{url}?{query_params}"
@@ -671,7 +671,7 @@ class ResaleManager:
     def purchase_resale_ticket(self, ticket_id: int) -> Dict[str, Any]:
         """Purchase a ticket from resale marketplace"""
         response = self.api_client.post(
-            "/resale/purchase",
+            "/api/resale/purchase",
             headers={
                 **self.token_manager.get_auth_header("customer"),
                 "Content-Type": "application/json"

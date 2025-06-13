@@ -716,7 +716,7 @@ class TestTicketResale:
     """Test ticket resale marketplace functionality"""
 
     @pytest.fixture(autouse=True)
-    def setup(self, user_manager, event_manager, cart_manager, ticket_manager, resale_manager):
+    def setup(self, api_client, user_manager, event_manager, cart_manager, ticket_manager, resale_manager):
         """Setup test environment with tickets ready for resale"""
         self.test_env = prepare_test_env(user_manager, event_manager, cart_manager)
         self.event_manager = event_manager
@@ -736,9 +736,16 @@ class TestTicketResale:
         cart_manager.add_item_to_cart(ticket_type_id=ticket_type_id, quantity=1)
         cart_manager.checkout()
 
+        response = api_client.get(
+            "/api/user/me",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        user_id = response.json().get("user_id")
+
         # Get the purchased ticket
         tickets = ticket_manager.list_tickets()
-        self.purchased_ticket = tickets[0] if tickets else None
+        user_tickets = [t for t in tickets if t.get("owner_id") == user_id]
+        self.purchased_ticket = user_tickets[0] if tickets else None
 
     def test_list_ticket_for_resale(self, ticket_manager):
         """Test listing a ticket for resale"""
