@@ -53,7 +53,7 @@ class PageLayout extends StatelessWidget {
     );
 
     return Scaffold(
-      backgroundColor: backgroundColor ?? colorScheme.background,
+      backgroundColor: backgroundColor ?? colorScheme.surface,
       appBar:
           useAppBar
               ? AppBar(

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:resellio/core/models/ticket_model.dart';
-import 'package:resellio/core/services/ticket_service.dart';
+import 'package:resellio/core/services/api_service.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 
@@ -16,7 +17,6 @@ class MyTicketsPage extends StatefulWidget {
 class _MyTicketsPageState extends State<MyTicketsPage>
     with SingleTickerProviderStateMixin {
   late Future<List<TicketDetailsModel>> _myTicketsFuture;
-  final TicketService _ticketService = TicketService();
   // TODO: Replace with actual authenticated user ID
   final int _currentUserId = 1;
 
@@ -59,10 +59,11 @@ class _MyTicketsPageState extends State<MyTicketsPage>
   }
 
   void _loadMyTickets() {
+    final apiService = context.read<ApiService>();
     setState(() {
       _isLoading = true;
       // Pass the hardcoded user ID for now
-      _myTicketsFuture = _ticketService.getMyTickets(_currentUserId);
+      _myTicketsFuture = apiService.getMyTickets(_currentUserId);
     });
 
     _myTicketsFuture
@@ -604,7 +605,8 @@ class _MyTicketsPageState extends State<MyTicketsPage>
                                     if (!isPast)
                                       Container(
                                         decoration: BoxDecoration(
-                                          color: colorScheme.surfaceVariant
+                                          color: colorScheme
+                                              .surfaceContainerHighest
                                               .withOpacity(0.3),
                                           border: Border(
                                             top: BorderSide(
@@ -613,7 +615,7 @@ class _MyTicketsPageState extends State<MyTicketsPage>
                                             ),
                                           ),
                                         ),
-                                        child: ButtonBar(
+                                        child: OverflowBar(
                                           alignment: MainAxisAlignment.end,
                                           children: [
                                             TextButton.icon(

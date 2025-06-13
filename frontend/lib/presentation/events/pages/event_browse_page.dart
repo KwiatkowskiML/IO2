@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:resellio/core/models/event_model.dart';
 import 'package:resellio/core/models/event_filter_model.dart';
-import 'package:resellio/core/services/event_service.dart';
+import 'package:resellio/core/services/api_service.dart';
 import 'package:resellio/core/utils/responsive_layout.dart';
 import 'package:resellio/presentation/events/widgets/event_card.dart';
 import 'package:resellio/presentation/events/widgets/event_filter_sheet.dart';
@@ -16,7 +17,6 @@ class EventBrowsePage extends StatefulWidget {
 
 class _EventBrowsePageState extends State<EventBrowsePage> {
   late Future<List<Event>> _eventsFuture;
-  final EventService _eventService = EventService();
   EventFilterModel _currentFilters = const EventFilterModel();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -46,10 +46,9 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
   }
 
   void _loadEvents() {
+    final apiService = context.read<ApiService>();
     setState(() {
-      // In a real app, we would modify the filter object to include category and search
-      // For now, we'll just use the current filters directly
-      _eventsFuture = _eventService.getEvents(filters: _currentFilters);
+      _eventsFuture = apiService.getEvents();
     });
   }
 
@@ -85,7 +84,6 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
     if (query != _searchQuery) {
       setState(() {
         _searchQuery = query;
-        // In a real app, we'd update the filter to include search term
       });
       _loadEvents();
     }
@@ -95,7 +93,6 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
     if (category != _selectedCategory) {
       setState(() {
         _selectedCategory = category;
-        // In a real app, we'd update the filter to include the category
       });
       _loadEvents();
     }
@@ -127,7 +124,7 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Container(
               decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant.withOpacity(0.5),
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: TextField(
@@ -171,7 +168,7 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
                     label: Text(category),
                     selected: isSelected,
                     onSelected: (_) => _selectCategory(category),
-                    backgroundColor: colorScheme.surfaceVariant,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
                     selectedColor: colorScheme.primaryContainer,
                     labelStyle: TextStyle(
                       color:

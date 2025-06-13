@@ -27,14 +27,8 @@ class AppTheme {
           fontWeight: FontWeight.bold,
           fontSize: 24,
         ),
-        bodyMedium: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-        ),
-        labelLarge: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+        bodyMedium: TextStyle(color: Colors.white, fontSize: 16),
+        labelLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -45,11 +39,9 @@ class AppTheme {
           ),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.grey[900],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Color(0xFF121212),
