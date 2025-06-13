@@ -7,7 +7,7 @@ import 'package:resellio/presentation/tickets/pages/my_tickets_page.dart';
 import 'package:resellio/presentation/marketplace/pages/marketplace_page.dart';
 import 'package:resellio/presentation/profile/pages/profile_page.dart';
 
-enum UserRole { user, organizer, admin }
+enum UserRole { customer, organizer, admin }
 
 class AdaptiveNavigation extends StatefulWidget {
   final UserRole userRole;
@@ -28,7 +28,7 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
 
   List<NavigationDestination> _getBottomNavDestinations() {
     switch (widget.userRole) {
-      case UserRole.user:
+      case UserRole.customer:
         return const [
           NavigationDestination(
             icon: Icon(Icons.event_outlined),
@@ -102,7 +102,7 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
 
   List<NavigationRailDestination> _getNavRailDestinations() {
     switch (widget.userRole) {
-      case UserRole.user:
+      case UserRole.customer:
         return const [
           NavigationRailDestination(
             icon: Icon(Icons.event_outlined),
@@ -177,7 +177,7 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
   Widget _getSelectedScreen() {
     List<Widget> screens;
     switch (widget.userRole) {
-      case UserRole.user:
+      case UserRole.customer:
         screens = [
           const EventBrowsePage(),
           const MyTicketsPage(),
@@ -272,7 +272,11 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
                               color: colorScheme.primaryContainer,
                               shape: BoxShape.circle,
                             ),
-                            child: const AppBranding(logoSize: 40),
+                            child: const AppBranding(
+                              logoSize: 40,
+                              showTitle: false,
+                              showTagline: false,
+                            ),
                           ),
                         ],
                       ),

@@ -69,7 +69,6 @@ CREATE TABLE IF NOT EXISTS cart_items (
         ON DELETE CASCADE
 );
 
--- TODO: Sample data for locations
 INSERT INTO locations (name, address, zipcode, city, country) VALUES
   ('Main Hall',   '123 Center St',      '00-100', 'Warsaw',    'Poland'),
   ('Open Arena',  '45 Stadium Rd',      NULL,     'Gdansk',    'Poland'),

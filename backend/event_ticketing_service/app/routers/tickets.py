@@ -10,7 +10,7 @@ from app.schemas.ticket import TicketPDF, TicketDetails, ResellTicketRequest
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-@router.get("/", response_model=List[TicketDetails])
+@router.get("", response_model=List[TicketDetails])
 def list_tickets_endpoint(filters: TicketFilter = Depends(), db: Session = Depends(get_db)):
     repository = TicketRepository(db)
     tickets = repository.list_tickets(filters)

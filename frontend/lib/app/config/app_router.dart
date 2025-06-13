@@ -17,6 +17,8 @@ class AppRouter {
       refreshListenable: authService,
       redirect: (BuildContext context, GoRouterState state) {
         final bool loggedIn = authService.isLoggedIn;
+        final String? userRoleName = authService.user?.role.name;
+
         final bool onAuthRoute =
             state.uri.path.startsWith('/welcome') ||
             state.uri.path.startsWith('/login') ||
@@ -29,7 +31,7 @@ class AppRouter {
 
         // If user is logged in and tries to access an auth route, redirect to home
         if (loggedIn && onAuthRoute) {
-          return '/home/user'; // Default to user home page
+          return '/home/${userRoleName ?? 'customer'}';
         }
 
         // No redirect needed
@@ -46,14 +48,18 @@ class AppRouter {
         ),
         GoRoute(
           path: '/register',
-          builder: (context, state) => const RegisterScreen(),
+          builder: (context, state) {
+            final userType = state.uri.queryParameters['type'] ?? 'customer';
+            return RegisterScreen(userType: userType);
+          },
         ),
 
         // This route uses a parameter to determine the user role
         GoRoute(
           path: '/home/:userType',
           builder: (context, state) {
-            final userTypeString = state.pathParameters['userType'] ?? 'user';
+            final userTypeString =
+                state.pathParameters['userType'] ?? 'customer';
             UserRole role;
             switch (userTypeString.toLowerCase()) {
               case 'organizer':
@@ -63,7 +69,7 @@ class AppRouter {
                 role = UserRole.admin;
                 break;
               default:
-                role = UserRole.user;
+                role = UserRole.customer;
                 break;
             }
             return MainLayout(userRole: role);

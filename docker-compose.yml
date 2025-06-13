@@ -28,6 +28,7 @@ services:
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - PGPASSWORD=${DB_PASSWORD}
+      - DB_RESET=true
     depends_on:
       postgres:
         condition: service_healthy
