@@ -66,11 +66,8 @@ CREATE TABLE IF NOT EXISTS cart_items (
     CONSTRAINT fk_ticket_type
         FOREIGN KEY(ticket_type_id)
         REFERENCES ticket_types(type_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    
+    CONSTRAINT chk_cart_item_type
+        CHECK ((ticket_id IS NOT NULL AND ticket_type_id IS NULL) OR (ticket_id IS NULL AND ticket_type_id IS NOT NULL))
 );
-
--- TODO: Sample data for locations
-INSERT INTO locations (name, address, zipcode, city, country) VALUES
-  ('Main Hall',   '123 Center St',      '00-100', 'Warsaw',    'Poland'),
-  ('Open Arena',  '45 Stadium Rd',      NULL,     'Gdansk',    'Poland'),
-  ('Conference X','789 Tech Parkway',   '10-200', 'Krakow',    'Poland');

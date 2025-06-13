@@ -76,34 +76,34 @@ class PrimaryButton extends StatelessWidget {
     final button = ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ButtonStyle(
-        backgroundColor: MaterialStateProperty.resolveWith<Color>((states) {
-          if (states.contains(MaterialState.disabled)) {
+        backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.disabled)) {
             return (backgroundColor ?? colorScheme.primary).withOpacity(0.6);
           }
           return backgroundColor ?? colorScheme.primary;
         }),
-        foregroundColor: MaterialStateProperty.all<Color>(
+        foregroundColor: WidgetStateProperty.all<Color>(
           foregroundColor ?? colorScheme.onPrimary,
         ),
-        elevation: MaterialStateProperty.all<double>(elevation),
-        padding: MaterialStateProperty.all<EdgeInsets>(
+        elevation: WidgetStateProperty.all<double>(elevation),
+        padding: WidgetStateProperty.all<EdgeInsets>(
           EdgeInsets.symmetric(vertical: verticalPadding, horizontal: 24),
         ),
-        shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+        shape: WidgetStateProperty.all<RoundedRectangleBorder>(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
         ),
-        overlayColor: MaterialStateProperty.resolveWith<Color?>((states) {
-          if (states.contains(MaterialState.pressed)) {
+        overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.pressed)) {
             return colorScheme.onPrimary.withOpacity(0.1);
           }
-          if (states.contains(MaterialState.hovered)) {
+          if (states.contains(WidgetState.hovered)) {
             return colorScheme.onPrimary.withOpacity(0.05);
           }
           return null;
         }),
-        fixedSize: MaterialStateProperty.all<Size?>(
+        fixedSize: WidgetStateProperty.all<Size?>(
           Size(width ?? double.infinity, height),
         ),
         animationDuration: const Duration(milliseconds: 200),

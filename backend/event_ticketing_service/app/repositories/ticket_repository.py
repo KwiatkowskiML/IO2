@@ -22,6 +22,8 @@ class TicketRepository:
             query = query.filter(TicketModel.ticket_id == filters.ticket_id)
         if filters.type_id is not None:
             query = query.filter(TicketModel.type_id == filters.type_id)
+        if filters.owner_id is not None:
+            query = query.filter(TicketModel.owner_id == filters.owner_id)
         if filters.is_on_resale is not None:
             if filters.is_on_resale:
                 query = query.filter(TicketModel.resell_price.isnot(None))

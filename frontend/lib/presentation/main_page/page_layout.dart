@@ -47,13 +47,13 @@ class PageLayout extends StatelessWidget {
         tooltip: 'Shopping Cart',
         icon: const Icon(Icons.shopping_cart_outlined),
         onPressed: () {
-          context.go('/cart');
+          context.push('/cart');
         },
       ),
     );
 
     return Scaffold(
-      backgroundColor: backgroundColor ?? colorScheme.background,
+      backgroundColor: backgroundColor ?? colorScheme.surface,
       appBar:
           useAppBar
               ? AppBar(
@@ -72,7 +72,9 @@ class PageLayout extends StatelessWidget {
                         ? IconButton(
                           icon: const Icon(Icons.arrow_back_ios_new_rounded),
                           onPressed: () {
-                            Navigator.maybePop(context);
+                            if (context.canPop()) {
+                              context.pop();
+                            }
                           },
                         )
                         : null,
@@ -106,7 +108,9 @@ class PageLayout extends StatelessWidget {
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),
                       onPressed: () {
-                        Navigator.maybePop(context);
+                        if (context.canPop()) {
+                          context.pop();
+                        }
                       },
                     ),
                   Expanded(

@@ -4,26 +4,31 @@ class AppBranding extends StatelessWidget {
   final double logoSize;
   final Alignment alignment;
   final TextAlign textAlign;
+  final bool showTitle;
+  final bool showTagline;
 
   const AppBranding({
     super.key,
     this.logoSize = 120,
     this.alignment = Alignment.center,
     this.textAlign = TextAlign.center,
+    this.showTitle = true,
+    this.showTagline = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: alignment == Alignment.centerLeft
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.center,
+      crossAxisAlignment:
+          alignment == Alignment.centerLeft
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
       children: [
         _buildLogo(context, size: logoSize),
-        const SizedBox(height: 32),
-        _buildAppTitle(context, alignment: alignment),
-        const SizedBox(height: 16),
-        _buildTagline(context, alignment: textAlign),
+        if (showTitle) const SizedBox(height: 32),
+        if (showTitle) _buildAppTitle(context, alignment: alignment),
+        if (showTitle && showTagline) const SizedBox(height: 16),
+        if (showTagline) _buildTagline(context, alignment: textAlign),
       ],
     );
   }
@@ -33,7 +38,7 @@ class AppBranding extends StatelessWidget {
       height: size,
       width: size,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
         shape: BoxShape.circle,
       ),
       child: Icon(
@@ -44,7 +49,10 @@ class AppBranding extends StatelessWidget {
     );
   }
 
-  Widget _buildAppTitle(BuildContext context, {Alignment alignment = Alignment.center}) {
+  Widget _buildAppTitle(
+    BuildContext context, {
+    Alignment alignment = Alignment.center,
+  }) {
     return Align(
       alignment: alignment,
       child: Text(
@@ -59,7 +67,10 @@ class AppBranding extends StatelessWidget {
     );
   }
 
-  Widget _buildTagline(BuildContext context, {TextAlign alignment = TextAlign.center}) {
+  Widget _buildTagline(
+    BuildContext context, {
+    TextAlign alignment = TextAlign.center,
+  }) {
     return Text(
       'The Ticket Marketplace',
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
