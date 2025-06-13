@@ -1,7 +1,8 @@
 """
-test_events_tickets_cart.py - Enhanced Events, Tickets and Shopping Cart Tests
-------------------------------------------------------------------------------
+test_events_tickets_cart.py - Enhanced Events, Tickets and Shopping Cart Tests with Resale
+-----------------------------------------------------------------------------------------
 Comprehensive tests with response field validation based on Pydantic schemas.
+Now includes ticket resale marketplace functionality.
 
 Environment Variables:
 - API_BASE_URL: Base URL for API (default: http://localhost:8080)
@@ -17,7 +18,7 @@ import pytest
 
 from helper import (
     APIClient, TokenManager, TestDataGenerator, UserManager, EventManager, CartManager,
-    TicketManager, print_test_config
+    TicketManager, ResaleManager, print_test_config
 )
 
 
@@ -124,6 +125,31 @@ def validate_ticket_details_response(ticket_data: Dict[str, Any]) -> None:
         assert ticket_data["resell_price"] >= 0, "resell_price must be non-negative"
 
 
+def validate_resale_listing_response(listing_data: Dict[str, Any]) -> None:
+    """Validate ResaleTicketListing response structure"""
+    required_fields = [
+        "ticket_id", "original_price", "resell_price",
+        "event_name", "event_date", "venue_name"
+    ]
+
+    for field in required_fields:
+        assert field in listing_data, f"Missing required field: {field}"
+
+    # Type validations
+    assert isinstance(listing_data["ticket_id"], int), "ticket_id must be integer"
+    assert isinstance(listing_data["original_price"], (int, float)), "original_price must be numeric"
+    assert isinstance(listing_data["resell_price"], (int, float)), "resell_price must be numeric"
+    assert isinstance(listing_data["event_name"], str), "event_name must be string"
+    assert isinstance(listing_data["venue_name"], str), "venue_name must be string"
+
+    # Optional fields
+    if "ticket_type_description" in listing_data and listing_data["ticket_type_description"] is not None:
+        assert isinstance(listing_data["ticket_type_description"], str), "ticket_type_description must be string"
+
+    if "seat" in listing_data and listing_data["seat"] is not None:
+        assert isinstance(listing_data["seat"], str), "seat must be string"
+
+
 @pytest.fixture(scope="session")
 def api_client():
     """API client fixture"""
@@ -166,6 +192,12 @@ def ticket_manager(api_client, token_manager):
     return TicketManager(api_client, token_manager)
 
 
+@pytest.fixture(scope="session")
+def resale_manager(api_client, token_manager):
+    """Resale manager fixture"""
+    return ResaleManager(api_client, token_manager)
+
+
 def prepare_test_env(user_manager: UserManager, event_manager: EventManager,
                      cart_manager: CartManager):
     """Prepare test environment with required users and events"""
@@ -176,8 +208,11 @@ def prepare_test_env(user_manager: UserManager, event_manager: EventManager,
     organizer_data = user_manager.register_and_login_organizer()
     admin_data = user_manager.register_and_login_admin()
 
+    customer2_data = user_manager.register_and_login_customer2()
+
     return {
         "customer": customer_data,
+        "customer2": customer2_data,
         "organizer": organizer_data,
         "admin": admin_data,
     }
@@ -672,3 +707,282 @@ class TestIntegrationValidation:
 
         # Verify cart item references correct event through ticket type
         assert cart_item["ticket_type"]["event_id"] == event["event_id"]
+
+
+class TestTicketResale:
+    """Test ticket resale marketplace functionality"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, api_client, user_manager, event_manager, cart_manager, ticket_manager, resale_manager):
+        """Setup test environment with tickets ready for resale"""
+        self.test_env = prepare_test_env(user_manager, event_manager, cart_manager)
+        self.event_manager = event_manager
+        self.cart_manager = cart_manager
+        self.ticket_manager = ticket_manager
+        self.resale_manager = resale_manager
+        self.token_manager = user_manager.token_manager
+
+        # Create event and ticket type
+        self.test_event = event_manager.create_event()
+        event_id = self.test_event.get("event_id")
+        self.test_ticket_type = event_manager.create_ticket_type(event_id)
+
+        # Customer 1 buys a ticket
+        self.token_manager.tokens["customer_backup"] = self.token_manager.tokens["customer"]
+        ticket_type_id = self.test_ticket_type.get("type_id")
+        cart_manager.add_item_to_cart(ticket_type_id=ticket_type_id, quantity=1)
+        cart_manager.checkout()
+
+        response = api_client.get(
+            "/api/user/me",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        user_id = response.json().get("user_id")
+
+        # Get the purchased ticket
+        tickets = ticket_manager.list_tickets()
+        user_tickets = [t for t in tickets if t.get("owner_id") == user_id]
+        self.purchased_ticket = user_tickets[0] if tickets else None
+
+    def test_list_ticket_for_resale(self, ticket_manager):
+        """Test listing a ticket for resale"""
+        if not self.purchased_ticket:
+            pytest.skip("No ticket available for resale test")
+
+        ticket_id = self.purchased_ticket["ticket_id"]
+        resale_price = 120.00
+
+        # List ticket for resale
+        resold_ticket = ticket_manager.resell_ticket(ticket_id, resale_price)
+        validate_ticket_details_response(resold_ticket)
+
+        # Verify resell price is set
+        assert resold_ticket["resell_price"] == resale_price
+        assert resold_ticket["ticket_id"] == ticket_id
+
+        print(f"✓ Listed ticket {ticket_id} for resale at {resale_price}")
+
+    def test_get_resale_marketplace(self, resale_manager):
+        """Test getting all tickets in resale marketplace"""
+        # First list a ticket for resale
+        if self.purchased_ticket:
+            ticket_id = self.purchased_ticket["ticket_id"]
+            self.ticket_manager.resell_ticket(ticket_id, 150.00)
+
+        # Get marketplace listings
+        listings = resale_manager.get_marketplace()
+        assert isinstance(listings, list), "Marketplace response must be a list"
+
+        # Validate each listing
+        for listing in listings:
+            validate_resale_listing_response(listing)
+
+        print(f"✓ Retrieved {len(listings)} resale listings from marketplace")
+
+    def test_get_resale_marketplace_with_filters(self, resale_manager):
+        """Test marketplace with price filters"""
+        # List tickets at different prices
+        if self.purchased_ticket:
+            ticket_id = self.purchased_ticket["ticket_id"]
+            self.ticket_manager.resell_ticket(ticket_id, 200.00)
+
+        # Test price filters
+        filtered_listings = resale_manager.get_marketplace({
+            "min_price": 100,
+            "max_price": 250
+        })
+
+        assert isinstance(filtered_listings, list)
+
+        # Verify all listings are within price range
+        for listing in filtered_listings:
+            validate_resale_listing_response(listing)
+            assert 100 <= listing["resell_price"] <= 250
+
+        print(f"✓ Filtered marketplace returned {len(filtered_listings)} listings")
+
+    def test_purchase_resale_ticket(self, resale_manager):
+        """Test purchasing a ticket from resale marketplace"""
+        # Customer 1 lists ticket for resale
+        if not self.purchased_ticket:
+            pytest.skip("No ticket available for resale test")
+
+        ticket_id = self.purchased_ticket["ticket_id"]
+        self.ticket_manager.resell_ticket(ticket_id, 180.00)
+
+        # Switch to customer 2
+        self.token_manager.tokens["customer"] = self.token_manager.tokens["customer2"]
+
+        # Customer 2 purchases the resale ticket
+        purchased_ticket = resale_manager.purchase_resale_ticket(ticket_id)
+        validate_ticket_details_response(purchased_ticket)
+
+        # Verify ownership transferred and not on resale anymore
+        assert purchased_ticket["resell_price"] is None
+        assert purchased_ticket["ticket_id"] == ticket_id
+
+        print(f"✓ Customer 2 successfully purchased resale ticket {ticket_id}")
+
+        # Restore original customer token
+        self.token_manager.tokens["customer"] = self.token_manager.tokens["customer_backup"]
+
+    def test_cancel_resale_listing(self, ticket_manager):
+        """Test canceling a resale listing"""
+        if not self.purchased_ticket:
+            pytest.skip("No ticket available for resale test")
+
+        ticket_id = self.purchased_ticket["ticket_id"]
+
+        # List for resale
+        self.ticket_manager.resell_ticket(ticket_id, 200.00)
+
+        # Cancel resale
+        canceled_ticket = ticket_manager.cancel_resell(ticket_id)
+        validate_ticket_details_response(canceled_ticket)
+
+        # Verify resell price is removed
+        assert canceled_ticket["resell_price"] is None
+        assert canceled_ticket["ticket_id"] == ticket_id
+
+        print(f"✓ Canceled resale listing for ticket {ticket_id}")
+
+    def test_get_my_resale_listings(self, resale_manager):
+        """Test getting user's own resale listings"""
+        # List a ticket for resale
+        if self.purchased_ticket:
+            ticket_id = self.purchased_ticket["ticket_id"]
+            self.ticket_manager.resell_ticket(ticket_id, 175.00)
+
+        # Get my listings
+        my_listings = resale_manager.get_my_listings()
+        assert isinstance(my_listings, list)
+
+        # Validate listings
+        for listing in my_listings:
+            validate_resale_listing_response(listing)
+
+        # Verify at least one listing exists
+        if self.purchased_ticket:
+            assert len(my_listings) > 0, "Should have at least one listing"
+            # Check if our ticket is in the listings
+            ticket_ids = [listing["ticket_id"] for listing in my_listings]
+            assert self.purchased_ticket["ticket_id"] in ticket_ids
+
+        print(f"✓ Retrieved {len(my_listings)} personal resale listings")
+
+    def test_cannot_buy_own_ticket(self, resale_manager, api_client, token_manager):
+        """Test that users cannot buy their own resale tickets"""
+        if not self.purchased_ticket:
+            pytest.skip("No ticket available for resale test")
+
+        ticket_id = self.purchased_ticket["ticket_id"]
+
+        # List ticket for resale
+        self.ticket_manager.resell_ticket(ticket_id, 150.00)
+
+        # Try to purchase own ticket
+        response = api_client.post(
+            "/api/resale/purchase",
+            headers={
+                **token_manager.get_auth_header("customer"),
+                "Content-Type": "application/json"
+            },
+            json_data={"ticket_id": ticket_id},
+            expected_status=400
+        )
+
+        print("✓ Correctly prevented user from buying their own ticket")
+
+    def test_resale_with_event_filter(self, resale_manager):
+        """Test marketplace filtered by event"""
+        # Get marketplace filtered by our test event
+        event_id = self.test_event.get("event_id")
+
+        filtered_listings = resale_manager.get_marketplace({
+            "event_id": event_id
+        })
+
+        assert isinstance(filtered_listings, list)
+
+        # All listings should be for our event
+        for listing in filtered_listings:
+            validate_resale_listing_response(listing)
+            assert listing["event_name"] == self.test_event["name"]
+
+        print(f"✓ Event filter returned {len(filtered_listings)} listings for event {event_id}")
+
+
+class TestResaleIntegration:
+    """Test complete resale flow integration"""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, api_client, user_manager, event_manager, cart_manager, ticket_manager, resale_manager):
+        """Setup test environment"""
+        self.test_env = prepare_test_env(user_manager, event_manager, cart_manager)
+        self.event_manager = event_manager
+        self.cart_manager = cart_manager
+        self.ticket_manager = ticket_manager
+        self.resale_manager = resale_manager
+        self.token_manager = user_manager.token_manager
+        self.api_client = api_client
+
+    def test_complete_resale_flow(self):
+        """Test complete ticket purchase -> resale -> repurchase flow"""
+        # 1. Create event and ticket type
+        event = self.event_manager.create_event()
+        event_id = event["event_id"]
+        ticket_type = self.event_manager.create_ticket_type(event_id)
+        ticket_type_id = ticket_type["type_id"]
+        original_price = ticket_type["price"]
+
+        # 2. Customer 1 purchases ticket
+        self.cart_manager.add_item_to_cart(ticket_type_id=ticket_type_id, quantity=1)
+        checkout_result = self.cart_manager.checkout()
+        assert checkout_result is True
+
+        # 3. Get purchased ticket
+        response = self.api_client.get(
+            "/api/user/me",
+            headers=self.token_manager.get_auth_header("customer")
+        )
+        user_id = response.json().get("user_id")
+
+        tickets = self.ticket_manager.list_tickets()
+        user_tickets = [t for t in tickets if t.get("owner_id") == user_id]
+
+        assert len(tickets) > 0
+        ticket = user_tickets[0] if tickets else None
+        ticket_id = ticket["ticket_id"]
+
+        # 4. Customer 1 lists ticket for resale at higher price
+        resale_price = original_price * 1.5
+        resold_ticket = self.ticket_manager.resell_ticket(ticket_id, resale_price)
+
+        # 5. Verify ticket appears in marketplace
+        marketplace = self.resale_manager.get_marketplace()
+        resale_listings = [l for l in marketplace if l["ticket_id"] == ticket_id]
+        assert len(resale_listings) == 1
+        listing = resale_listings[0]
+        assert listing["original_price"] == original_price
+
+        # 6. Switch to Customer 2
+        self.token_manager.tokens["customer"] = self.token_manager.tokens["customer2"]
+
+        # 7. Customer 2 purchases from resale
+        purchased = self.resale_manager.purchase_resale_ticket(ticket_id)
+        assert purchased["ticket_id"] == ticket_id
+        assert purchased["resell_price"] is None  # No longer for resale
+
+        # 8. Verify ticket no longer in marketplace
+        marketplace_after = self.resale_manager.get_marketplace()
+        resale_listings_after = [l for l in marketplace_after if l["ticket_id"] == ticket_id]
+        assert len(resale_listings_after) == 0
+
+        # 9. Verify Customer 2 owns the ticket
+        customer2_tickets = self.ticket_manager.list_tickets()
+        owned_tickets = [t for t in customer2_tickets if t["ticket_id"] == ticket_id]
+        assert len(owned_tickets) > 0
+
+        print(
+            f"✓ Complete resale flow: Original {original_price} → Resold {resale_price} → Transferred to new owner")
+

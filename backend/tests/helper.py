@@ -259,6 +259,26 @@ class UserManager:
 
         return user_data
 
+    def register_and_login_customer2(self) -> Dict[str, str]:
+        """Register and login a second customer user for testing purposes"""
+        user_data = self.data_generator.customer_data()
+
+        # Register customer
+        response = self.api_client.post(
+            "/api/auth/register/customer",
+            headers={"Content-Type": "application/json"},
+            json_data=user_data,
+            expected_status=201
+        )
+
+        # Extract and store token
+        token = response.json().get("token")
+        if token:
+            self.token_manager.set_token("customer2", token)
+            self.token_manager.set_user("customer2", user_data)
+
+        return user_data
+
     def register_organizer(self) -> Dict[str, str]:
         """Register an organizer user (returns unverified organizer)"""
         user_data = self.data_generator.organizer_data()
@@ -600,13 +620,10 @@ class TicketManager:
         )
         return response.json()
 
-    def resell_ticket(self, ticket_id: int, resale_price: float = None, description: str = None) -> \
-            Dict[str, Any]:
+    def resell_ticket(self, ticket_id: int, price: float) -> Dict[str, Any]:
         """Put ticket up for resale"""
         resell_data = {
-            "ticket_id": ticket_id,
-            "resale_price": resale_price or 150.00,
-            "resale_description": description or "Selling due to scheduling conflict"
+            "price": price
         }
 
         response = self.api_client.post(
@@ -650,6 +667,44 @@ class TicketManager:
                 "Content-Type": "application/json"
             },
             json_data=transfer_data
+        )
+        return response.json()
+
+
+class ResaleManager:
+    """Manages ticket resale marketplace operations"""
+
+    def __init__(self, api_client: APIClient, token_manager: TokenManager):
+        self.api_client = api_client
+        self.token_manager = token_manager
+
+    def get_marketplace(self, filters: Dict = None) -> list:
+        """Get resale marketplace listings"""
+        url = "/api/resale/marketplace"
+        if filters:
+            query_params = "&".join([f"{k}={v}" for k, v in filters.items()])
+            url = f"{url}?{query_params}"
+
+        response = self.api_client.get(url)
+        return response.json()
+
+    def purchase_resale_ticket(self, ticket_id: int) -> Dict[str, Any]:
+        """Purchase a ticket from resale marketplace"""
+        response = self.api_client.post(
+            "/api/resale/purchase",
+            headers={
+                **self.token_manager.get_auth_header("customer"),
+                "Content-Type": "application/json"
+            },
+            json_data={"ticket_id": ticket_id}
+        )
+        return response.json()
+
+    def get_my_listings(self) -> list:
+        """Get user's own resale listings"""
+        response = self.api_client.get(
+            "/api/resale/my-listings",
+            headers=self.token_manager.get_auth_header("customer")
         )
         return response.json()
 

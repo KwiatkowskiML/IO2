@@ -1,3 +1,5 @@
+
+
 # Resellio
 
 Resellio is a ticketing platform designed to simplify and automate the process of buying and selling tickets for various events such as concerts, sports matches, theater performances, and conferences. The platform caters to three primary roles:

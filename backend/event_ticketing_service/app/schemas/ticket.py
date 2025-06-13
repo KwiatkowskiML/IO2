@@ -34,5 +34,5 @@ class TicketPDF(BaseModel):
 
 
 class ResellTicketRequest(BaseModel):
-    ticket_id: int
+    ticket_id: Optional[int] = None
     price: Optional[float] = None

@@ -18,11 +18,12 @@ app.add_middleware(
 
 api_sub_app = FastAPI()
 
-from app.routers import cart, events, tickets, ticket_types
+from app.routers import cart, events, tickets, ticket_types, resale
 api_sub_app.include_router(tickets.router)
 api_sub_app.include_router(events.router)
 api_sub_app.include_router(ticket_types.router)
 api_sub_app.include_router(cart.router)
+api_sub_app.include_router(resale.router)
 
 app.mount("/api", api_sub_app)
 
