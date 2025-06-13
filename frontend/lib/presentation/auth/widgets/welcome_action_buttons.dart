@@ -13,14 +13,15 @@ class WelcomeActionButtons extends StatelessWidget {
       children: [
         PrimaryButton(
           text: 'REGISTER AS USER',
-          onPressed: () => GoRouter.of(context).push('/user/register'),
+          onPressed: () => GoRouter.of(context).push('/register?type=customer'),
           backgroundColor: theme.colorScheme.primary,
           foregroundColor: theme.colorScheme.onPrimary,
         ),
         const SizedBox(height: 16),
         PrimaryButton(
           text: 'REGISTER AS ORGANIZER',
-          onPressed: () => GoRouter.of(context).push('/organizer/register'),
+          onPressed:
+              () => GoRouter.of(context).push('/register?type=organizer'),
           backgroundColor: theme.colorScheme.secondary,
           foregroundColor: theme.colorScheme.onSecondary,
         ),
