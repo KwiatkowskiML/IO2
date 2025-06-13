@@ -68,8 +68,3 @@ CREATE TABLE IF NOT EXISTS cart_items (
         REFERENCES ticket_types(type_id)
         ON DELETE CASCADE
 );
-
-INSERT INTO locations (name, address, zipcode, city, country) VALUES
-  ('Main Hall',   '123 Center St',      '00-100', 'Warsaw',    'Poland'),
-  ('Open Arena',  '45 Stadium Rd',      NULL,     'Gdansk',    'Poland'),
-  ('Conference X','789 Tech Parkway',   '10-200', 'Krakow',    'Poland');
