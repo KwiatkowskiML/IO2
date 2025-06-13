@@ -12,7 +12,7 @@ from app.filters.ticket_type_filter import TicketTypeFilter
 router = APIRouter(prefix="/ticket-types", tags=["ticket_types"])
 
 
-@router.get("", response_model=List[TicketType])
+@router.get("/", response_model=List[TicketType])
 def get_ticket_types(
     filters: TicketTypeFilter = Depends(),
     db: Session = Depends(get_db),
