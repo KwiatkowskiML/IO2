@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/models/ticket_model.dart';
 import 'package:resellio/core/services/api_service.dart';
+import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 
@@ -16,9 +17,7 @@ class MyTicketsPage extends StatefulWidget {
 
 class _MyTicketsPageState extends State<MyTicketsPage>
     with SingleTickerProviderStateMixin {
-  late Future<List<TicketDetailsModel>> _myTicketsFuture;
-  // TODO: Replace with actual authenticated user ID
-  final int _currentUserId = 1;
+  Future<List<TicketDetailsModel>>? _myTicketsFuture;
 
   late TabController _tabController;
   String _activeFilter = 'All';
@@ -29,7 +28,11 @@ class _MyTicketsPageState extends State<MyTicketsPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
-    _loadMyTickets();
+
+    // Use addPostFrameCallback to ensure context is available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMyTickets();
+    });
   }
 
   @override
@@ -54,33 +57,35 @@ class _MyTicketsPageState extends State<MyTicketsPage>
             break;
         }
       });
-      // In a real app, we'd filter the tickets here based on _activeFilter
+      // The FutureBuilder will re-filter the list automatically
     }
   }
 
   void _loadMyTickets() {
     final apiService = context.read<ApiService>();
+    final authService = context.read<AuthService>();
+    final userId = authService.user?.userId;
+
+    if (userId == null) {
+      // Handle case where user is not logged in, though router should prevent this
+      setState(() {
+        _myTicketsFuture = Future.error("User not authenticated.");
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
-      // Pass the hardcoded user ID for now
-      _myTicketsFuture = apiService.getMyTickets(_currentUserId);
+      _myTicketsFuture = apiService.getMyTickets(userId);
     });
 
-    _myTicketsFuture
-        .then((_) {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
-        })
-        .catchError((_) {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
+    _myTicketsFuture!.whenComplete(() {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
         });
+      }
+    });
   }
 
   // Simulate placing a ticket for resale
@@ -207,7 +212,7 @@ class _MyTicketsPageState extends State<MyTicketsPage>
           // Tickets List
           Expanded(
             child:
-                _isLoading
+                (_isLoading || _myTicketsFuture == null)
                     ? const Center(child: CircularProgressIndicator())
                     : FutureBuilder<List<TicketDetailsModel>>(
                       future: _myTicketsFuture,

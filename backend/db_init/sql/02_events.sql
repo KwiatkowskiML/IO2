@@ -66,5 +66,8 @@ CREATE TABLE IF NOT EXISTS cart_items (
     CONSTRAINT fk_ticket_type
         FOREIGN KEY(ticket_type_id)
         REFERENCES ticket_types(type_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    
+    CONSTRAINT chk_cart_item_type
+        CHECK ((ticket_id IS NOT NULL AND ticket_type_id IS NULL) OR (ticket_id IS NULL AND ticket_type_id IS NOT NULL))
 );
