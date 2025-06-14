@@ -56,20 +56,13 @@ async def get_shopping_cart(
     response_model=CartItemWithDetails,
 )
 async def add_to_cart(
-    ticket_id: int = Query(None, description="ID of the resale ticket to add"),
-    ticket_type_id: int = Query(None, description="ID of the ticket type to add"),
+    ticket_type_id: int,
     quantity: int = Query(1, description="Quantity of tickets to add"),
     user: dict = Depends(get_user_from_token),
     cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     """Add a ticket to the user's shopping cart"""
     user_id = user["user_id"]
-
-    if ticket_type_id is None and ticket_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either ticket_id or ticket_type_id must be provided."
-        )
 
     try:
         if ticket_type_id is not None:
@@ -83,17 +76,6 @@ async def add_to_cart(
                 ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
                 quantity=cart_item_model.quantity
             )
-        elif ticket_id is not None:
-            cart_item_model = cart_repo.add_item_from_resell(
-                customer_id=user_id,
-                ticket_id=ticket_id
-            )
-
-            return CartItemWithDetails(
-                ticket_type=None,
-                quantity=cart_item_model.quantity
-            )
-
     except HTTPException as e:
         # Re-raise HTTPExceptions from the repository (e.g., not found, bad request)
         raise e
