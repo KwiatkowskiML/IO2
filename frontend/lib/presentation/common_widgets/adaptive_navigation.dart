@@ -6,6 +6,9 @@ import 'package:resellio/presentation/events/pages/event_browse_page.dart';
 import 'package:resellio/presentation/tickets/pages/my_tickets_page.dart';
 import 'package:resellio/presentation/marketplace/pages/marketplace_page.dart';
 import 'package:resellio/presentation/profile/pages/profile_page.dart';
+import 'package:resellio/presentation/organizer/pages/organizer_dashboard_page.dart';
+import 'package:resellio/presentation/organizer/pages/create_event_page.dart';
+import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
 
 enum UserRole { customer, organizer, admin }
 
@@ -187,18 +190,18 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
         break;
       case UserRole.organizer:
         screens = [
-          const Center(child: Text('Dashboard Page (Organizer)')),
-          const Center(child: Text('Create Event Page (Organizer)')),
-          const Center(child: Text('Statistics Page (Organizer)')),
-          const Center(child: Text('Profile Page (Organizer)')),
+          const OrganizerDashboardPage(),
+          const CreateEventPage(),
+          const Center(child: Text('Statistics Page (Organizer) - Coming Soon!')),
+          const ProfilePage(),
         ];
         break;
       case UserRole.admin:
         screens = [
-          const Center(child: Text('Dashboard Page (Admin)')),
-          const Center(child: Text('User Management Page (Admin)')),
-          const Center(child: Text('Verification Page (Admin)')),
-          const Center(child: Text('Admin Settings Page (Admin)')),
+          const AdminDashboardPage(),
+          const Center(child: Text('User Management Page (Admin) - Coming Soon!')),
+          const Center(child: Text('Verification Page (Admin) - Coming Soon!')),
+          const Center(child: Text('Admin Settings Page (Admin) - Coming Soon!')),
         ];
         break;
     }

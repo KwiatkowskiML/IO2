@@ -28,7 +28,7 @@ class EventCard extends StatelessWidget {
           } else {
             // Navigate to the event details page using go_router
             // Pass the event object via the 'extra' parameter
-            context.go('/event/${event.id}', extra: event);
+            context.push('/event/${event.id}', extra: event);
           }
         },
         child: Column(
