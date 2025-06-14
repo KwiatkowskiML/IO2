@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
@@ -15,8 +16,10 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) =>
-          ProfileCubit(context.read<UserRepository>())..loadProfile(),
+      create: (context) => ProfileCubit(
+        context.read<UserRepository>(),
+        context.read<AuthService>(),
+      )..loadProfile(),
       child: const _ProfileView(),
     );
   }
@@ -103,25 +106,18 @@ class _ProfileView extends StatelessWidget {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  final Map<String, dynamic> userProfile;
+  final UserProfile userProfile;
   const _ProfileHeader({required this.userProfile});
-
-  String _getInitials() {
-    final firstName = userProfile['first_name'] as String? ?? '';
-    final lastName = userProfile['last_name'] as String? ?? '';
-    return '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'
-        .toUpperCase();
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Text('Welcome, ${userProfile['first_name']}!',
+    return Text('Welcome, ${userProfile.firstName}!',
         style: Theme.of(context).textTheme.headlineMedium);
   }
 }
 
 class _ProfileForm extends StatefulWidget {
-  final Map<String, dynamic> userProfile;
+  final UserProfile userProfile;
   final bool isEditing;
   final bool isSaving;
 
@@ -144,20 +140,19 @@ class _ProfileFormState extends State<_ProfileForm> {
   void initState() {
     super.initState();
     _firstNameController =
-        TextEditingController(text: widget.userProfile['first_name'] ?? '');
+        TextEditingController(text: widget.userProfile.firstName);
     _lastNameController =
-        TextEditingController(text: widget.userProfile['last_name'] ?? '');
-    _loginController =
-        TextEditingController(text: widget.userProfile['login'] ?? '');
+        TextEditingController(text: widget.userProfile.lastName);
+    _loginController = TextEditingController(text: widget.userProfile.login ?? '');
   }
 
   @override
   void didUpdateWidget(covariant _ProfileForm oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.userProfile != oldWidget.userProfile) {
-      _firstNameController.text = widget.userProfile['first_name'] ?? '';
-      _lastNameController.text = widget.userProfile['last_name'] ?? '';
-      _loginController.text = widget.userProfile['login'] ?? '';
+      _firstNameController.text = widget.userProfile.firstName;
+      _lastNameController.text = widget.userProfile.lastName;
+      _loginController.text = widget.userProfile.login ?? '';
     }
   }
 
@@ -238,7 +233,7 @@ class _ProfileFormState extends State<_ProfileForm> {
 }
 
 class _AccountInfo extends StatelessWidget {
-  final Map<String, dynamic> userProfile;
+  final UserProfile userProfile;
   const _AccountInfo({required this.userProfile});
 
   @override
@@ -251,12 +246,12 @@ class _AccountInfo extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.email),
               title: const Text('Email'),
-              subtitle: Text(userProfile['email'] ?? 'N/A'),
+              subtitle: Text(userProfile.email),
             ),
             ListTile(
               leading: const Icon(Icons.verified_user),
               title: const Text('Status'),
-              subtitle: Text(userProfile['is_active'] ? 'Active' : 'Inactive'),
+              subtitle: Text(userProfile.isActive ? 'Active' : 'Inactive'),
             ),
           ],
         ),

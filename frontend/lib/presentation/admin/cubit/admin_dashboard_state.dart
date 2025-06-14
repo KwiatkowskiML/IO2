@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:resellio/core/models/models.dart';
 
 abstract class AdminDashboardState extends Equatable {
   const AdminDashboardState();
@@ -11,8 +12,8 @@ class AdminDashboardInitial extends AdminDashboardState {}
 class AdminDashboardLoading extends AdminDashboardState {}
 
 class AdminDashboardLoaded extends AdminDashboardState {
-  final List<dynamic> pendingOrganizers;
-  final List<dynamic> allUsers;
+  final List<PendingOrganizer> pendingOrganizers;
+  final List<UserDetails> allUsers;
 
   const AdminDashboardLoaded(
       {required this.pendingOrganizers, required this.allUsers});

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:resellio/core/models/models.dart';
 
 abstract class ProfileState extends Equatable {
   const ProfileState();
@@ -11,7 +12,7 @@ class ProfileInitial extends ProfileState {}
 class ProfileLoading extends ProfileState {}
 
 class ProfileLoaded extends ProfileState {
-  final Map<String, dynamic> userProfile;
+  final UserProfile userProfile;
   final bool isEditing;
 
   const ProfileLoaded({required this.userProfile, this.isEditing = false});

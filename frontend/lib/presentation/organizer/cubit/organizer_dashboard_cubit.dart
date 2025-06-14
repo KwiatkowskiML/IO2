@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/network/api_exception.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
@@ -12,11 +13,14 @@ class OrganizerDashboardCubit extends Cubit<OrganizerDashboardState> {
       : super(OrganizerDashboardInitial());
 
   Future<void> loadDashboard() async {
-    final organizerId = _authService.user?.roleId;
-    if (organizerId == null) {
+    final profile = _authService.detailedProfile;
+
+    if (profile is! OrganizerProfile) {
       emit(const OrganizerDashboardError("User is not a valid organizer."));
       return;
     }
+
+    final organizerId = profile.organizerId;
 
     try {
       emit(OrganizerDashboardLoading());

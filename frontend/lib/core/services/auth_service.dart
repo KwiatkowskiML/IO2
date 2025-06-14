@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/utils/jwt_decoder.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
@@ -42,35 +43,56 @@ class UserModel {
 
 class AuthService extends ChangeNotifier {
   final AuthRepository _authRepository;
+  final UserRepository _userRepository;
   String? _token;
   UserModel? _user;
+  UserProfile? _detailedProfile;
 
-  AuthService(this._authRepository);
+  AuthService(this._authRepository, this._userRepository);
 
   bool get isLoggedIn => _token != null;
   UserModel? get user => _user;
+  UserProfile? get detailedProfile => _detailedProfile;
+
+  Future<void> _fetchAndSetDetailedProfile() async {
+    if (isLoggedIn) {
+      try {
+        _detailedProfile = await _userRepository.getUserProfile();
+        notifyListeners();
+      } catch (e) {
+        // Silently fail or log error, as this is a background update.
+        debugPrint("Failed to fetch detailed profile: $e");
+      }
+    }
+  }
 
   Future<void> login(String email, String password) async {
     final token = await _authRepository.login(email, password);
-    _setTokenAndUser(token);
+    await _setTokenAndUser(token);
   }
 
   Future<void> registerCustomer(Map<String, dynamic> data) async {
     final token = await _authRepository.registerCustomer(data);
-    _setTokenAndUser(token);
+    await _setTokenAndUser(token);
   }
 
   Future<void> registerOrganizer(Map<String, dynamic> data) async {
     final token = await _authRepository.registerOrganizer(data);
-    _setTokenAndUser(token);
+    await _setTokenAndUser(token);
   }
 
-  void _setTokenAndUser(String token) {
+  Future<void> _setTokenAndUser(String token) async {
     _token = token;
     final jwtData = tryDecodeJwt(token);
     if (jwtData != null) {
       _user = UserModel.fromJwt(jwtData);
     }
+    await _fetchAndSetDetailedProfile(); // Fetch profile right after login/register
+    notifyListeners();
+  }
+
+  void updateDetailedProfile(UserProfile profile) {
+    _detailedProfile = profile;
     notifyListeners();
   }
 
@@ -78,6 +100,7 @@ class AuthService extends ChangeNotifier {
     await _authRepository.logout();
     _token = null;
     _user = null;
+    _detailedProfile = null;
     notifyListeners();
   }
 }

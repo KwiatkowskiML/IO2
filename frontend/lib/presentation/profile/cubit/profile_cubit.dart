@@ -1,17 +1,21 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/network/api_exception.dart';
 import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/profile/cubit/profile_state.dart';
 
 class ProfileCubit extends Cubit<ProfileState> {
   final UserRepository _userRepository;
+  final AuthService _authService;
 
-  ProfileCubit(this._userRepository) : super(ProfileInitial());
+  ProfileCubit(this._userRepository, this._authService)
+      : super(ProfileInitial());
 
   Future<void> loadProfile() async {
     try {
       emit(ProfileLoading());
       final profile = await _userRepository.getUserProfile();
+      _authService.updateDetailedProfile(profile); // Sync with auth service
       emit(ProfileLoaded(userProfile: profile));
     } on ApiException catch (e) {
       emit(ProfileError(e.message));
@@ -34,13 +38,18 @@ class ProfileCubit extends Cubit<ProfileState> {
     emit(ProfileSaving(userProfile: loadedState.userProfile));
 
     try {
-      await _userRepository.updateUserProfile(data);
-      await loadProfile();
-    } on ApiException {
-      emit(ProfileLoaded(userProfile: loadedState.userProfile));
+      final updatedProfile = await _userRepository.updateUserProfile(data);
+      _authService.updateDetailedProfile(updatedProfile); // Sync with auth service
+      emit(ProfileLoaded(userProfile: updatedProfile));
+    } on ApiException catch (e) {
+      emit(ProfileLoaded(
+          userProfile: loadedState.userProfile,
+          isEditing: true)); // Revert to editing mode on error
       rethrow;
     } catch (e) {
-      emit(ProfileLoaded(userProfile: loadedState.userProfile));
+      emit(ProfileLoaded(
+          userProfile: loadedState.userProfile,
+          isEditing: true)); // Revert to editing mode on error
       throw Exception('An unexpected error occurred.');
     }
   }

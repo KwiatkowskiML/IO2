@@ -1,8 +1,9 @@
+import 'package:resellio/core/models/user_model.dart';
 import 'package:resellio/core/network/api_client.dart';
 
 abstract class UserRepository {
-  Future<Map<String, dynamic>> getUserProfile();
-  Future<void> updateUserProfile(Map<String, dynamic> profileData);
+  Future<UserProfile> getUserProfile();
+  Future<UserProfile> updateUserProfile(Map<String, dynamic> profileData);
 }
 
 class ApiUserRepository implements UserRepository {
@@ -10,12 +11,15 @@ class ApiUserRepository implements UserRepository {
   ApiUserRepository(this._apiClient);
 
   @override
-  Future<Map<String, dynamic>> getUserProfile() async {
-    return await _apiClient.get('/user/me');
+  Future<UserProfile> getUserProfile() async {
+    final data = await _apiClient.get('/user/me');
+    return UserProfile.fromJson(data);
   }
 
   @override
-  Future<void> updateUserProfile(Map<String, dynamic> profileData) async {
-    await _apiClient.put('/user/update-profile', data: profileData);
+  Future<UserProfile> updateUserProfile(
+      Map<String, dynamic> profileData) async {
+    final data = await _apiClient.put('/user/update-profile', data: profileData);
+    return UserProfile.fromJson(data);
   }
 }

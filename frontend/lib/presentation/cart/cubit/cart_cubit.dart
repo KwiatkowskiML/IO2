@@ -10,8 +10,29 @@ class CartCubit extends Cubit<CartState> {
 
   Future<void> _handleAction(Future<void> Function() action) async {
     try {
-      emit(CartLoading());
+      // Keep current data while loading to avoid screen flicker
+      final currentState = state;
+      if (currentState is CartLoaded) {
+        emit(CartLoading(currentState.items));
+      } else {
+        emit(CartLoading([]));
+      }
+
       await action();
+      final items = await _cartRepository.getCartItems();
+      emit(CartLoaded(items));
+    } on ApiException catch (e) {
+      emit(CartError(e.message));
+      await fetchCart(); // Re-fetch cart to show previous state on error
+    } catch (e) {
+      emit(CartError("An unexpected error occurred: $e"));
+      await fetchCart();
+    }
+  }
+
+  Future<void> fetchCart() async {
+    try {
+      emit(CartLoading(state is CartLoaded ? (state as CartLoaded).items : []));
       final items = await _cartRepository.getCartItems();
       emit(CartLoaded(items));
     } on ApiException catch (e) {
@@ -19,10 +40,6 @@ class CartCubit extends Cubit<CartState> {
     } catch (e) {
       emit(CartError("An unexpected error occurred: $e"));
     }
-  }
-
-  Future<void> fetchCart() async {
-    await _handleAction(() async {});
   }
 
   Future<void> addItem(int ticketTypeId, int quantity) async {
@@ -42,20 +59,23 @@ class CartCubit extends Cubit<CartState> {
     }
 
     try {
-      emit(CartLoading());
+      emit(CartLoading(loadedState.items));
       final success = await _cartRepository.checkout();
       if (success) {
         emit(const CartLoaded([]));
         return true;
       } else {
         emit(const CartError('Checkout failed. Please try again.'));
+        await fetchCart(); 
         return false;
       }
     } on ApiException catch (e) {
       emit(CartError(e.message));
+      await fetchCart(); 
       return false;
     } catch (e) {
       emit(CartError("An unexpected error occurred: $e"));
+      await fetchCart(); 
       return false;
     }
   }

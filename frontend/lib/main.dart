@@ -39,6 +39,7 @@ void main() {
         ChangeNotifierProvider(
           create: (context) => AuthService(
             context.read<AuthRepository>(),
+            context.read<UserRepository>(),
           ),
         ),
         BlocProvider(

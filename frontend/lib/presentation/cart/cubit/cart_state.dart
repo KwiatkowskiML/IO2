@@ -9,7 +9,14 @@ abstract class CartState extends Equatable {
 
 class CartInitial extends CartState {}
 
-class CartLoading extends CartState {}
+class CartLoading extends CartState {
+  // Can hold previous items to avoid UI flicker
+  final List<CartItem> previousItems;
+  const CartLoading(this.previousItems);
+
+  @override
+  List<Object?> get props => [previousItems];
+}
 
 class CartLoaded extends CartState {
   final List<CartItem> items;
