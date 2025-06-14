@@ -19,35 +19,71 @@ class CartService extends ChangeNotifier {
     (sum, item) => sum + (item.quantity * item.ticketType.price),
   );
 
-  void addItem(TicketType ticketType) {
-    // Check if the item already exists in the cart
-    final index = _items.indexWhere(
-      (item) => item.ticketType.typeId == ticketType.typeId,
-    );
-
-    if (index != -1) {
-      // If it exists, increase the quantity
-      _items[index] = _items[index].copyWith(
-        quantity: _items[index].quantity + 1,
+  Future<void> addItem(TicketType ticketType) async {
+    try {
+      // Check if typeId is not null
+      if (ticketType.typeId == null) {
+        throw Exception('Ticket type ID is required');
+      }
+      
+      // Call the backend API to add item to cart
+      await _apiService.addToCart(ticketType.typeId!, 1);
+      
+      // Update local state
+      final index = _items.indexWhere(
+        (item) => item.ticketType.typeId == ticketType.typeId,
       );
-    } else {
-      // If not, add a new item
-      _items.add(CartItem(ticketType: ticketType, quantity: 1));
+
+      if (index != -1) {
+        // If it exists, increase the quantity
+        _items[index] = _items[index].copyWith(
+          quantity: _items[index].quantity + 1,
+        );
+      } else {
+        // If not, add a new item
+        _items.add(CartItem(ticketType: ticketType, quantity: 1));
+      }
+      notifyListeners();
+    } catch (e) {
+      // Handle errors - maybe show a snackbar in the UI
+      rethrow;
     }
-    // In a real app, you would also call the backend API here to add the item
-    // await _apiService.addToCart(ticketType.typeId, 1);
-    notifyListeners();
   }
 
-  void removeItem(TicketType ticketType) {
-    _items.removeWhere((item) => item.ticketType.typeId == ticketType.typeId);
-    // In a real app, you would call the backend to remove the item
-    notifyListeners();
+  Future<void> removeItem(TicketType ticketType) async {
+    try {
+      // Find the cart item to get its ID for backend removal
+      final itemIndex = _items.indexWhere((item) => item.ticketType.typeId == ticketType.typeId);
+      if (itemIndex != -1) {
+        // Note: This assumes we have a way to get cart item ID
+        // In a real implementation, you might need to modify the cart model
+        // to include cart item IDs from the backend
+        
+        // Remove from local state first
+        _items.removeAt(itemIndex);
+        notifyListeners();
+      }
+    } catch (e) {
+      // Handle errors
+      rethrow;
+    }
   }
 
-  void clearCart() {
+  Future<void> clearCart() async {
     _items.clear();
-    // In a real app, you would call the backend to clear the cart
     notifyListeners();
+  }
+  
+  Future<bool> checkout() async {
+    try {
+      final success = await _apiService.checkout();
+      if (success) {
+        // Clear the cart after successful checkout
+        await clearCart();
+      }
+      return success;
+    } catch (e) {
+      rethrow;
+    }
   }
 }

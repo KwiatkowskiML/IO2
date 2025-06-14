@@ -5,9 +5,14 @@ import 'package:resellio/core/services/cart_service.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 
-class CartPage extends StatelessWidget {
+class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
+  @override
+  State<CartPage> createState() => _CartPageState();
+}
+
+class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     final cartService = context.watch<CartService>();
@@ -82,8 +87,19 @@ class CartPage extends StatelessWidget {
                                     Icons.delete_outline,
                                     color: colorScheme.error,
                                   ),
-                                  onPressed: () {
-                                    cartService.removeItem(item.ticketType);
+                                  onPressed: () async {
+                                    try {
+                                      await cartService.removeItem(item.ticketType);
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error removing item: ${e.toString()}'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                 ),
                               ],
@@ -141,16 +157,71 @@ class CartPage extends StatelessWidget {
                         const SizedBox(height: 24),
                         PrimaryButton(
                           text: 'PROCEED TO CHECKOUT',
-                          onPressed: () {
-                            // TODO: Implement checkout logic
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Checkout feature not yet implemented.',
+                          onPressed: () async {
+                            try {
+                              // Show loading indicator
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const AlertDialog(
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      CircularProgressIndicator(),
+                                      SizedBox(height: 16),
+                                      Text('Processing your order...'),
+                                    ],
+                                  ),
                                 ),
-                                backgroundColor: Colors.blue,
-                              ),
-                            );
+                              );
+
+                              // Call checkout API
+                              final success = await cartService.checkout();
+                              
+                              // Close loading dialog
+                              if (mounted) Navigator.of(context).pop();
+
+                              if (success) {
+                                // Show success message
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Order successful! Your tickets have been added to "My Tickets".',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      duration: Duration(seconds: 4),
+                                    ),
+                                  );
+                                  
+                                  // Navigate back or to my tickets page
+                                  Navigator.of(context).pop(); // Go back to previous page
+                                }
+                              } else {
+                                // Show error message
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Checkout failed. Please try again.'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              // Close loading dialog if still open
+                              if (mounted) Navigator.of(context).pop();
+                              
+                              // Show error message
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           },
                         ),
                       ],

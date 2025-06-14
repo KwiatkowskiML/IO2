@@ -37,15 +37,29 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
-  void _addToCart(TicketType ticketType) {
-    context.read<CartService>().addItem(ticketType);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${ticketType.description} added to cart!'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  void _addToCart(TicketType ticketType) async {
+    try {
+      await context.read<CartService>().addItem(ticketType);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${ticketType.description} added to cart!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding to cart: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override

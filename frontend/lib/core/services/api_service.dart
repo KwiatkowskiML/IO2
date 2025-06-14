@@ -376,14 +376,20 @@ class ApiService {
     }
   }
 
-  Future<List<TicketDetailsModel>> getMyTickets(int userId) async {
+  Future<List<TicketDetailsModel>> getMyTickets([int? userId]) async {
     if (_shouldUseMockData) {
       await Future.delayed(const Duration(seconds: 1));
-      return _mockTickets.where((t) => t.ownerId == userId).toList();
+      return _mockTickets.where((t) => t.ownerId == (userId ?? 1)).toList();
     }
     try {
-      // Use the owner_id filter on the backend for security and efficiency
-      final response = await _dio.get('/tickets?owner_id=$userId');
+      // The backend will automatically filter by the authenticated user's tickets
+      // If userId is provided, we can optionally include it as a query parameter
+      String endpoint = '/tickets';
+      if (userId != null) {
+        endpoint = '/tickets?owner_id=$userId';
+      }
+      
+      final response = await _dio.get(endpoint);
       return (response.data as List)
           .map((e) => TicketDetailsModel.fromJson(e))
           .toList();
@@ -778,4 +784,71 @@ class ApiService {
       return false;
     }
   }
+
+  // --- Cart Methods ---
+
+  Future<List<dynamic>> getCartItems() async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return []; // Mock empty cart
+    }
+
+    try {
+      final response = await _dio.get('/cart/items');
+      return response.data as List;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> addToCart(int ticketTypeId, int quantity) async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return;
+    }
+
+    try {
+      await _dio.post('/cart/items', queryParameters: {
+        'ticket_type_id': ticketTypeId,
+        'quantity': quantity,
+      });
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> removeFromCart(int cartItemId) async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return;
+    }
+
+    try {
+      await _dio.delete('/cart/items/$cartItemId');
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> checkout() async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 2));
+      return true; // Mock successful checkout
+    }
+
+    try {
+      final response = await _dio.post('/cart/checkout');
+      return response.data == true;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // --- Ticket Methods ---
 }

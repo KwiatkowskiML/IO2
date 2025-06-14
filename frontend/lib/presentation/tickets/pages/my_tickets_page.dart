@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/models/ticket_model.dart';
 import 'package:resellio/core/services/api_service.dart';
-import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 
@@ -63,20 +62,10 @@ class _MyTicketsPageState extends State<MyTicketsPage>
 
   void _loadMyTickets() {
     final apiService = context.read<ApiService>();
-    final authService = context.read<AuthService>();
-    final userId = authService.user?.userId;
-
-    if (userId == null) {
-      // Handle case where user is not logged in, though router should prevent this
-      setState(() {
-        _myTicketsFuture = Future.error("User not authenticated.");
-      });
-      return;
-    }
-
+    
     setState(() {
       _isLoading = true;
-      _myTicketsFuture = apiService.getMyTickets(userId);
+      _myTicketsFuture = apiService.getMyTickets();
     });
 
     _myTicketsFuture!.whenComplete(() {
