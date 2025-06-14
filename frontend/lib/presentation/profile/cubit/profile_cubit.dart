@@ -41,7 +41,7 @@ class ProfileCubit extends Cubit<ProfileState> {
       final updatedProfile = await _userRepository.updateUserProfile(data);
       _authService.updateDetailedProfile(updatedProfile); // Sync with auth service
       emit(ProfileLoaded(userProfile: updatedProfile));
-    } on ApiException catch (e) {
+    } on ApiException {
       emit(ProfileLoaded(
           userProfile: loadedState.userProfile,
           isEditing: true)); // Revert to editing mode on error

@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:resellio/core/models/admin_model.dart';
 import 'package:resellio/core/network/api_exception.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/admin/cubit/admin_dashboard_state.dart';
