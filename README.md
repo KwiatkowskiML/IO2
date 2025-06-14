@@ -100,7 +100,7 @@ graph TD
 
     Flutter --> LocalGateway
     Flutter --> ALB`
-
+```
 ## Tech Stack
 
 | Category      | Technology                                                                                                    |
