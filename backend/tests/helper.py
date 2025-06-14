@@ -601,7 +601,7 @@ class TicketManager:
 
     def list_tickets(self, filters: Dict = None) -> list:
         """List tickets with optional filters"""
-        url = "/api/tickets/"
+        url = "/api/tickets"
         if filters:
             query_params = "&".join([f"{k}={v}" for k, v in filters.items()])
             url = f"{url}?{query_params}"
@@ -644,29 +644,45 @@ class TicketManager:
         )
         return response.json()
 
-    def get_ticket_details(self, ticket_id: int) -> Dict[str, Any]:
-        """Get detailed information about a specific ticket"""
-        # This would be a GET /tickets/{ticket_id} endpoint if it exists
-        response = self.api_client.get(
-            f"/api/tickets/{ticket_id}",
-            headers=self.token_manager.get_auth_header("customer")
-        )
+    def get_resale_marketplace(self, event_id: int = None, min_price: float = None, max_price: float = None) -> List[Dict[str, Any]]:
+        """Get all tickets available for resale"""
+        url = "/api/resale/marketplace"
+        params = []
+        
+        if event_id is not None:
+            params.append(f"event_id={event_id}")
+        if min_price is not None:
+            params.append(f"min_price={min_price}")
+        if max_price is not None:
+            params.append(f"max_price={max_price}")
+            
+        if params:
+            url = f"{url}?{'&'.join(params)}"
+
+        response = self.api_client.get(url)
         return response.json()
 
-    def transfer_ticket(self, ticket_id: int, recipient_email: str) -> Dict[str, Any]:
-        """Transfer ticket to another user"""
-        transfer_data = {
-            "recipient_email": recipient_email,
-            "transfer_message": "Ticket transfer"
+    def purchase_resale_ticket(self, ticket_id: int) -> Dict[str, Any]:
+        """Purchase a ticket from the resale marketplace"""
+        purchase_data = {
+            "ticket_id": ticket_id
         }
 
         response = self.api_client.post(
-            f"/api/tickets/{ticket_id}/transfer",
+            "/api/resale/purchase",
             headers={
                 **self.token_manager.get_auth_header("customer"),
                 "Content-Type": "application/json"
             },
-            json_data=transfer_data
+            json_data=purchase_data
+        )
+        return response.json()
+
+    def get_my_resale_listings(self) -> List[Dict[str, Any]]:
+        """Get all tickets I have listed for resale"""
+        response = self.api_client.get(
+            "/api/resale/my-listings",
+            headers=self.token_manager.get_auth_header("customer")
         )
         return response.json()
 
