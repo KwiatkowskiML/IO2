@@ -1,11 +1,9 @@
-// === frontend/lib/presentation/events/pages/event_details_page.dart ===
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:resellio/core/models/event_model.dart';
-import 'package:resellio/core/models/ticket_model.dart';
-import 'package:resellio/core/repositories/event_repository.dart';
-import 'package:resellio/core/services/cart_service.dart';
+import 'package:resellio/core/models/models.dart';
+import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 
@@ -38,28 +36,15 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
-  void _addToCart(TicketType ticketType) async {
-    try {
-      await context.read<CartService>().addItem(ticketType);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${ticketType.description} added to cart!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error adding to cart: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+  void _addToCart(TicketType ticketType) {
+    if (ticketType.typeId != null) {
+      context.read<CartCubit>().addItem(ticketType.typeId!, 1);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${ticketType.description} added to cart!'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -160,8 +145,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                   const SizedBox(height: 4),
                                   Text(
                                       '\$${ticketType.price.toStringAsFixed(2)}',
-                                      style: theme.textTheme.bodyLarge
-                                          ?.copyWith(color: colorScheme.primary)),
+                                      style: theme.textTheme.bodyLarge?.copyWith(
+                                          color: colorScheme.primary)),
                                 ],
                               ),
                             ),

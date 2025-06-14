@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/network/api_exception.dart';
 import 'package:resellio/core/repositories/event_repository.dart';
-import 'event_browse_state.dart';
+import 'package:resellio/presentation/events/cubit/event_browse_state.dart';
 
 class EventBrowseCubit extends Cubit<EventBrowseState> {
   final EventRepository _eventRepository;

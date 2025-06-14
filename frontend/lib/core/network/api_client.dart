@@ -25,15 +25,37 @@ class ApiClient {
     }
   }
 
-  Future<dynamic> post(String endpoint, {dynamic data, Options? options}) async {
+  Future<dynamic> post(String endpoint,
+      {dynamic data,
+      Map<String, dynamic>? queryParams,
+      Options? options}) async {
     try {
-      final response = await _dio.post(endpoint, data: data, options: options);
+      final response = await _dio.post(endpoint,
+          data: data, queryParameters: queryParams, options: options);
       return response.data;
     } on DioException catch (e) {
       throw ApiException.fromDioError(e);
     }
   }
-  
+
+  Future<dynamic> put(String endpoint, {dynamic data}) async {
+    try {
+      final response = await _dio.put(endpoint, data: data);
+      return response.data;
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
+  Future<dynamic> delete(String endpoint, {dynamic data}) async {
+    try {
+      final response = await _dio.delete(endpoint, data: data);
+      return response.data;
+    } on DioException catch (e) {
+      throw ApiException.fromDioError(e);
+    }
+  }
+
   InterceptorsWrapper _createInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) {

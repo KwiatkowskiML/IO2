@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/app/config/app_router.dart';
 import 'package:resellio/app/config/app_theme.dart';
 import 'package:resellio/core/network/api_client.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 
 void main() {
   runApp(
@@ -38,6 +40,10 @@ void main() {
           create: (context) => AuthService(
             context.read<AuthRepository>(),
           ),
+        ),
+        BlocProvider(
+          create: (context) =>
+              CartCubit(context.read<CartRepository>())..fetchCart(),
         ),
       ],
       child: const ResellioApp(),

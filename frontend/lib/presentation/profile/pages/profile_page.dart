@@ -54,7 +54,7 @@ class _ProfileView extends StatelessWidget {
     return BlocListener<ProfileCubit, ProfileState>(
       listener: (context, state) {
         if (state is ProfileLoaded && !state.isEditing) {
-          // TODO: Could show a "Saved!" snackbar here after an update.
+          // Could show a "Saved!" snackbar here after an update.
         }
       },
       child: PageLayout(
@@ -199,6 +199,7 @@ class _ProfileFormState extends State<_ProfileForm> {
       child: Column(
         children: [
           TextFormField(
+            key: const ValueKey('first_name_field'), // ADDED KEY
             controller: _firstNameController,
             enabled: widget.isEditing,
             decoration: const InputDecoration(labelText: 'First Name'),
@@ -206,6 +207,7 @@ class _ProfileFormState extends State<_ProfileForm> {
           ),
           const SizedBox(height: 16),
           TextFormField(
+            key: const ValueKey('last_name_field'), // ADDED KEY
             controller: _lastNameController,
             enabled: widget.isEditing,
             decoration: const InputDecoration(labelText: 'Last Name'),
@@ -213,6 +215,7 @@ class _ProfileFormState extends State<_ProfileForm> {
           ),
           const SizedBox(height: 16),
           TextFormField(
+            key: const ValueKey('login_field'), // ADDED KEY
             controller: _loginController,
             enabled: widget.isEditing,
             decoration: const InputDecoration(labelText: 'Username'),
@@ -224,7 +227,8 @@ class _ProfileFormState extends State<_ProfileForm> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => context.read<ProfileCubit>().toggleEdit(false),
+                    onPressed: () =>
+                        context.read<ProfileCubit>().toggleEdit(false),
                     child: const Text('Cancel'),
                   ),
                 ),

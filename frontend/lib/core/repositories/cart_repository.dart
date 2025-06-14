@@ -1,4 +1,4 @@
-import 'package:resellio/core/models/cart_model.dart';
+import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/network/api_client.dart';
 
 abstract class CartRepository {
@@ -27,8 +27,7 @@ class ApiCartRepository implements CartRepository {
 
   @override
   Future<void> addResaleTicketToCart(int ticketId) async {
-    await _apiClient
-        .post('/cart/items', queryParams: {'ticket_id': ticketId});
+    await _apiClient.post('/cart/items', queryParams: {'ticket_id': ticketId});
   }
 
   @override
