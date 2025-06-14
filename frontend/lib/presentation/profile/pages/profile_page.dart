@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
+import 'package:resellio/presentation/common_widgets/custom_text_form_field.dart';
 import 'package:resellio/presentation/common_widgets/dialogs.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/profile/cubit/profile_cubit.dart';
@@ -184,27 +185,24 @@ class _ProfileFormState extends State<_ProfileForm> {
       key: _formKey,
       child: Column(
         children: [
-          TextFormField(
-            key: const ValueKey('first_name_field'),
+          CustomTextFormField(
             controller: _firstNameController,
             enabled: widget.isEditing,
-            decoration: const InputDecoration(labelText: 'First Name'),
+            labelText: 'First Name',
             validator: (v) => v!.isEmpty ? 'Required' : null,
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            key: const ValueKey('last_name_field'),
+          CustomTextFormField(
             controller: _lastNameController,
             enabled: widget.isEditing,
-            decoration: const InputDecoration(labelText: 'Last Name'),
+            labelText: 'Last Name',
             validator: (v) => v!.isEmpty ? 'Required' : null,
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            key: const ValueKey('login_field'),
+          CustomTextFormField(
             controller: _loginController,
             enabled: widget.isEditing,
-            decoration: const InputDecoration(labelText: 'Username'),
+            labelText: 'Username',
             validator: (v) => v!.isEmpty ? 'Required' : null,
           ),
           if (widget.isEditing) ...[

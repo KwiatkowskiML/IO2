@@ -5,6 +5,7 @@ import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
+import 'package:resellio/presentation/common_widgets/empty_state_widget.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_cubit.dart';
 import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_state.dart';
@@ -297,10 +298,15 @@ class _RecentEventsList extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         if (events.isEmpty)
-          const _EmptyState(
-            icon: Icons.event_note,
-            message: 'No events yet',
-            details: 'Create your first event to get started.',
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32.0),
+              child: EmptyStateWidget(
+                icon: Icons.event_note,
+                message: 'No events yet',
+                details: 'Create your first event to get started.',
+              ),
+            ),
           )
         else
           ListView.builder(
@@ -382,42 +388,6 @@ class _EventListItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final IconData icon;
-  final String message;
-  final String details;
-
-  const _EmptyState(
-      {required this.icon, required this.message, required this.details});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(icon,
-                  size: 48,
-                  color: theme.colorScheme.onSurfaceVariant),
-              const SizedBox(height: 16),
-              Text(message, style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text(
-                details,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium,
-              ),
-            ],
-          ),
         ),
       ),
     );

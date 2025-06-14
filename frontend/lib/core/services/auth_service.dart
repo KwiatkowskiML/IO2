@@ -1,21 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/core/utils/jwt_decoder.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
-
-Map<String, dynamic>? tryDecodeJwt(String token) {
-  try {
-    final parts = token.split('.');
-    if (parts.length != 3) return null;
-    final payload = parts[1];
-    final normalized = base64Url.normalize(payload);
-    final resp = utf8.decode(base64Url.decode(normalized));
-    return json.decode(resp);
-  } catch (e) {
-    debugPrint('Error decoding JWT: $e');
-    return null;
-  }
-}
 
 class UserModel {
   final int userId;

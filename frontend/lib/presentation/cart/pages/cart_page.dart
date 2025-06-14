@@ -6,6 +6,7 @@ import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 import 'package:resellio/presentation/cart/cubit/cart_state.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
+import 'package:resellio/presentation/common_widgets/empty_state_widget.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 
@@ -52,7 +53,11 @@ class _CartView extends StatelessWidget {
               onRetry: () => context.read<CartCubit>().fetchCart(),
               builder: (loadedState) {
                 if (loadedState.items.isEmpty) {
-                  return const Center(child: Text('Your cart is empty'));
+                  return const EmptyStateWidget(
+                    icon: Icons.remove_shopping_cart_outlined,
+                    message: 'Your cart is empty',
+                    details: 'Find an event and add some tickets to get started!',
+                  );
                 } else {
                   return Column(
                     children: [

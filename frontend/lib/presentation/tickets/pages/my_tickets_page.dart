@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/common_widgets/dialogs.dart';
+import 'package:resellio/presentation/common_widgets/empty_state_widget.dart';
 import 'package:resellio/presentation/common_widgets/list_item_card.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_cubit.dart';
@@ -154,7 +155,12 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                 if (state is MyTicketsLoaded) {
                   final tickets = state.filteredTickets;
                   if (tickets.isEmpty) {
-                    return const Center(child: Text('No tickets found.'));
+                    return const EmptyStateWidget(
+                      icon: Icons.confirmation_number_outlined,
+                      message: 'No tickets here',
+                      details:
+                          'Your purchased tickets will appear in this section.',
+                    );
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.all(16),

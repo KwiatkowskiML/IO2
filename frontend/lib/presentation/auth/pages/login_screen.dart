@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/presentation/common_widgets/custom_text_form_field.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -83,9 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
-                  TextFormField(
+                  CustomTextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    labelText: 'Email',
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null ||
@@ -97,9 +98,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  CustomTextFormField(
                     controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    labelText: 'Password',
                     obscureText: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
