@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/profile/cubit/profile_cubit.dart';
 import 'package:resellio/presentation/profile/cubit/profile_state.dart';
@@ -51,8 +52,6 @@ class _ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     return BlocListener<ProfileCubit, ProfileState>(
       listener: (context, state) {
         if (state is ProfileLoaded && !state.isEditing) {
@@ -80,57 +79,32 @@ class _ProfileView extends StatelessWidget {
         ],
         body: BlocBuilder<ProfileCubit, ProfileState>(
           builder: (context, state) {
-            if (state is ProfileLoading || state is ProfileInitial) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is ProfileError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.error_outline,
-                        size: 48, color: colorScheme.error),
-                    const SizedBox(height: 16),
-                    Text('Failed to load profile',
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(color: colorScheme.error)),
-                    const SizedBox(height: 8),
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () =>
-                          context.read<ProfileCubit>().loadProfile(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              );
-            }
-            if (state is ProfileLoaded || state is ProfileSaving) {
-              final userProfile = (state as dynamic).userProfile;
-              final isEditing =
-                  state is ProfileLoaded ? state.isEditing : false;
-              final isSaving = state is ProfileSaving;
+            return BlocStateWrapper<ProfileLoaded>(
+              state: state,
+              onRetry: () => context.read<ProfileCubit>().loadProfile(),
+              builder: (loadedState) {
+                final userProfile = loadedState.userProfile;
+                final isEditing = loadedState.isEditing;
+                final isSaving = loadedState is ProfileSaving;
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _ProfileHeader(userProfile: userProfile),
-                    const SizedBox(height: 32),
-                    _ProfileForm(
-                      userProfile: userProfile,
-                      isEditing: isEditing,
-                      isSaving: isSaving,
-                    ),
-                    const SizedBox(height: 32),
-                    _AccountInfo(userProfile: userProfile),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _ProfileHeader(userProfile: userProfile),
+                      const SizedBox(height: 32),
+                      _ProfileForm(
+                        userProfile: userProfile,
+                        isEditing: isEditing,
+                        isSaving: isSaving,
+                      ),
+                      const SizedBox(height: 32),
+                      _AccountInfo(userProfile: userProfile),
+                    ],
+                  ),
+                );
+              },
+            );
           },
         ),
       ),

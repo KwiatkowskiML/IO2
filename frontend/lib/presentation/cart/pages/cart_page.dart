@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 import 'package:resellio/presentation/cart/cubit/cart_state.dart';
+import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 
@@ -27,7 +28,6 @@ class _CartView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final numberFormat = NumberFormat.currency(locale: 'en_US', symbol: '\$');
 
     return BlocListener<CartCubit, CartState>(
@@ -43,111 +43,92 @@ class _CartView extends StatelessWidget {
       },
       child: BlocBuilder<CartCubit, CartState>(
         builder: (context, state) {
-          Widget body;
-          if (state is CartLoading || state is CartInitial) {
-            body = const Center(child: CircularProgressIndicator());
-          } else if (state is CartError) {
-            body = Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline,
-                      size: 48, color: colorScheme.error),
-                  const SizedBox(height: 16),
-                  Text('Failed to load cart',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(color: colorScheme.error)),
-                  const SizedBox(height: 8),
-                  Text(state.message, textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () => context.read<CartCubit>().fetchCart(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          } else if (state is CartLoaded) {
-            if (state.items.isEmpty) {
-              body = const Center(child: Text('Your cart is empty'));
-            } else {
-              body = Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(top: 16),
-                      itemCount: state.items.length,
-                      itemBuilder: (context, index) {
-                        final item = state.items[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: ListTile(
-                            title: Text(
-                                item.ticketType?.description ?? 'Resale Ticket'),
-                            subtitle: Text(
-                                '${item.quantity} x ${numberFormat.format(item.price)}'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  color: Colors.red),
-                              onPressed: () => context
-                                  .read<CartCubit>()
-                                  .removeItem(item.cartItemId),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Total'),
-                            Text(numberFormat.format(state.totalPrice),
-                                style: theme.textTheme.titleLarge),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        PrimaryButton(
-                          text: 'PROCEED TO CHECKOUT',
-                          isLoading: state is CartLoading,
-                          onPressed: () async {
-                            final success =
-                                await context.read<CartCubit>().checkout();
-                            if (success && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text('Purchase Successful!'),
-                                      backgroundColor: Colors.green));
-                              context.go('/home/customer');
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }
-          } else {
-            body = const SizedBox.shrink();
-          }
-
           return PageLayout(
             title: 'Shopping Cart',
             showBackButton: true,
             showCartButton: false,
-            body: body,
+            body: BlocStateWrapper<CartLoaded>(
+              state: state,
+              onRetry: () => context.read<CartCubit>().fetchCart(),
+              builder: (loadedState) {
+                if (loadedState.items.isEmpty) {
+                  return const Center(child: Text('Your cart is empty'));
+                } else {
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.only(top: 16),
+                          itemCount: loadedState.items.length,
+                          itemBuilder: (context, index) {
+                            final item = loadedState.items[index];
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              child: ListTile(
+                                title: Text(item.ticketType?.description ??
+                                    'Resale Ticket'),
+                                subtitle: Text(
+                                    '${item.quantity} x ${numberFormat.format(item.price)}'),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline,
+                                      color: Colors.red),
+                                  onPressed: () => context
+                                      .read<CartCubit>()
+                                      .removeItem(item.cartItemId),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color:
+                              theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Total'),
+                                Text(
+                                    numberFormat
+                                        .format(loadedState.totalPrice),
+                                    style: theme.textTheme.titleLarge),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            PrimaryButton(
+                              text: 'PROCEED TO CHECKOUT',
+                              isLoading: state is CartLoading,
+                              onPressed: () async {
+                                final success = await context
+                                    .read<CartCubit>()
+                                    .checkout();
+                                if (success && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('Purchase Successful!'),
+                                          backgroundColor: Colors.green));
+                                  context.go('/home/customer');
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              },
+            ),
           );
         },
       ),

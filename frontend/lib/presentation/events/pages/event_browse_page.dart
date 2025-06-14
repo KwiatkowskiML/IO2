@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/models/event_filter_model.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/utils/responsive_layout.dart';
+import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
 import 'package:resellio/presentation/events/cubit/event_browse_cubit.dart';
 import 'package:resellio/presentation/events/cubit/event_browse_state.dart';
 import 'package:resellio/presentation/events/widgets/event_card.dart';
@@ -169,64 +170,34 @@ class _EventBrowseViewState extends State<_EventBrowseView> {
           Expanded(
             child: BlocBuilder<EventBrowseCubit, EventBrowseState>(
               builder: (context, state) {
-                if (state is EventBrowseLoading || state is EventBrowseInitial) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (state is EventBrowseError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline,
-                            size: 48, color: colorScheme.error),
-                        const SizedBox(height: 16),
-                        Text('Failed to load events',
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(color: colorScheme.error)),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Text(state.message,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyMedium),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () =>
-                              context.read<EventBrowseCubit>().loadEvents(),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                if (state is EventBrowseLoaded) {
-                  if (state.events.isEmpty) {
-                    return const Center(child: Text('No events found.'));
-                  }
-                  final events = state.events;
+                return BlocStateWrapper<EventBrowseLoaded>(
+                  state: state,
+                  onRetry: () => context.read<EventBrowseCubit>().loadEvents(),
+                  builder: (loadedState) {
+                    if (loadedState.events.isEmpty) {
+                      return const Center(child: Text('No events found.'));
+                    }
+                    final events = loadedState.events;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent:
-                            ResponsiveLayout.isMobile(context) ? 300 : 350,
-                        childAspectRatio: 0.75,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent:
+                              ResponsiveLayout.isMobile(context) ? 300 : 350,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: events.length,
+                        itemBuilder: (context, index) {
+                          return EventCard(event: events[index]);
+                        },
                       ),
-                      itemCount: events.length,
-                      itemBuilder: (context, index) {
-                        return EventCard(event: events[index]);
-                      },
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
+                    );
+                  },
+                );
               },
             ),
           ),

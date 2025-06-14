@@ -20,11 +20,8 @@ class ProfileLoaded extends ProfileState {
   List<Object?> get props => [userProfile, isEditing];
 }
 
-class ProfileSaving extends ProfileState {
-  final Map<String, dynamic> userProfile;
-  const ProfileSaving({required this.userProfile});
-  @override
-  List<Object?> get props => [userProfile];
+class ProfileSaving extends ProfileLoaded {
+  const ProfileSaving({required super.userProfile}) : super(isEditing: true);
 }
 
 class ProfileError extends ProfileState {

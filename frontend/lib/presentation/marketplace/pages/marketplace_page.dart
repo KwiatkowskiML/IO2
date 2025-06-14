@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/marketplace/cubit/marketplace_cubit.dart';
 import 'package:resellio/presentation/marketplace/cubit/marketplace_state.dart';
@@ -22,7 +23,8 @@ class MarketplacePage extends StatelessWidget {
 class _MarketplaceView extends StatelessWidget {
   const _MarketplaceView();
 
-  void _showFilters(BuildContext context, double? currentMin, double? currentMax) {
+  void _showFilters(
+      BuildContext context, double? currentMin, double? currentMax) {
     showModalBottomSheet(
       context: context,
       builder: (_) => _FilterBottomSheet(
@@ -39,9 +41,6 @@ class _MarketplaceView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return PageLayout(
       title: 'Marketplace',
       actions: [
@@ -62,7 +61,8 @@ class _MarketplaceView extends StatelessWidget {
       ],
       body: BlocListener<MarketplaceCubit, MarketplaceState>(
         listener: (context, state) {
-          if (state is MarketplaceLoaded && state is! MarketplacePurchaseInProgress) {
+          if (state is MarketplaceLoaded &&
+              state is! MarketplacePurchaseInProgress) {
             // Can be used to show "Purchase successful" if needed,
             // but for now, the list just refreshes.
           }
@@ -71,84 +71,59 @@ class _MarketplaceView extends StatelessWidget {
           onRefresh: () => context.read<MarketplaceCubit>().loadListings(),
           child: BlocBuilder<MarketplaceCubit, MarketplaceState>(
             builder: (context, state) {
-              if (state is MarketplaceLoading || state is MarketplaceInitial) {
-                return const Center(child: CircularProgressIndicator());
-              }
+              return BlocStateWrapper<MarketplaceLoaded>(
+                state: state,
+                onRetry: () =>
+                    context.read<MarketplaceCubit>().loadListings(),
+                builder: (loadedState) {
+                  if (loadedState.listings.isEmpty) {
+                    return const Center(
+                        child: Text('No tickets on the marketplace.'));
+                  }
 
-              if (state is MarketplaceError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline,
-                          size: 48, color: colorScheme.error),
-                      const SizedBox(height: 16),
-                      Text('Failed to load marketplace',
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(color: colorScheme.error)),
-                      const SizedBox(height: 8),
-                      Text(state.message, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: () =>
-                            context.read<MarketplaceCubit>().loadListings(),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                );
-              }
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: loadedState.listings.length,
+                    itemBuilder: (context, index) {
+                      final listing = loadedState.listings[index];
+                      final isPurchasing =
+                          state is MarketplacePurchaseInProgress &&
+                              state.processingTicketId == listing.ticketId;
 
-              if (state is MarketplaceLoaded) {
-                if (state.listings.isEmpty) {
-                  return const Center(
-                      child: Text('No tickets on the marketplace.'));
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: state.listings.length,
-                  itemBuilder: (context, index) {
-                    final listing = state.listings[index];
-                    final isPurchasing = state is MarketplacePurchaseInProgress &&
-                        state.processingTicketId == listing.ticketId;
-
-                    return _TicketListingCard(
-                      listing: listing,
-                      isPurchasing: isPurchasing,
-                      onPurchaseTicket: () async {
-                        try {
-                          await context
-                              .read<MarketplaceCubit>()
-                              .purchaseTicket(listing.ticketId);
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    '${listing.eventName} ticket purchased successfully!'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                        } catch (e) {
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(
-                              SnackBar(
-                                content:
-                                    Text('Purchase failed: ${e.toString()}'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                        }
-                      },
-                    );
-                  },
-                );
-              }
-
-              return const SizedBox.shrink();
+                      return _TicketListingCard(
+                        listing: listing,
+                        isPurchasing: isPurchasing,
+                        onPurchaseTicket: () async {
+                          try {
+                            await context
+                                .read<MarketplaceCubit>()
+                                .purchaseTicket(listing.ticketId);
+                            ScaffoldMessenger.of(context)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      '${listing.eventName} ticket purchased successfully!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context)
+                              ..hideCurrentSnackBar()
+                              ..showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text('Purchase failed: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                          }
+                        },
+                      );
+                    },
+                  );
+                },
+              );
             },
           ),
         ),

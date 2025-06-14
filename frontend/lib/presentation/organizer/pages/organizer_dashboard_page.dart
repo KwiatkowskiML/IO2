@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_cubit.dart';
 import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_state.dart';
@@ -28,8 +29,6 @@ class _OrganizerDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     return PageLayout(
       title: 'Dashboard',
       actions: [
@@ -45,52 +44,25 @@ class _OrganizerDashboardView extends StatelessWidget {
             context.read<OrganizerDashboardCubit>().loadDashboard(),
         child: BlocBuilder<OrganizerDashboardCubit, OrganizerDashboardState>(
           builder: (context, state) {
-            if (state is OrganizerDashboardLoading ||
-                state is OrganizerDashboardInitial) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (state is OrganizerDashboardError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            return BlocStateWrapper<OrganizerDashboardLoaded>(
+              state: state,
+              onRetry: () =>
+                  context.read<OrganizerDashboardCubit>().loadDashboard(),
+              builder: (loadedState) {
+                return ListView(
+                  padding: const EdgeInsets.all(16),
                   children: [
-                    Icon(Icons.error_outline,
-                        size: 48, color: colorScheme.error),
-                    const SizedBox(height: 16),
-                    Text('Failed to load dashboard',
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(color: colorScheme.error)),
-                    const SizedBox(height: 8),
-                    Text(state.message, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () =>
-                          context.read<OrganizerDashboardCubit>().loadDashboard(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Retry'),
-                    ),
+                    _WelcomeCard(),
+                    const SizedBox(height: 24),
+                    _StatCardGrid(events: loadedState.events),
+                    const SizedBox(height: 24),
+                    _QuickActions(),
+                    const SizedBox(height: 24),
+                    _RecentEventsList(events: loadedState.events),
                   ],
-                ),
-              );
-            }
-
-            if (state is OrganizerDashboardLoaded) {
-              return ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _WelcomeCard(),
-                  const SizedBox(height: 24),
-                  _StatCardGrid(events: state.events),
-                  const SizedBox(height: 24),
-                  _QuickActions(),
-                  const SizedBox(height: 24),
-                  _RecentEventsList(events: state.events),
-                ],
-              );
-            }
-
-            return const SizedBox.shrink();
+                );
+              },
+            );
           },
         ),
       ),
