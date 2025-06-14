@@ -386,9 +386,9 @@ class ApiService {
     try {
       // The backend will automatically filter by the authenticated user's tickets
       // If userId is provided, we can optionally include it as a query parameter
-      String endpoint = '/tickets';
+      String endpoint = '/tickets/';
       if (userId != null) {
-        endpoint = '/tickets?owner_id=$userId';
+        endpoint = '/tickets/?owner_id=$userId';
       }
       
       final response = await _dio.get(endpoint);
