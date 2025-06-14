@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:resellio/core/services/api_service.dart';
+import 'package:resellio/core/network/api_client.dart';
+import 'package:resellio/core/repositories/auth_repository.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 
-// --- JWT Decoding Helper ---
 Map<String, dynamic>? tryDecodeJwt(String token) {
   try {
     final parts = token.split('.');
@@ -20,7 +20,6 @@ Map<String, dynamic>? tryDecodeJwt(String token) {
   }
 }
 
-// --- User Model ---
 class UserModel {
   final int userId;
   final String email;
@@ -60,28 +59,28 @@ class UserModel {
 }
 
 class AuthService extends ChangeNotifier {
-  final ApiService _apiService;
+  final AuthRepository _authRepository;
+  final ApiClient _apiClient;
   String? _token;
   UserModel? _user;
 
-  AuthService(this._apiService);
+  AuthService(this._authRepository, this._apiClient);
 
   bool get isLoggedIn => _token != null;
   UserModel? get user => _user;
 
   Future<void> login(String email, String password) async {
     try {
-      final token = await _apiService.login(email, password);
+      final token = await _authRepository.login(email, password);
       _setTokenAndUser(token);
     } catch (e) {
-      // Rethrow to be caught in the UI
       rethrow;
     }
   }
 
   Future<void> registerCustomer(Map<String, dynamic> data) async {
     try {
-      final token = await _apiService.registerCustomer(data);
+      final token = await _authRepository.registerCustomer(data);
       _setTokenAndUser(token);
     } catch (e) {
       rethrow;
@@ -90,7 +89,7 @@ class AuthService extends ChangeNotifier {
 
   Future<void> registerOrganizer(Map<String, dynamic> data) async {
     try {
-      final token = await _apiService.registerOrganizer(data);
+      final token = await _authRepository.registerOrganizer(data);
       _setTokenAndUser(token);
     } catch (e) {
       rethrow;
@@ -99,7 +98,7 @@ class AuthService extends ChangeNotifier {
 
   void _setTokenAndUser(String token) {
     _token = token;
-    _apiService.setAuthToken(token);
+    _apiClient.setAuthToken(token);
 
     final jwtData = tryDecodeJwt(token);
     if (jwtData != null) {
@@ -111,7 +110,7 @@ class AuthService extends ChangeNotifier {
   void logout() {
     _token = null;
     _user = null;
-    _apiService.setAuthToken(null);
+    _apiClient.setAuthToken(null);
     notifyListeners();
   }
 }
