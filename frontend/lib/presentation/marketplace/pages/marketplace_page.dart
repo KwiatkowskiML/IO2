@@ -1,148 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:resellio/core/services/api_service.dart';
-import 'package:resellio/core/services/cart_service.dart';
-import 'package:resellio/core/models/ticket_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:resellio/core/models/resale_ticket_listing.dart';
+import 'package:resellio/core/repositories/resale_repository.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
+import 'package:resellio/presentation/marketplace/cubit/marketplace_cubit.dart';
+import 'package:resellio/presentation/marketplace/cubit/marketplace_state.dart';
 
-// Model for resale ticket listings
-class ResaleTicketListing {
-  final int ticketId;
-  final double originalPrice;
-  final double resellPrice;
-  final String eventName;
-  final DateTime eventDate;
-  final String venueName;
-  final String ticketTypeDescription;
-  final String? seat;
+class MarketplacePage extends StatelessWidget {
+  const MarketplacePage({super.key});
 
-  ResaleTicketListing({
-    required this.ticketId,
-    required this.originalPrice,
-    required this.resellPrice,
-    required this.eventName,
-    required this.eventDate,
-    required this.venueName,
-    required this.ticketTypeDescription,
-    this.seat,
-  });
-
-  factory ResaleTicketListing.fromJson(Map<String, dynamic> json) {
-    return ResaleTicketListing(
-      ticketId: json['ticket_id'],
-      originalPrice: (json['original_price'] as num).toDouble(),
-      resellPrice: (json['resell_price'] as num).toDouble(),
-      eventName: json['event_name'],
-      eventDate: DateTime.parse(json['event_date']),
-      venueName: json['venue_name'],
-      ticketTypeDescription: json['ticket_type_description'],
-      seat: json['seat'],
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          MarketplaceCubit(context.read<ResaleRepository>())..loadListings(),
+      child: const _MarketplaceView(),
     );
   }
 }
 
-class MarketplacePage extends StatefulWidget {
-  const MarketplacePage({super.key});
+class _MarketplaceView extends StatelessWidget {
+  const _MarketplaceView();
 
-  @override
-  State<MarketplacePage> createState() => _MarketplacePageState();
-}
-
-class _MarketplacePageState extends State<MarketplacePage> {
-  List<ResaleTicketListing> _listings = [];
-  bool _isLoading = true;
-  bool _isPurchasing = false; // Add this for purchase action
-  String? _error;
-  
-  // Filter state
-  double? _minPrice;
-  double? _maxPrice;
-  int? _eventId;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMarketplaceListings();
-  }
-
-  Future<void> _loadMarketplaceListings() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final apiService = context.read<ApiService>();
-      final listings = await apiService.getMarketplaceListings(
-        eventId: _eventId,
-        minPrice: _minPrice,
-        maxPrice: _maxPrice,
-      );
-      
-      setState(() {
-        _listings = listings.map((json) => ResaleTicketListing.fromJson(json)).toList();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
- Future<void> _purchaseTicket(ResaleTicketListing listing) async {
-    setState(() {
-      _isPurchasing = true; // Indicate purchase is in progress
-    });
-    try {
-      final apiService = context.read<ApiService>();
-
-      bool success = await apiService.purchaseResaleTicket(listing.ticketId);
-
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${listing.eventName} ticket purchased successfully!'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-        _loadMarketplaceListings(); // Refresh listings, the purchased one should be gone
-      }
-
-    } catch (e) {
-      print('Marketplace: Error purchasing ticket: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error purchasing ticket: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isPurchasing = false; // Purchase attempt finished
-        });
-      }
-    }
-  }
-
-  void _showFilters() {
+  void _showFilters(BuildContext context, double? currentMin, double? currentMax) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => _FilterBottomSheet(
-        minPrice: _minPrice,
-        maxPrice: _maxPrice,
+      builder: (_) => _FilterBottomSheet(
+        minPrice: currentMin,
+        maxPrice: currentMax,
         onApplyFilters: (min, max) {
-          setState(() {
-            _minPrice = min;
-            _maxPrice = max;
-          });
-          _loadMarketplaceListings();
+          context
+              .read<MarketplaceCubit>()
+              .loadListings(minPrice: min, maxPrice: max);
         },
       ),
     );
@@ -153,88 +42,99 @@ class _MarketplacePageState extends State<MarketplacePage> {
     return PageLayout(
       title: 'Marketplace',
       actions: [
-        IconButton(
-          icon: const Icon(Icons.filter_list),
-          onPressed: _showFilters,
+        BlocBuilder<MarketplaceCubit, MarketplaceState>(
+          builder: (context, state) {
+            return IconButton(
+              icon: const Icon(Icons.filter_list),
+              onPressed: () {
+                double? min, max;
+                if (state is MarketplaceLoaded) {
+                  // Pass current filters if they exist
+                }
+                _showFilters(context, min, max);
+              },
+            );
+          },
         ),
       ],
-      body: RefreshIndicator(
-        onRefresh: _loadMarketplaceListings,
-        child: _buildBody(),
+      body: BlocListener<MarketplaceCubit, MarketplaceState>(
+        listener: (context, state) {
+          if (state is MarketplaceLoaded && state is! MarketplacePurchaseInProgress) {
+            // TODO: Can be used to show "Purchase successful" if needed,
+            // but for now, the list just refreshes.
+          }
+        },
+        child: RefreshIndicator(
+          onRefresh: () => context.read<MarketplaceCubit>().loadListings(),
+          child: _buildBody(),
+        ),
       ),
     );
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    return BlocBuilder<MarketplaceCubit, MarketplaceState>(
+      builder: (context, state) {
+        if (state is MarketplaceLoading || state is MarketplaceInitial) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Error: $_error',
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadMarketplaceListings,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
+        if (state is MarketplaceError) {
+          return Center(child: Text('Error: ${state.message}'));
+        }
 
-    if (_listings.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.store_outlined,
-              size: 64,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'No tickets available for resale',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Check back later for new listings!',
-              style: TextStyle(color: Colors.grey),
-            ),
-          ],
-        ),
-      );
-    }
+        if (state is MarketplaceLoaded) {
+          if (state.listings.isEmpty) {
+            return const Center(child: Text('No tickets on the marketplace.'));
+          }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _listings.length,
-      itemBuilder: (context, index) {
-        final listing = _listings[index];
-        return _TicketListingCard(
-          listing: listing,
-          onPurchaseTicket: () => _purchaseTicket(listing),
-          isPurchasing: _isPurchasing
-        );
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: state.listings.length,
+            itemBuilder: (context, index) {
+              final listing = state.listings[index];
+              final isPurchasing = state is MarketplacePurchaseInProgress &&
+                  state.processingTicketId == listing.ticketId;
+
+              return _TicketListingCard(
+                listing: listing,
+                isPurchasing: isPurchasing,
+                onPurchaseTicket: () async {
+                  try {
+                    await context
+                        .read<MarketplaceCubit>()
+                        .purchaseTicket(listing.ticketId);
+                    ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              '${listing.eventName} ticket purchased successfully!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                  } catch (e) {
+                     ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Text('Purchase failed: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                  }
+                },
+              );
+            },
+          );
+        }
+
+        return const SizedBox.shrink();
       },
     );
   }
 }
+
 
 class _TicketListingCard extends StatelessWidget {
   final ResaleTicketListing listing;
@@ -244,16 +144,17 @@ class _TicketListingCard extends StatelessWidget {
   const _TicketListingCard({
     required this.listing,
     required this.onPurchaseTicket,
-    required this.isPurchasing
+    required this.isPurchasing,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
     final savings = listing.originalPrice - listing.resellPrice;
-    final savingsPercent = listing.originalPrice > 0 ? (savings / listing.originalPrice * 100).round() : 0;
+    final savingsPercent = listing.originalPrice > 0
+        ? (savings / listing.originalPrice * 100).round()
+        : 0;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -270,84 +171,26 @@ class _TicketListingCard extends StatelessWidget {
                     children: [
                       Text(
                         listing.eventName,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        listing.venueName,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        style: theme.textTheme.titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ),
-                if (savings > 0 && listing.originalPrice > 0)
+                if (savings > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '$savingsPercent% OFF',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Text('$savingsPercent% OFF',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold)),
                   ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  Icons.event,
-                  size: 16,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _formatDate(listing.eventDate),
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.confirmation_number,
-                  size: 16,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  listing.ticketTypeDescription,
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-            if (listing.seat != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(
-                    Icons.event_seat,
-                    size: 16,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Seat: ${listing.seat}',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            ],
             const SizedBox(height: 16),
             Row(
               children: [
@@ -355,22 +198,18 @@ class _TicketListingCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (savings > 0) ...[
+                      if (savings > 0)
                         Text(
                           '\$${listing.originalPrice.toStringAsFixed(2)}',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            decoration: TextDecoration.lineThrough,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                              decoration: TextDecoration.lineThrough,
+                              color: colorScheme.onSurfaceVariant),
                         ),
-                        const SizedBox(height: 2),
-                      ],
                       Text(
                         '\$${listing.resellPrice.toStringAsFixed(2)}',
                         style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary),
                       ),
                     ],
                   ),
@@ -381,43 +220,16 @@ class _TicketListingCard extends StatelessWidget {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
                       : const Text('Buy Now'),
-                  ),
+                ),
               ],
             ),
           ],
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final difference = date.difference(now);
-    
-    if (difference.inDays == 0) {
-      return 'Today at ${_formatTime(date)}';
-    } else if (difference.inDays == 1) {
-      return 'Tomorrow at ${_formatTime(date)}';
-    } else if (difference.inDays < 7) {
-      return '${_getDayName(date.weekday)} at ${_formatTime(date)}';
-    } else {
-      return '${date.month}/${date.day}/${date.year} at ${_formatTime(date)}';
-    }
-  }
-
-  String _formatTime(DateTime date) {
-    final hour = date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
-    final minute = date.minute.toString().padLeft(2, '0');
-    final period = date.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $period';
-  }
-
-  String _getDayName(int weekday) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days[weekday - 1];
   }
 }
 
@@ -426,11 +238,7 @@ class _FilterBottomSheet extends StatefulWidget {
   final double? maxPrice;
   final Function(double?, double?) onApplyFilters;
 
-  const _FilterBottomSheet({
-    this.minPrice,
-    this.maxPrice,
-    required this.onApplyFilters,
-  });
+  const _FilterBottomSheet({this.minPrice, this.maxPrice, required this.onApplyFilters});
 
   @override
   State<_FilterBottomSheet> createState() => _FilterBottomSheetState();
@@ -443,12 +251,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _minPriceController = TextEditingController(
-      text: widget.minPrice?.toString() ?? '',
-    );
-    _maxPriceController = TextEditingController(
-      text: widget.maxPrice?.toString() ?? '',
-    );
+    _minPriceController = TextEditingController(text: widget.minPrice?.toString() ?? '');
+    _maxPriceController = TextEditingController(text: widget.maxPrice?.toString() ?? '');
   }
 
   @override
@@ -466,10 +270,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Filter Tickets',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
+          Text('Filter Tickets', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -478,10 +279,9 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   controller: _minPriceController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: 'Min Price',
-                    prefixText: '\$',
-                    border: OutlineInputBorder(),
-                  ),
+                      labelText: 'Min Price',
+                      prefixText: '\$',
+                      border: OutlineInputBorder()),
                 ),
               ),
               const SizedBox(width: 16),
@@ -490,10 +290,9 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   controller: _maxPriceController,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
-                    labelText: 'Max Price',
-                    prefixText: '\$',
-                    border: OutlineInputBorder(),
-                  ),
+                      labelText: 'Max Price',
+                      prefixText: '\$',
+                      border: OutlineInputBorder()),
                 ),
               ),
             ],

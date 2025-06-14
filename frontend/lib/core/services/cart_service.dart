@@ -3,96 +3,94 @@ import 'package:flutter/material.dart';
 import 'package:resellio/core/models/cart_model.dart';
 import 'package:resellio/core/models/ticket_model.dart';
 import 'package:resellio/core/repositories/cart_repository.dart';
+import 'package:resellio/core/network/api_exception.dart';
 
 class CartService extends ChangeNotifier {
   final CartRepository _cartRepository;
-  final List<CartItem> _items = [];
+  List<CartItem> _items = [];
+  bool _isLoading = false;
+  String? _error;
 
-  CartService(this._cartRepository);
+  CartService(this._cartRepository) {
+    fetchCartItems();
+  }
 
   UnmodifiableListView<CartItem> get items => UnmodifiableListView(_items);
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
-
   double get totalPrice => _items.fold(
-    0.0,
-    (sum, item) => sum + (item.quantity * item.ticketType.price),
-  );
+        0.0,
+        (sum, item) => sum + (item.quantity * item.price),
+      );
+
+  Future<void> _runAction(Future<void> Function() action) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await action();
+      await fetchCartItems(); // Refresh cart after action
+    } on ApiException catch (e) {
+      _error = e.message;
+    } catch (e) {
+      _error = 'An unexpected error occurred.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchCartItems() async {
+    await _runAction(() async {
+      _items = await _cartRepository.getCartItems();
+    });
+  }
 
   Future<void> addItem(TicketType ticketType) async {
-    try {
-      if (ticketType.typeId == null) {
-        throw Exception('Ticket type ID is required');
-      }
-      
-      // TODO: In phase 2, call _cartRepository.addToCart here
-      
-      final index = _items.indexWhere(
-        (item) => item.ticketType.typeId == ticketType.typeId,
-      );
-
-      if (index != -1) {
-        _items[index] = _items[index].copyWith(
-          quantity: _items[index].quantity + 1,
-        );
-      } else {
-        _items.add(CartItem(ticketType: ticketType, quantity: 1));
-      }
-      notifyListeners();
-    } catch (e) {
-      rethrow;
-    }
+    if (ticketType.typeId == null) throw Exception('Ticket type ID is required');
+    await _runAction(
+        () => _cartRepository.addToCart(ticketType.typeId!, 1));
   }
 
-  Future<void> addResaleTicket(int ticketId, String eventName, String description, double price) async {
-    try {
-      // TODO: In phase 2, call _cartRepository.addResaleTicketToCart here
-      
-      final resaleTicketType = TicketType(
-        typeId: ticketId,
-        eventId: 0,
-        description: '$eventName - $description (Resale)',
-        price: price,
-        maxCount: 1,
-        currency: 'USD',
-      );
-      
-      _items.add(CartItem(ticketType: resaleTicketType, quantity: 1));
-      notifyListeners();
-    } catch (e) {
-      rethrow;
-    }
+  Future<void> addResaleTicket(int ticketId) async {
+    await _runAction(() => _cartRepository.addResaleTicketToCart(ticketId));
   }
 
-  Future<void> removeItem(TicketType ticketType) async {
-    try {
-      // TODO: In phase 2, call _cartRepository.removeFromCart here
-      final itemIndex = _items.indexWhere((item) => item.ticketType.typeId == ticketType.typeId);
-      if (itemIndex != -1) {
-        _items.removeAt(itemIndex);
-        notifyListeners();
-      }
-    } catch (e) {
-      rethrow;
-    }
+  Future<void> removeItem(int cartItemId) async {
+    await _runAction(() => _cartRepository.removeFromCart(cartItemId));
   }
 
   Future<void> clearCart() async {
-    _items.clear();
-    notifyListeners();
+    // This assumes a clear cart endpoint or iterates remove
+    final currentItems = List<CartItem>.from(_items);
+    await _runAction(() async {
+      for (final item in currentItems) {
+        await _cartRepository.removeFromCart(item.cartItemId);
+      }
+    });
   }
-  
+
   Future<bool> checkout() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
     try {
-      // TODO: In phase 2, call _cartRepository.checkout here
-      final success = true; 
-      
+      final success = await _cartRepository.checkout();
       if (success) {
-        await clearCart();
+        _items.clear();
       }
       return success;
-    } catch (e) {
+    } on ApiException catch (e) {
+      _error = e.message;
       rethrow;
+    } catch (e) {
+      _error = 'An unexpected error occurred during checkout.';
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

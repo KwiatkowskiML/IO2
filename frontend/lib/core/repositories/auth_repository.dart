@@ -20,7 +20,9 @@ class ApiAuthRepository implements AuthRepository {
       options: Options(contentType: Headers.formUrlEncodedContentType),
     );
     if (response['token'] != null && response['token'].isNotEmpty) {
-      return response['token'];
+      final token = response['token'] as String;
+      _apiClient.setAuthToken(token);
+      return token;
     } else {
       throw Exception('Login failed: ${response['message']}');
     }
@@ -28,13 +30,19 @@ class ApiAuthRepository implements AuthRepository {
 
   @override
   Future<String> registerCustomer(Map<String, dynamic> data) async {
-    final response = await _apiClient.post('/auth/register/customer', data: data);
-    return response['token'];
+    final response =
+        await _apiClient.post('/auth/register/customer', data: data);
+    final token = response['token'] as String;
+    _apiClient.setAuthToken(token);
+    return token;
   }
 
   @override
   Future<String> registerOrganizer(Map<String, dynamic> data) async {
-    final response = await _apiClient.post('/auth/register/organizer', data: data);
-    return response['token'];
+    final response =
+        await _apiClient.post('/auth/register/organizer', data: data);
+    final token = response['token'] as String;
+    _apiClient.setAuthToken(token);
+    return token;
   }
 }

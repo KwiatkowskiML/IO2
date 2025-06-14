@@ -1,9 +1,10 @@
+// === frontend/lib/presentation/events/pages/event_details_page.dart ===
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/models/event_model.dart';
 import 'package:resellio/core/models/ticket_model.dart';
-import 'package:resellio/core/services/api_service.dart';
+import 'package:resellio/core/repositories/event_repository.dart';
 import 'package:resellio/core/services/cart_service.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
@@ -28,11 +29,11 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   }
 
   void _loadTicketTypes() {
-    final apiService = context.read<ApiService>();
+    final eventRepository = context.read<EventRepository>();
     final id = widget.event?.id ?? widget.eventId;
     if (id != null) {
       setState(() {
-        _ticketTypesFuture = apiService.getTicketTypesForEvent(id);
+        _ticketTypesFuture = eventRepository.getTicketTypesForEvent(id);
       });
     }
   }
@@ -65,7 +66,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   @override
   Widget build(BuildContext context) {
     if (widget.event == null) {
-      // TODO: Add a FutureBuilder to fetch the event by eventId if it's not passed
       return const Scaffold(body: Center(child: Text("Loading Event...")));
     }
 
@@ -82,7 +82,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Event Image
             if (event.imageUrl != null)
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),
@@ -97,58 +96,29 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 ),
               ),
             const SizedBox(height: 24),
-            // Event Title
-            Text(
-              event.name,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(event.name,
+                style: theme.textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            // Date and Time
             _buildInfoRow(
-              icon: Icons.calendar_today,
-              text: dateFormat.format(event.start),
-              context: context,
-            ),
+                icon: Icons.calendar_today,
+                text: dateFormat.format(event.start),
+                context: context),
             const SizedBox(height: 8),
             _buildInfoRow(
-              icon: Icons.access_time,
-              text:
-                  '${timeFormat.format(event.start)} - ${timeFormat.format(event.end)}',
-              context: context,
-            ),
+                icon: Icons.access_time,
+                text:
+                    '${timeFormat.format(event.start)} - ${timeFormat.format(event.end)}',
+                context: context),
             const SizedBox(height: 8),
-            // Location
             _buildInfoRow(
-              icon: Icons.location_on,
-              text: event.location,
-              context: context,
-            ),
+                icon: Icons.location_on,
+                text: event.location,
+                context: context),
             const SizedBox(height: 24),
-            // Description
-            Text(
-              'About this event',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              event.description ?? 'No description available.',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: Colors.white70,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Tickets Section
-            Text(
-              'Tickets',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text('Tickets',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             FutureBuilder<List<TicketType>>(
               future: _ticketTypesFuture,
@@ -160,8 +130,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                     !snapshot.hasData ||
                     snapshot.data!.isEmpty) {
                   return const Center(
-                    child: Text('No tickets available for this event.'),
-                  );
+                      child: Text('No tickets available for this event.'));
                 }
 
                 final ticketTypes = snapshot.data!;
@@ -183,17 +152,16 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    ticketType.description ?? 'Standard Ticket',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.bold),
-                                  ),
+                                      ticketType.description ??
+                                          'Standard Ticket',
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '\$${ticketType.price.toStringAsFixed(2)}',
-                                    style: theme.textTheme.bodyLarge?.copyWith(
-                                      color: colorScheme.primary,
-                                    ),
-                                  ),
+                                      '\$${ticketType.price.toStringAsFixed(2)}',
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(color: colorScheme.primary)),
                                 ],
                               ),
                             ),
@@ -212,25 +180,22 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 );
               },
             ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow({
-    required IconData icon,
-    required String text,
-    required BuildContext context,
-  }) {
+  Widget _buildInfoRow(
+      {required IconData icon,
+      required String text,
+      required BuildContext context}) {
     return Row(
       children: [
         Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(text, style: Theme.of(context).textTheme.bodyLarge),
-        ),
+            child: Text(text, style: Theme.of(context).textTheme.bodyLarge)),
       ],
     );
   }

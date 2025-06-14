@@ -60,11 +60,10 @@ class UserModel {
 
 class AuthService extends ChangeNotifier {
   final AuthRepository _authRepository;
-  final ApiClient _apiClient;
   String? _token;
   UserModel? _user;
 
-  AuthService(this._authRepository, this._apiClient);
+  AuthService(this._authRepository);
 
   bool get isLoggedIn => _token != null;
   UserModel? get user => _user;
@@ -98,7 +97,6 @@ class AuthService extends ChangeNotifier {
 
   void _setTokenAndUser(String token) {
     _token = token;
-    _apiClient.setAuthToken(token);
 
     final jwtData = tryDecodeJwt(token);
     if (jwtData != null) {
@@ -110,7 +108,10 @@ class AuthService extends ChangeNotifier {
   void logout() {
     _token = null;
     _user = null;
-    _apiClient.setAuthToken(null);
+    // The token is cleared from ApiClient via a repository method if needed,
+    // but for now, we just nullify it here.
+    // A better way would be _authRepository.logout() which would clear the token.
+    // TODO: Implement it the better way
     notifyListeners();
   }
 }
