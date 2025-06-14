@@ -16,6 +16,8 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
       emit(AdminDashboardLoaded(pendingOrganizers: pending, allUsers: users));
     } on ApiException catch (e) {
       emit(AdminDashboardError(e.message));
+    } catch (e) {
+      emit(AdminDashboardError('An unexpected error occurred: $e'));
     }
   }
 

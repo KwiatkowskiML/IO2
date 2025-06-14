@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:resellio/core/models/ticket_model.dart';
-import 'package:resellio/core/repositories/ticket_repository.dart';
+import 'package:resellio/core/models/models.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_cubit.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_state.dart';
@@ -98,14 +98,20 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error, size: 48, color: Colors.red),
+                        Icon(Icons.error_outline,
+                            size: 48, color: colorScheme.error),
                         const SizedBox(height: 16),
-                        Text(state.message),
+                        Text('Failed to load tickets',
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(color: colorScheme.error)),
+                        const SizedBox(height: 8),
+                        Text(state.message, textAlign: TextAlign.center),
                         const SizedBox(height: 16),
-                        ElevatedButton(
+                        ElevatedButton.icon(
                           onPressed: () =>
                               context.read<MyTicketsCubit>().loadTickets(),
-                          child: const Text('Retry'),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
                         ),
                       ],
                     ),
@@ -122,8 +128,9 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                     itemCount: tickets.length,
                     itemBuilder: (context, index) {
                       final ticket = tickets[index];
-                      final bool isProcessing = state is TicketUpdateInProgress &&
-                          state.processingTicketId == ticket.ticketId;
+                      final bool isProcessing =
+                          state is TicketUpdateInProgress &&
+                              state.processingTicketId == ticket.ticketId;
                       return _TicketCard(
                         ticket: ticket,
                         isProcessing: isProcessing,
@@ -191,8 +198,8 @@ class _TicketCard extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Cancel Resale?'),
-        content:
-            const Text('Are you sure you want to remove this ticket from resale?'),
+        content: const Text(
+            'Are you sure you want to remove this ticket from resale?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -274,7 +281,8 @@ class _TicketCard extends StatelessWidget {
                           : colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                     child: Column(
                       children: [
                         Text(

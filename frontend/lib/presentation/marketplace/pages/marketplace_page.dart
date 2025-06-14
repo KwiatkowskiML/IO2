@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:resellio/core/models/resale_ticket_listing.dart';
-import 'package:resellio/core/repositories/resale_repository.dart';
+import 'package:resellio/core/models/models.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/marketplace/cubit/marketplace_cubit.dart';
 import 'package:resellio/presentation/marketplace/cubit/marketplace_state.dart';
@@ -39,6 +39,9 @@ class _MarketplaceView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return PageLayout(
       title: 'Marketplace',
       actions: [
@@ -60,81 +63,99 @@ class _MarketplaceView extends StatelessWidget {
       body: BlocListener<MarketplaceCubit, MarketplaceState>(
         listener: (context, state) {
           if (state is MarketplaceLoaded && state is! MarketplacePurchaseInProgress) {
-            // TODO: Can be used to show "Purchase successful" if needed,
+            // Can be used to show "Purchase successful" if needed,
             // but for now, the list just refreshes.
           }
         },
         child: RefreshIndicator(
           onRefresh: () => context.read<MarketplaceCubit>().loadListings(),
-          child: _buildBody(),
+          child: BlocBuilder<MarketplaceCubit, MarketplaceState>(
+            builder: (context, state) {
+              if (state is MarketplaceLoading || state is MarketplaceInitial) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (state is MarketplaceError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline,
+                          size: 48, color: colorScheme.error),
+                      const SizedBox(height: 16),
+                      Text('Failed to load marketplace',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: colorScheme.error)),
+                      const SizedBox(height: 8),
+                      Text(state.message, textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            context.read<MarketplaceCubit>().loadListings(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              if (state is MarketplaceLoaded) {
+                if (state.listings.isEmpty) {
+                  return const Center(
+                      child: Text('No tickets on the marketplace.'));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: state.listings.length,
+                  itemBuilder: (context, index) {
+                    final listing = state.listings[index];
+                    final isPurchasing = state is MarketplacePurchaseInProgress &&
+                        state.processingTicketId == listing.ticketId;
+
+                    return _TicketListingCard(
+                      listing: listing,
+                      isPurchasing: isPurchasing,
+                      onPurchaseTicket: () async {
+                        try {
+                          await context
+                              .read<MarketplaceCubit>()
+                              .purchaseTicket(listing.ticketId);
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    '${listing.eventName} ticket purchased successfully!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text('Purchase failed: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                        }
+                      },
+                    );
+                  },
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
+          ),
         ),
       ),
     );
   }
-
-  Widget _buildBody() {
-    return BlocBuilder<MarketplaceCubit, MarketplaceState>(
-      builder: (context, state) {
-        if (state is MarketplaceLoading || state is MarketplaceInitial) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (state is MarketplaceError) {
-          return Center(child: Text('Error: ${state.message}'));
-        }
-
-        if (state is MarketplaceLoaded) {
-          if (state.listings.isEmpty) {
-            return const Center(child: Text('No tickets on the marketplace.'));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: state.listings.length,
-            itemBuilder: (context, index) {
-              final listing = state.listings[index];
-              final isPurchasing = state is MarketplacePurchaseInProgress &&
-                  state.processingTicketId == listing.ticketId;
-
-              return _TicketListingCard(
-                listing: listing,
-                isPurchasing: isPurchasing,
-                onPurchaseTicket: () async {
-                  try {
-                    await context
-                        .read<MarketplaceCubit>()
-                        .purchaseTicket(listing.ticketId);
-                    ScaffoldMessenger.of(context)
-                      ..hideCurrentSnackBar()
-                      ..showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              '${listing.eventName} ticket purchased successfully!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                  } catch (e) {
-                     ScaffoldMessenger.of(context)
-                      ..hideCurrentSnackBar()
-                      ..showSnackBar(
-                        SnackBar(
-                          content: Text('Purchase failed: ${e.toString()}'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                  }
-                },
-              );
-            },
-          );
-        }
-
-        return const SizedBox.shrink();
-      },
-    );
-  }
 }
-
 
 class _TicketListingCard extends StatelessWidget {
   final ResaleTicketListing listing;
@@ -179,7 +200,8 @@ class _TicketListingCard extends StatelessWidget {
                 ),
                 if (savings > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                         color: Colors.green,
                         borderRadius: BorderRadius.circular(12)),
@@ -238,7 +260,8 @@ class _FilterBottomSheet extends StatefulWidget {
   final double? maxPrice;
   final Function(double?, double?) onApplyFilters;
 
-  const _FilterBottomSheet({this.minPrice, this.maxPrice, required this.onApplyFilters});
+  const _FilterBottomSheet(
+      {this.minPrice, this.maxPrice, required this.onApplyFilters});
 
   @override
   State<_FilterBottomSheet> createState() => _FilterBottomSheetState();
@@ -251,8 +274,10 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _minPriceController = TextEditingController(text: widget.minPrice?.toString() ?? '');
-    _maxPriceController = TextEditingController(text: widget.maxPrice?.toString() ?? '');
+    _minPriceController =
+        TextEditingController(text: widget.minPrice?.toString() ?? '');
+    _maxPriceController =
+        TextEditingController(text: widget.maxPrice?.toString() ?? '');
   }
 
   @override
@@ -270,7 +295,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Filter Tickets', style: Theme.of(context).textTheme.headlineSmall),
+          Text('Filter Tickets',
+              style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
           Row(
             children: [

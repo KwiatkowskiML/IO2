@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:resellio/core/repositories/cart_repository.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 import 'package:resellio/presentation/cart/cubit/cart_state.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
@@ -47,7 +47,27 @@ class _CartView extends StatelessWidget {
           if (state is CartLoading || state is CartInitial) {
             body = const Center(child: CircularProgressIndicator());
           } else if (state is CartError) {
-            body = Center(child: Text(state.message));
+            body = Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline,
+                      size: 48, color: colorScheme.error),
+                  const SizedBox(height: 16),
+                  Text('Failed to load cart',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: colorScheme.error)),
+                  const SizedBox(height: 8),
+                  Text(state.message, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => context.read<CartCubit>().fetchCart(),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
           } else if (state is CartLoaded) {
             if (state.items.isEmpty) {
               body = const Center(child: Text('Your cart is empty'));
@@ -71,8 +91,9 @@ class _CartView extends StatelessWidget {
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_outline,
                                   color: Colors.red),
-                              onPressed: () =>
-                                  context.read<CartCubit>().removeItem(item.cartItemId),
+                              onPressed: () => context
+                                  .read<CartCubit>()
+                                  .removeItem(item.cartItemId),
                             ),
                           ),
                         );
@@ -83,7 +104,8 @@ class _CartView extends StatelessWidget {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(20)),
                     ),
                     child: Column(
                       children: [
@@ -100,9 +122,13 @@ class _CartView extends StatelessWidget {
                           text: 'PROCEED TO CHECKOUT',
                           isLoading: state is CartLoading,
                           onPressed: () async {
-                            final success = await context.read<CartCubit>().checkout();
-                            if(success && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Purchase Successful!'), backgroundColor: Colors.green,));
+                            final success =
+                                await context.read<CartCubit>().checkout();
+                            if (success && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Purchase Successful!'),
+                                      backgroundColor: Colors.green));
                               context.go('/home/customer');
                             }
                           },

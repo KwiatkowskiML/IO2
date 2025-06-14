@@ -28,6 +28,8 @@ class _OrganizerDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return PageLayout(
       title: 'Dashboard',
       actions: [
@@ -49,10 +51,28 @@ class _OrganizerDashboardView extends StatelessWidget {
             }
 
             if (state is OrganizerDashboardError) {
-              return _ErrorState(
-                  onRetry: () =>
-                      context.read<OrganizerDashboardCubit>().loadDashboard(),
-                  error: state.message);
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 48, color: colorScheme.error),
+                    const SizedBox(height: 16),
+                    Text('Failed to load dashboard',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(color: colorScheme.error)),
+                    const SizedBox(height: 8),
+                    Text(state.message, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          context.read<OrganizerDashboardCubit>().loadDashboard(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
             }
 
             if (state is OrganizerDashboardLoaded) {
@@ -340,7 +360,8 @@ class _RecentEventsList extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: events.take(3).length,
-            itemBuilder: (context, index) => _EventListItem(event: events[index]),
+            itemBuilder: (context, index) =>
+                _EventListItem(event: events[index]),
           ),
       ],
     );
@@ -418,42 +439,6 @@ class _EventListItem extends StatelessWidget {
                     fontWeight: FontWeight.bold),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final VoidCallback onRetry;
-  final Object? error;
-
-  const _ErrorState({required this.onRetry, this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline,
-                size: 48, color: Theme.of(context).colorScheme.error),
-            const SizedBox(height: 16),
-            Text('Failed to load dashboard',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text('$error',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry')),
           ],
         ),
       ),

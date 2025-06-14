@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:resellio/core/repositories/user_repository.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/profile/cubit/profile_cubit.dart';
@@ -51,6 +51,8 @@ class _ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return BlocListener<ProfileCubit, ProfileState>(
       listener: (context, state) {
         if (state is ProfileLoaded && !state.isEditing) {
@@ -82,7 +84,28 @@ class _ProfileView extends StatelessWidget {
               return const Center(child: CircularProgressIndicator());
             }
             if (state is ProfileError) {
-              return Center(child: Text('Error: ${state.message}'));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 48, color: colorScheme.error),
+                    const SizedBox(height: 16),
+                    Text('Failed to load profile',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(color: colorScheme.error)),
+                    const SizedBox(height: 8),
+                    Text(state.message, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          context.read<ProfileCubit>().loadProfile(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
             }
             if (state is ProfileLoaded || state is ProfileSaving) {
               final userProfile = (state as dynamic).userProfile;
@@ -199,7 +222,7 @@ class _ProfileFormState extends State<_ProfileForm> {
       child: Column(
         children: [
           TextFormField(
-            key: const ValueKey('first_name_field'), // ADDED KEY
+            key: const ValueKey('first_name_field'),
             controller: _firstNameController,
             enabled: widget.isEditing,
             decoration: const InputDecoration(labelText: 'First Name'),
@@ -207,7 +230,7 @@ class _ProfileFormState extends State<_ProfileForm> {
           ),
           const SizedBox(height: 16),
           TextFormField(
-            key: const ValueKey('last_name_field'), // ADDED KEY
+            key: const ValueKey('last_name_field'),
             controller: _lastNameController,
             enabled: widget.isEditing,
             decoration: const InputDecoration(labelText: 'Last Name'),
@@ -215,7 +238,7 @@ class _ProfileFormState extends State<_ProfileForm> {
           ),
           const SizedBox(height: 16),
           TextFormField(
-            key: const ValueKey('login_field'), // ADDED KEY
+            key: const ValueKey('login_field'),
             controller: _loginController,
             enabled: widget.isEditing,
             decoration: const InputDecoration(labelText: 'Username'),

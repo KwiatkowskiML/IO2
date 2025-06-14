@@ -24,6 +24,8 @@ class OrganizerDashboardCubit extends Cubit<OrganizerDashboardState> {
       emit(OrganizerDashboardLoaded(events));
     } on ApiException catch (e) {
       emit(OrganizerDashboardError(e.message));
+    } catch (e) {
+      emit(OrganizerDashboardError("An unexpected error occurred: $e"));
     }
   }
 }

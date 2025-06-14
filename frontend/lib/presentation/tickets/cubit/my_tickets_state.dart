@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:resellio/core/models/ticket_model.dart';
+import 'package:resellio/core/models/models.dart';
 
 enum TicketFilter { all, upcoming, resale }
 

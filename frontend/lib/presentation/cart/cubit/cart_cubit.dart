@@ -54,6 +54,9 @@ class CartCubit extends Cubit<CartState> {
     } on ApiException catch (e) {
       emit(CartError(e.message));
       return false;
+    } catch (e) {
+      emit(CartError("An unexpected error occurred: $e"));
+      return false;
     }
   }
 }

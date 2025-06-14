@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/network/api_exception.dart';
-import 'package:resellio/core/repositories/user_repository.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/profile/cubit/profile_state.dart';
 
 class ProfileCubit extends Cubit<ProfileState> {
@@ -35,12 +35,12 @@ class ProfileCubit extends Cubit<ProfileState> {
 
     try {
       await _userRepository.updateUserProfile(data);
-      await loadProfile(); // Refresh after successful save
+      await loadProfile();
     } on ApiException {
-      emit(ProfileLoaded(userProfile: loadedState.userProfile)); // Revert
-      rethrow; // re-throw for listener
+      emit(ProfileLoaded(userProfile: loadedState.userProfile));
+      rethrow;
     } catch (e) {
-      emit(ProfileLoaded(userProfile: loadedState.userProfile)); // Revert
+      emit(ProfileLoaded(userProfile: loadedState.userProfile));
       throw Exception('An unexpected error occurred.');
     }
   }

@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/network/api_exception.dart';
-import 'package:resellio/core/repositories/resale_repository.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/marketplace/cubit/marketplace_state.dart';
 
 class MarketplaceCubit extends Cubit<MarketplaceState> {
@@ -33,12 +33,9 @@ class MarketplaceCubit extends Cubit<MarketplaceState> {
 
     try {
       await _resaleRepository.purchaseResaleTicket(ticketId);
-      // On success, refresh the whole list
       await loadListings();
     } on ApiException {
-      // Revert to loaded state on error to un-disable button
       emit(MarketplaceLoaded(loadedState.listings));
-      // Then throw to be caught by BlocListener for SnackBar
       rethrow;
     } catch (e) {
       emit(MarketplaceLoaded(loadedState.listings));

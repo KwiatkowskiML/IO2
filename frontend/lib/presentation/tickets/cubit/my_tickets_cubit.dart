@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/network/api_exception.dart';
-import 'package:resellio/core/repositories/ticket_repository.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_state.dart';
 
 class MyTicketsCubit extends Cubit<MyTicketsState> {
@@ -41,7 +41,7 @@ class MyTicketsCubit extends Cubit<MyTicketsState> {
 
     try {
       await _ticketRepository.listTicketForResale(ticketId, price);
-      await loadTickets(); 
+      await loadTickets();
     } on ApiException catch (e) {
       emit(MyTicketsError(e.message));
     } catch (e) {

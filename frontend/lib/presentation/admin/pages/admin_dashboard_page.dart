@@ -23,6 +23,8 @@ class _AdminDashboardView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return PageLayout(
       title: 'Admin Dashboard',
       actions: [
@@ -39,7 +41,28 @@ class _AdminDashboardView extends StatelessWidget {
               return const Center(child: CircularProgressIndicator());
             }
             if (state is AdminDashboardError) {
-              return Center(child: Text('Error: ${state.message}'));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 48, color: colorScheme.error),
+                    const SizedBox(height: 16),
+                    Text('Failed to load dashboard',
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(color: colorScheme.error)),
+                    const SizedBox(height: 8),
+                    Text(state.message, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          context.read<AdminDashboardCubit>().loadDashboard(),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
             }
             if (state is AdminDashboardLoaded) {
               return SingleChildScrollView(

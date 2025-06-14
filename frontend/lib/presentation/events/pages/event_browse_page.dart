@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/models/event_filter_model.dart';
-import 'package:resellio/core/repositories/event_repository.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/utils/responsive_layout.dart';
 import 'package:resellio/presentation/events/cubit/event_browse_cubit.dart';
 import 'package:resellio/presentation/events/cubit/event_browse_state.dart';
@@ -177,17 +177,24 @@ class _EventBrowseViewState extends State<_EventBrowseView> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: colorScheme.error),
+                        Icon(Icons.error_outline,
+                            size: 48, color: colorScheme.error),
                         const SizedBox(height: 16),
-                        Text('Failed to load events', style: theme.textTheme.titleMedium?.copyWith(color: colorScheme.error)),
+                        Text('Failed to load events',
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(color: colorScheme.error)),
                         const SizedBox(height: 8),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Text(state.message, textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text(state.message,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium),
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
-                          onPressed: () => context.read<EventBrowseCubit>().loadEvents(),
+                          onPressed: () =>
+                              context.read<EventBrowseCubit>().loadEvents(),
                           icon: const Icon(Icons.refresh),
                           label: const Text('Retry'),
                         ),
@@ -206,7 +213,8 @@ class _EventBrowseViewState extends State<_EventBrowseView> {
                     child: GridView.builder(
                       padding: const EdgeInsets.all(16),
                       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: ResponsiveLayout.isMobile(context) ? 300 : 350,
+                        maxCrossAxisExtent:
+                            ResponsiveLayout.isMobile(context) ? 300 : 350,
                         childAspectRatio: 0.75,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
