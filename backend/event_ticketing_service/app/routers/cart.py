@@ -63,90 +63,36 @@ async def add_to_cart(
     ticket_repo: TicketRepository = Depends(get_ticket_repository),
     cart_repo: CartRepository = Depends(get_cart_repository)
 ):
-    """Add a ticket to the user's shopping cart
-    
-    - For new event tickets: provide ticket_type_id
-    - For resale tickets: provide ticket_id
-    - Exactly one of ticket_id or ticket_type_id must be provided
-    """
+    """Add a ticket to the user's shopping cart"""
     user_id = user["user_id"]
 
-    # Validate that exactly one parameter is provided
-    if not ticket_id and not ticket_type_id:
+    # Verify the ticket type exists
+    ticket_type = ticket_repo.get_ticket_type_by_id(ticket_type_id)
+    if not ticket_type:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either ticket_id or ticket_type_id must be provided"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticket type with ID {ticket_type_id} not found",
         )
-    
-    if ticket_id and ticket_type_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only one of ticket_id or ticket_type_id should be provided, not both"
-        )
+    logger.info(f"Add item {ticket_type} to cart of {user}")
 
     try:
-        if ticket_type_id:
-            # Handle normal event tickets
-            logger.info(f"Adding ticket_type_id {ticket_type_id} to cart for user {user_id}")
-            
-            # Verify the ticket type exists
-            ticket_type = ticket_repo.get_ticket_type_by_id(ticket_type_id)
-            if not ticket_type:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Ticket type with ID {ticket_type_id} not found",
-                )
-            
-            cart_item_model = cart_repo.add_item_from_detailed_sell(
-                customer_id=user_id,
-                ticket_type_id=ticket_type_id,
-                quantity=quantity
-            )
-            
-        else:  # ticket_id is provided
-            # Handle resale tickets
-            logger.info(f"Adding resale ticket_id {ticket_id} to cart for user {user_id}")
-            
-            # Verify the ticket exists and is available for resale
-            ticket = ticket_repo.get_ticket(ticket_id)
-            if not ticket:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Ticket with ID {ticket_id} not found",
-                )
-            
-            if ticket.resell_price is None:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Ticket with ID {ticket_id} is not available for resale",
-                )
-            
-            if ticket.owner_id == user_id:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="You cannot buy your own ticket",
-                )
-            
-            # For resale tickets, quantity is always 1
-            cart_item_model = cart_repo.add_resale_ticket_to_cart(
-                customer_id=user_id,
-                ticket_id=ticket_id
-            )
+        cart_item_model = cart_repo.add_item_from_detailed_sell(
+            customer_id=user_id,
+            ticket_type_id=ticket_type_id,
+            quantity=quantity
+        )
 
-        # Validate and return the cart item
         if not cart_item_model.ticket_type:
+            # This should ideally not happen if add_item works correctly and ticket_type exists
             logger.error(
                 f"Ticket type details not found for cart_item_id {cart_item_model.cart_item_id} after adding to cart.")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Error retrieving ticket type details after adding to cart."
-            )
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Error retrieving ticket type details after adding to cart.")
 
         return CartItemWithDetails(
             ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
             quantity=cart_item_model.quantity
         )
-        
     except HTTPException as e:
         # Re-raise HTTPExceptions from the repository (e.g., not found, bad request)
         raise e
