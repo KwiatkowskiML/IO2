@@ -1,15 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:resellio/core/network/api_client.dart';
-import 'package:resellio/core/repositories/auth_repository.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 
 Map<String, dynamic>? tryDecodeJwt(String token) {
   try {
     final parts = token.split('.');
-    if (parts.length != 3) {
-      return null;
-    }
+    if (parts.length != 3) return null;
     final payload = parts[1];
     final normalized = base64Url.normalize(payload);
     final resp = utf8.decode(base64Url.decode(normalized));
@@ -27,13 +24,12 @@ class UserModel {
   final UserRole role;
   final int roleId;
 
-  UserModel({
-    required this.userId,
-    required this.email,
-    required this.name,
-    required this.role,
-    required this.roleId,
-  });
+  UserModel(
+      {required this.userId,
+      required this.email,
+      required this.name,
+      required this.role,
+      required this.roleId});
 
   factory UserModel.fromJwt(Map<String, dynamic> jwtData) {
     UserRole role;
@@ -69,35 +65,22 @@ class AuthService extends ChangeNotifier {
   UserModel? get user => _user;
 
   Future<void> login(String email, String password) async {
-    try {
-      final token = await _authRepository.login(email, password);
-      _setTokenAndUser(token);
-    } catch (e) {
-      rethrow;
-    }
+    final token = await _authRepository.login(email, password);
+    _setTokenAndUser(token);
   }
 
   Future<void> registerCustomer(Map<String, dynamic> data) async {
-    try {
-      final token = await _authRepository.registerCustomer(data);
-      _setTokenAndUser(token);
-    } catch (e) {
-      rethrow;
-    }
+    final token = await _authRepository.registerCustomer(data);
+    _setTokenAndUser(token);
   }
 
   Future<void> registerOrganizer(Map<String, dynamic> data) async {
-    try {
-      final token = await _authRepository.registerOrganizer(data);
-      _setTokenAndUser(token);
-    } catch (e) {
-      rethrow;
-    }
+    final token = await _authRepository.registerOrganizer(data);
+    _setTokenAndUser(token);
   }
 
   void _setTokenAndUser(String token) {
     _token = token;
-
     final jwtData = tryDecodeJwt(token);
     if (jwtData != null) {
       _user = UserModel.fromJwt(jwtData);
@@ -105,13 +88,10 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void logout() {
+  Future<void> logout() async {
+    await _authRepository.logout();
     _token = null;
     _user = null;
-    // The token is cleared from ApiClient via a repository method if needed,
-    // but for now, we just nullify it here.
-    // A better way would be _authRepository.logout() which would clear the token.
-    // TODO: Implement it the better way
     notifyListeners();
   }
 }

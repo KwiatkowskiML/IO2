@@ -1,17 +1,10 @@
-// === frontend/lib/main.dart ===
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/app/config/app_router.dart';
 import 'package:resellio/app/config/app_theme.dart';
 import 'package:resellio/core/network/api_client.dart';
-import 'package:resellio/core/repositories/auth_repository.dart';
-import 'package:resellio/core/repositories/cart_repository.dart';
-import 'package:resellio/core/repositories/event_repository.dart';
-import 'package:resellio/core/repositories/resale_repository.dart';
-import 'package:resellio/core/repositories/ticket_repository.dart';
-import 'package:resellio/core/repositories/user_repository.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
-import 'package:resellio/core/services/cart_service.dart';
 
 void main() {
   runApp(
@@ -38,13 +31,13 @@ void main() {
         Provider<UserRepository>(
           create: (context) => ApiUserRepository(context.read<ApiClient>()),
         ),
+        Provider<AdminRepository>(
+          create: (context) => ApiAdminRepository(context.read<ApiClient>()),
+        ),
         ChangeNotifierProvider(
           create: (context) => AuthService(
             context.read<AuthRepository>(),
           ),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => CartService(context.read<CartRepository>()),
         ),
       ],
       child: const ResellioApp(),

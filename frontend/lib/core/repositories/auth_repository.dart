@@ -5,6 +5,7 @@ abstract class AuthRepository {
   Future<String> login(String email, String password);
   Future<String> registerCustomer(Map<String, dynamic> data);
   Future<String> registerOrganizer(Map<String, dynamic> data);
+  Future<void> logout();
 }
 
 class ApiAuthRepository implements AuthRepository {
@@ -44,5 +45,10 @@ class ApiAuthRepository implements AuthRepository {
     final token = response['token'] as String;
     _apiClient.setAuthToken(token);
     return token;
+  }
+
+  @override
+  Future<void> logout() async {
+    _apiClient.setAuthToken(null);
   }
 }

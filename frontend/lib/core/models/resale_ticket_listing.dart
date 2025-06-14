@@ -27,7 +27,8 @@ class ResaleTicketListing {
       eventName: json['event_name'],
       eventDate: DateTime.parse(json['event_date']),
       venueName: json['venue_name'],
-      ticketTypeDescription: json['ticket_type_description'] ?? 'Standard Ticket',
+      ticketTypeDescription:
+          json['ticket_type_description'] ?? 'Standard Ticket',
       seat: json['seat'],
     );
   }

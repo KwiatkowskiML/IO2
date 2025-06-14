@@ -1,36 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import 'package:resellio/core/models/event_model.dart';
-import 'package:resellio/core/services/api_service.dart';
+import 'package:resellio/core/models/models.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
+import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_cubit.dart';
+import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_state.dart';
 
-class OrganizerDashboardPage extends StatefulWidget {
+class OrganizerDashboardPage extends StatelessWidget {
   const OrganizerDashboardPage({super.key});
 
   @override
-  State<OrganizerDashboardPage> createState() => _OrganizerDashboardPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => OrganizerDashboardCubit(
+        context.read<EventRepository>(),
+        context.read<AuthService>(),
+      )..loadDashboard(),
+      child: const _OrganizerDashboardView(),
+    );
+  }
 }
 
-class _OrganizerDashboardPageState extends State<OrganizerDashboardPage> {
-  late Future<List<Event>> _eventsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDashboardData();
-  }
-
-  Future<void> _loadDashboardData() async {
-    // This triggers the FutureBuilder to re-fetch data
-    setState(() {
-      _eventsFuture =
-          context.read<ApiService>().getOrganizerEvents(
-                context.read<AuthService>().user?.roleId ?? 0,
-              ).then((eventsAsMaps) => eventsAsMaps.map((e) => Event.fromJson(e)).toList());
-    });
-  }
+class _OrganizerDashboardView extends StatelessWidget {
+  const _OrganizerDashboardView();
 
   @override
   Widget build(BuildContext context) {
@@ -40,44 +34,49 @@ class _OrganizerDashboardPageState extends State<OrganizerDashboardPage> {
         IconButton(
           icon: const Icon(Icons.refresh),
           tooltip: 'Refresh Data',
-          onPressed: _loadDashboardData,
+          onPressed: () =>
+              context.read<OrganizerDashboardCubit>().loadDashboard(),
         ),
       ],
       body: RefreshIndicator(
-        onRefresh: _loadDashboardData,
-        child: FutureBuilder<List<Event>>(
-          future: _eventsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        onRefresh: () =>
+            context.read<OrganizerDashboardCubit>().loadDashboard(),
+        child: BlocBuilder<OrganizerDashboardCubit, OrganizerDashboardState>(
+          builder: (context, state) {
+            if (state is OrganizerDashboardLoading ||
+                state is OrganizerDashboardInitial) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
-              return _ErrorState(onRetry: _loadDashboardData, error: snapshot.error);
+            if (state is OrganizerDashboardError) {
+              return _ErrorState(
+                  onRetry: () =>
+                      context.read<OrganizerDashboardCubit>().loadDashboard(),
+                  error: state.message);
             }
 
-            final events = snapshot.data ?? [];
+            if (state is OrganizerDashboardLoaded) {
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _WelcomeCard(),
+                  const SizedBox(height: 24),
+                  _StatCardGrid(events: state.events),
+                  const SizedBox(height: 24),
+                  _QuickActions(),
+                  const SizedBox(height: 24),
+                  _RecentEventsList(events: state.events),
+                ],
+              );
+            }
 
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _WelcomeCard(),
-                const SizedBox(height: 24),
-                _StatCardGrid(events: events),
-                const SizedBox(height: 24),
-                _QuickActions(),
-                const SizedBox(height: 24),
-                _RecentEventsList(events: events),
-              ],
-            );
+            return const SizedBox.shrink();
           },
         ),
       ),
     );
   }
 }
-
-// --- Modular Widgets ---
 
 class _WelcomeCard extends StatelessWidget {
   @override
@@ -101,7 +100,8 @@ class _WelcomeCard extends StatelessWidget {
           children: [
             Text(
               'Welcome back, ${user?.name ?? 'Organizer'}!',
-              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -133,7 +133,10 @@ class _StatCardGrid extends StatelessWidget {
       children: [
         Text(
           'Overview',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -144,10 +147,26 @@ class _StatCardGrid extends StatelessWidget {
           mainAxisSpacing: 16,
           childAspectRatio: 1.5,
           children: [
-            _StatCard(title: 'Total Events', value: events.length.toString(), icon: Icons.event, color: Colors.blue),
-            _StatCard(title: 'Active Events', value: activeEvents.toString(), icon: Icons.event_available, color: Colors.green),
-            _StatCard(title: 'Pending Events', value: pendingEvents.toString(), icon: Icons.pending, color: Colors.orange),
-            _StatCard(title: 'Total Tickets', value: totalTickets.toString(), icon: Icons.confirmation_number, color: Colors.purple),
+            _StatCard(
+                title: 'Total Events',
+                value: events.length.toString(),
+                icon: Icons.event,
+                color: Colors.blue),
+            _StatCard(
+                title: 'Active Events',
+                value: activeEvents.toString(),
+                icon: Icons.event_available,
+                color: Colors.green),
+            _StatCard(
+                title: 'Pending Events',
+                value: pendingEvents.toString(),
+                icon: Icons.pending,
+                color: Colors.orange),
+            _StatCard(
+                title: 'Total Tickets',
+                value: totalTickets.toString(),
+                icon: Icons.confirmation_number,
+                color: Colors.purple),
           ],
         ),
       ],
@@ -161,7 +180,11 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _StatCard({required this.title, required this.value, required this.icon, required this.color});
+  const _StatCard(
+      {required this.title,
+      required this.value,
+      required this.icon,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -175,15 +198,21 @@ class _StatCard extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8)),
               child: Icon(icon, color: color, size: 20),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: color)),
+                Text(value,
+                    style: theme.textTheme.headlineMedium
+                        ?.copyWith(fontWeight: FontWeight.bold, color: color)),
                 const SizedBox(height: 4),
-                Text(title, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                Text(title,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
               ],
             ),
           ],
@@ -201,7 +230,10 @@ class _QuickActions extends StatelessWidget {
       children: [
         Text(
           'Quick Actions',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -215,7 +247,8 @@ class _QuickActions extends StatelessWidget {
                 color: Colors.green,
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Create Event page - Coming Soon!')),
+                    const SnackBar(
+                        content: Text('Create Event page - Coming Soon!')),
                   );
                 },
               ),
@@ -225,7 +258,8 @@ class _QuickActions extends StatelessWidget {
                 color: Colors.blue,
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Statistics page - Coming Soon!')),
+                    const SnackBar(
+                        content: Text('Statistics page - Coming Soon!')),
                   );
                 },
               ),
@@ -243,7 +277,11 @@ class _ActionCard extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _ActionCard({required this.title, required this.icon, required this.color, required this.onTap});
+  const _ActionCard(
+      {required this.title,
+      required this.icon,
+      required this.color,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -260,7 +298,11 @@ class _ActionCard extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 28),
               const SizedBox(height: 8),
-              Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text(title,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -281,7 +323,10 @@ class _RecentEventsList extends StatelessWidget {
       children: [
         Text(
           'Recent Events',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         if (events.isEmpty)
@@ -335,15 +380,22 @@ class _EventListItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(event.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(event.name,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      Icon(Icons.calendar_today,
+                          size: 14,
+                          color: theme.colorScheme.onSurfaceVariant),
                       const SizedBox(width: 6),
-                      Text(DateFormat.yMMMd().format(event.start), style: theme.textTheme.bodySmall),
+                      Text(DateFormat.yMMMd().format(event.start),
+                          style: theme.textTheme.bodySmall),
                       const SizedBox(width: 12),
-                      Icon(Icons.location_on, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      Icon(Icons.location_on,
+                          size: 14,
+                          color: theme.colorScheme.onSurfaceVariant),
                       const SizedBox(width: 6),
                       Text(event.location, style: theme.textTheme.bodySmall),
                     ],
@@ -360,7 +412,10 @@ class _EventListItem extends StatelessWidget {
               ),
               child: Text(
                 event.status.toUpperCase(),
-                style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -384,13 +439,21 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
+            Icon(Icons.error_outline,
+                size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
-            Text('Failed to load dashboard', style: Theme.of(context).textTheme.titleLarge),
+            Text('Failed to load dashboard',
+                style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            Text('$error', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text('$error',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
             const SizedBox(height: 24),
-            ElevatedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+            ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry')),
           ],
         ),
       ),
@@ -403,7 +466,8 @@ class _EmptyState extends StatelessWidget {
   final String message;
   final String details;
 
-  const _EmptyState({required this.icon, required this.message, required this.details});
+  const _EmptyState(
+      {required this.icon, required this.message, required this.details});
 
   @override
   Widget build(BuildContext context) {
@@ -413,14 +477,17 @@ class _EmptyState extends StatelessWidget {
         child: Center(
           child: Column(
             children: [
-              Icon(icon, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              Icon(icon,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(height: 16),
               Text(message, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
                 details,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
