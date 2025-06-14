@@ -105,9 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Create an account to start buying and selling.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                    style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
@@ -138,22 +136,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _emailController,
                     decoration: const InputDecoration(labelText: 'Email'),
                     keyboardType: TextInputType.emailAddress,
-                    validator:
-                        (v) =>
-                            v!.isEmpty || !v.contains('@')
-                                ? 'Enter a valid email'
-                                : null,
+                    validator: (v) => v!.isEmpty || !v.contains('@')
+                        ? 'Enter a valid email'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
                     decoration: const InputDecoration(labelText: 'Password'),
                     obscureText: true,
-                    validator:
-                        (v) =>
-                            v!.length < 8
-                                ? 'Password must be 8+ characters'
-                                : null,
+                    validator: (v) =>
+                        v!.length < 8 ? 'Password must be 8+ characters' : null,
                   ),
                   if (isOrganizer) ...[
                     const SizedBox(height: 16),

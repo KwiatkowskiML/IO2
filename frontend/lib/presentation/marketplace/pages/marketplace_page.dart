@@ -167,8 +167,7 @@ class _TicketListingCard extends StatelessWidget {
                     children: [
                       Text(
                         listing.eventName,
-                        style: theme.textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.titleLarge,
                       ),
                     ],
                   ),
@@ -180,11 +179,11 @@ class _TicketListingCard extends StatelessWidget {
                     decoration: BoxDecoration(
                         color: Colors.green,
                         borderRadius: BorderRadius.circular(12)),
-                    child: Text('$savingsPercent% OFF',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold)),
+                    child: Text(
+                      '$savingsPercent% OFF',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: Colors.white),
+                    ),
                   ),
               ],
             ),
@@ -199,14 +198,12 @@ class _TicketListingCard extends StatelessWidget {
                         Text(
                           '\$${listing.originalPrice.toStringAsFixed(2)}',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                              decoration: TextDecoration.lineThrough,
-                              color: colorScheme.onSurfaceVariant),
+                              decoration: TextDecoration.lineThrough),
                         ),
                       Text(
                         '\$${listing.resellPrice.toStringAsFixed(2)}',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.primary),
+                        style: theme.textTheme.headlineSmall
+                            ?.copyWith(color: colorScheme.primary),
                       ),
                     ],
                   ),

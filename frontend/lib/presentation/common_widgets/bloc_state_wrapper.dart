@@ -53,7 +53,6 @@ class BlocStateWrapper<TLoaded> extends StatelessWidget {
               Text(
                 'An Error Occurred',
                 style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
                   color: colorScheme.error,
                 ),
               ),

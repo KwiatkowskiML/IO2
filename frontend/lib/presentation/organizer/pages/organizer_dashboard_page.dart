@@ -76,14 +76,8 @@ class _WelcomeCard extends StatelessWidget {
     final authService = context.read<AuthService>();
     final user = authService.user;
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5)),
-      ),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -92,15 +86,12 @@ class _WelcomeCard extends StatelessWidget {
           children: [
             Text(
               'Welcome back, ${user?.name ?? 'Organizer'}!',
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
               'Here\'s an overview of your events and activities.',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+              style: theme.textTheme.bodyMedium,
             ),
           ],
         ),
@@ -125,10 +116,7 @@ class _StatCardGrid extends StatelessWidget {
       children: [
         Text(
           'Overview',
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -199,12 +187,9 @@ class _StatCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(value,
-                    style: theme.textTheme.headlineMedium
-                        ?.copyWith(fontWeight: FontWeight.bold, color: color)),
+                    style: theme.textTheme.headlineMedium?.copyWith(color: color)),
                 const SizedBox(height: 4),
-                Text(title,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                Text(title, style: theme.textTheme.bodyMedium),
               ],
             ),
           ],
@@ -222,10 +207,7 @@ class _QuickActions extends StatelessWidget {
       children: [
         Text(
           'Quick Actions',
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -290,11 +272,7 @@ class _ActionCard extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 28),
               const SizedBox(height: 8),
-              Text(title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600)),
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
             ],
           ),
         ),
@@ -315,10 +293,7 @@ class _RecentEventsList extends StatelessWidget {
       children: [
         Text(
           'Recent Events',
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
         if (events.isEmpty)
@@ -373,9 +348,7 @@ class _EventListItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(event.name,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(event.name, style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -405,10 +378,7 @@ class _EventListItem extends StatelessWidget {
               ),
               child: Text(
                 event.status.toUpperCase(),
-                style: TextStyle(
-                    color: statusColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold),
+                style: theme.textTheme.labelSmall?.copyWith(color: statusColor),
               ),
             ),
           ],
@@ -428,6 +398,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
@@ -436,15 +407,14 @@ class _EmptyState extends StatelessWidget {
             children: [
               Icon(icon,
                   size: 48,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  color: theme.colorScheme.onSurfaceVariant),
               const SizedBox(height: 16),
-              Text(message, style: Theme.of(context).textTheme.titleMedium),
+              Text(message, style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Text(
                 details,
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodyMedium,
               ),
             ],
           ),

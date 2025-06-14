@@ -1,4 +1,3 @@
-// === frontend/lib/presentation/main_page/page_layout.dart ===
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/utils/responsive_layout.dart';
@@ -70,8 +69,7 @@ class PageLayout extends StatelessWidget {
               centerTitle: false,
               title: Text(
                 title,
-                style:
-                    theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleLarge,
               ),
               leading: showBackButton
                   ? IconButton(
@@ -125,8 +123,7 @@ class PageLayout extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: theme.textTheme.headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.headlineMedium,
                     ),
                   ),
                   Row(

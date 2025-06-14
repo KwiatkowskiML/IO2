@@ -81,9 +81,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 ),
               ),
             const SizedBox(height: 24),
-            Text(event.name,
-                style: theme.textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+            Text(event.name, style: theme.textTheme.headlineSmall),
             const SizedBox(height: 16),
             _buildInfoRow(
                 icon: Icons.calendar_today,
@@ -101,9 +99,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 text: event.location,
                 context: context),
             const SizedBox(height: 24),
-            Text('Tickets',
-                style: theme.textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.bold)),
+            Text('Tickets', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             FutureBuilder<List<TicketType>>(
               future: _ticketTypesFuture,
@@ -139,14 +135,13 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                   Text(
                                       ticketType.description ??
                                           'Standard Ticket',
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.bold)),
+                                      style: theme.textTheme.titleMedium),
                                   const SizedBox(height: 4),
                                   Text(
                                       '\$${ticketType.price.toStringAsFixed(2)}',
-                                      style: theme.textTheme.bodyLarge?.copyWith(
-                                          color: colorScheme.primary)),
+                                      style: theme.textTheme.bodyLarge
+                                          ?.copyWith(
+                                              color: colorScheme.primary)),
                                 ],
                               ),
                             ),

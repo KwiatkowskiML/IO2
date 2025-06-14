@@ -59,8 +59,9 @@ class ListItemCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         DefaultTextStyle(
-                          style: theme.textTheme.titleMedium!.copyWith(
-                            fontWeight: FontWeight.bold,
+                          style: (theme.textTheme.titleMedium ??
+                                  const TextStyle())
+                              .copyWith(
                             color: isDimmed
                                 ? colorScheme.onSurface.withOpacity(0.6)
                                 : null,
@@ -70,7 +71,9 @@ class ListItemCard extends StatelessWidget {
                         if (subtitle != null) ...[
                           const SizedBox(height: 4),
                           DefaultTextStyle(
-                            style: theme.textTheme.bodyMedium!.copyWith(
+                            style: (theme.textTheme.bodyMedium ??
+                                    const TextStyle())
+                                .copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
                             child: subtitle!,

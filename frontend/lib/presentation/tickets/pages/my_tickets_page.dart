@@ -196,7 +196,6 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                         color: isResale
                                             ? colorScheme.tertiary
                                             : Colors.grey.shade600,
-                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ],
@@ -219,24 +218,22 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                     Text(
                                       DateFormat('MMM')
                                           .format(ticket.eventStartDate!),
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: isPast
-                                              ? Colors.grey.shade600
-                                              : colorScheme
-                                                  .onPrimaryContainer),
+                                      style: theme.textTheme.labelMedium
+                                          ?.copyWith(
+                                              color: isPast
+                                                  ? Colors.grey.shade600
+                                                  : colorScheme
+                                                      .onPrimaryContainer),
                                     ),
                                     Text(
                                       DateFormat('d')
                                           .format(ticket.eventStartDate!),
-                                      style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: isPast
-                                              ? Colors.grey.shade600
-                                              : colorScheme
-                                                  .onPrimaryContainer),
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                              color: isPast
+                                                  ? Colors.grey.shade600
+                                                  : colorScheme
+                                                      .onPrimaryContainer),
                                     ),
                                   ],
                                 ),
@@ -251,7 +248,6 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                   style:
                                       theme.textTheme.labelMedium?.copyWith(
                                     color: colorScheme.tertiary,
-                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               )
@@ -283,8 +279,8 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                     TextButton.icon(
                                       onPressed: isProcessing
                                           ? null
-                                          : () =>
-                                              _resellTicketDialog(context, ticket),
+                                          : () => _resellTicketDialog(
+                                              context, ticket),
                                       icon: const Icon(Icons.sell_outlined,
                                           size: 18),
                                       label: const Text('Resell'),

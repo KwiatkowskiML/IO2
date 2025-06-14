@@ -34,9 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       try {
         await context.read<AuthService>().login(
-          _emailController.text,
-          _passwordController.text,
-        );
+              _emailController.text,
+              _passwordController.text,
+            );
         // The router's redirect will handle navigation automatically on success.
       } catch (e) {
         setState(() {
@@ -79,9 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Log in to continue your journey.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                    style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
