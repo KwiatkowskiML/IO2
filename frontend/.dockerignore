@@ -1,0 +1,16 @@
+# Flutter/Dart build files
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+coverage/
+
+# IDE files
+.idea/
+.vscode/
+
+# Other
+*.iml
+*.ipr
+*.iws
