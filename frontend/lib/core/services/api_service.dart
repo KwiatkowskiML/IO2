@@ -47,7 +47,7 @@ class ApiService {
   // Use mockConfig for development with mock data
   // Use localConfig for development with local backend
   // Use productionConfig for production
-  // static final ApiConfig _currentConfig = ApiConfig.mockConfig;
+  // static final ApiConfig _currentConfig = ApiConfig.mockConfig; // Temporarily using mock to debug
   static final ApiConfig _currentConfig = ApiConfig.localConfig;
 
   final Dio _dio = Dio();
@@ -804,6 +804,7 @@ class ApiService {
   }
 
   Future<void> addToCart(int ticketTypeId, int quantity) async {
+    print('ApiService: Adding ticket_type_id $ticketTypeId to cart');
     if (_shouldUseMockData) {
       await Future.delayed(const Duration(seconds: 1));
       return;
@@ -813,6 +814,25 @@ class ApiService {
       await _dio.post('/cart/items', queryParameters: {
         'ticket_type_id': ticketTypeId,
         'quantity': quantity,
+      });
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> addResaleTicketToCart(int ticketId) async {
+    print('ApiService: Adding resale ticket_id $ticketId to cart');
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return;
+    }
+
+    try {
+      await _dio.post('/cart/items', queryParameters: {
+        'ticket_id': ticketId,
+        'quantity': 1,
       });
     } on DioException catch (e) {
       throw _handleDioError(e);

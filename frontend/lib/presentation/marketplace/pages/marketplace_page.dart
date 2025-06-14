@@ -90,77 +90,34 @@ class _MarketplacePageState extends State<MarketplacePage> {
     }
   }
 
-  Future<void> _purchaseTicket(ResaleTicketListing listing) async {
+  Future<void> _addToCart(ResaleTicketListing listing) async {
     try {
-      // Show confirmation dialog first
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Confirm Purchase'),
-            content: Text(
-              'Do you want to purchase this ticket for \$${listing.resellPrice.toStringAsFixed(2)}?\n\n'
-              'Event: ${listing.eventName}\n'
-              'Type: ${listing.ticketTypeDescription ?? 'Standard Ticket'}',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: Text('Purchase'),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (confirmed != true) return;
-
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Processing your purchase...'),
-            ],
-          ),
-        ),
-      );
-
-      final apiService = context.read<ApiService>();
-      await apiService.purchaseResaleTicket(listing.ticketId);
+      print('Marketplace: Adding ticket ${listing.ticketId} to cart');
       
-      // Close loading dialog
-      if (mounted) Navigator.of(context).pop();
+      // Use the cart service to add resale ticket
+      await context.read<CartService>().addResaleTicket(
+        listing.ticketId,
+        listing.eventName,
+        listing.ticketTypeDescription ?? 'Standard Ticket',
+        listing.resellPrice,
+      );
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Ticket purchased successfully! Check "My Tickets" to view your purchase.'),
+            content: Text('${listing.eventName} ticket added to cart!'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 2),
           ),
         );
         _loadMarketplaceListings(); // Refresh listings
       }
     } catch (e) {
-      // Close loading dialog if still open
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-      
+      print('Marketplace: Error adding to cart: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to purchase ticket: ${e.toString()}'),
+            content: Text('Error adding to cart: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -265,7 +222,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
         final listing = _listings[index];
         return _TicketListingCard(
           listing: listing,
-          onPurchase: () => _purchaseTicket(listing),
+          onAddToCart: () => _addToCart(listing),
         );
       },
     );
@@ -274,11 +231,11 @@ class _MarketplacePageState extends State<MarketplacePage> {
 
 class _TicketListingCard extends StatelessWidget {
   final ResaleTicketListing listing;
-  final VoidCallback onPurchase;
+  final VoidCallback onAddToCart;
 
   const _TicketListingCard({
     required this.listing,
-    required this.onPurchase,
+    required this.onAddToCart,
   });
 
   @override
@@ -410,8 +367,8 @@ class _TicketListingCard extends StatelessWidget {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: onPurchase,
-                  child: const Text('Purchase'),
+                  onPressed: onAddToCart,
+                  child: const Text('Add to Cart'),
                 ),
               ],
             ),

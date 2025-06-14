@@ -50,6 +50,33 @@ class CartService extends ChangeNotifier {
     }
   }
 
+  Future<void> addResaleTicket(int ticketId, String eventName, String description, double price) async {
+    try {
+      print('CartService: Adding resale ticket $ticketId');
+      
+      // Call the backend API to add resale ticket to cart
+      await _apiService.addResaleTicketToCart(ticketId);
+      
+      // Create a temporary TicketType representation for the UI
+      final resaleTicketType = TicketType(
+        typeId: ticketId, // Use ticketId for local reference
+        eventId: 0, // Not applicable for resale
+        description: '$eventName - $description (Resale)',
+        price: price,
+        maxCount: 1,
+        currency: 'USD',
+      );
+      
+      // Update local state - resale tickets are unique, so don't merge quantities
+      _items.add(CartItem(ticketType: resaleTicketType, quantity: 1));
+      notifyListeners();
+      print('CartService: Added resale ticket to local state');
+    } catch (e) {
+      print('CartService: Error adding resale ticket: $e');
+      rethrow;
+    }
+  }
+
   Future<void> removeItem(TicketType ticketType) async {
     try {
       // Find the cart item to get its ID for backend removal
