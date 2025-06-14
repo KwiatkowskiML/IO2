@@ -913,6 +913,25 @@ class ApiService {
     }
   }
 
+  Future<Response<T>> request<T>(
+      String method,
+      String endpoint, {
+        Map<String, dynamic>? headers,
+        dynamic data,
+        Map<String, dynamic>? queryParameters,
+        int? expectedStatus,
+      }) async {
+    return _dio.request<T>(
+      endpoint,
+      options: Options(
+        method: method,
+        headers: headers,
+      ),
+      data: data,
+      queryParameters: queryParameters,
+    );
+  }
+
   Future<List<dynamic>> getOrganizerEvents(int organizerId) async {
     if (_shouldUseMockData) {
       await Future.delayed(const Duration(seconds: 1));

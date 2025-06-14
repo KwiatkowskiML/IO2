@@ -69,7 +69,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
 
       final response = await apiService.request(
         'GET',
-        '/api/auth/users?' + params.entries.map((e) => '${e.key}=${e.value}').join('&'),
+        '/auth/users?' + params.entries.map((e) => '${e.key}=${e.value}').join('&'),
         headers: context.read<AuthService>().user != null
             ? {'Authorization': 'Bearer ${context.read<AuthService>().user}'}
             : {},
@@ -97,8 +97,9 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
     if (confirmed) {
       try {
         final apiService = context.read<ApiService>();
-        await apiService.post(
-          '/api/auth/ban-user/$userId',
+        await apiService.request(
+          'POST',
+          '/auth/ban-user/$userId',
           headers: context.read<AuthService>().user != null
               ? {'Authorization': 'Bearer ${context.read<AuthService>().user}'}
               : {},
@@ -135,8 +136,9 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
     if (confirmed) {
       try {
         final apiService = context.read<ApiService>();
-        await apiService.post(
-          '/api/auth/unban-user/$userId',
+        await apiService.request(
+          'POST',
+          '/auth/unban-user/$userId',
           headers: context.read<AuthService>().user != null
               ? {'Authorization': 'Bearer ${context.read<AuthService>().user}'}
               : {},

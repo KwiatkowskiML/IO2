@@ -30,8 +30,9 @@ class _AdminOrganizerVerificationPageState extends State<AdminOrganizerVerificat
 
     try {
       final apiService = context.read<ApiService>();
-      final response = await apiService.get(
-        '/api/auth/pending-organizers',
+      final response = await apiService.request(
+        'GET',
+        '/auth/pending-organizers',
         headers: context.read<AuthService>().user != null
             ? {'Authorization': 'Bearer ${context.read<AuthService>().user}'}
             : {},
@@ -60,13 +61,14 @@ class _AdminOrganizerVerificationPageState extends State<AdminOrganizerVerificat
     if (confirmed) {
       try {
         final apiService = context.read<ApiService>();
-        await apiService.post(
-          '/api/auth/verify-organizer',
+        await apiService.request(
+          'POST',
+          '/auth/verify-organizer',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ${context.read<AuthService>().user}',
           },
-          json_data: {
+          data: {
             'organizer_id': organizer['organizer_id'],
             'approve': approve,
           },

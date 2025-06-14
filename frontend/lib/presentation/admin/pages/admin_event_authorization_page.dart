@@ -32,7 +32,7 @@ class _AdminEventAuthorizationPageState extends State<AdminEventAuthorizationPag
     try {
       final apiService = context.read<ApiService>();
       // Get all events and filter for pending ones
-      final response = await apiService.get('/api/events');
+      final response = await apiService.request('GET', '/events');
 
       final allEvents = response.data as List;
       final pendingEvents = allEvents.where((event) => event['status'] == 'pending').toList();
@@ -62,8 +62,9 @@ class _AdminEventAuthorizationPageState extends State<AdminEventAuthorizationPag
         final apiService = context.read<ApiService>();
 
         if (approve) {
-          await apiService.post(
-            '/api/events/authorize/${event['event_id']}',
+          await apiService.request(
+            'POST',
+            '/events/authorize/${event['event_id']}',
             headers: {
               'Authorization': 'Bearer ${context.read<AuthService>().user}',
             },
