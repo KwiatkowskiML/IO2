@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
+import 'package:resellio/presentation/common_widgets/dialogs.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/profile/cubit/profile_cubit.dart';
 import 'package:resellio/presentation/profile/cubit/profile_state.dart';
@@ -23,31 +24,18 @@ class ProfilePage extends StatelessWidget {
 class _ProfileView extends StatelessWidget {
   const _ProfileView();
 
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
+  void _showLogoutDialog(BuildContext context) async {
+    final confirmed = await showConfirmationDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<AuthService>().logout();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
+      title: 'Logout',
+      content: const Text('Are you sure you want to logout?'),
+      confirmText: 'Logout',
+      isDestructive: true,
     );
+
+    if (confirmed == true && context.mounted) {
+      context.read<AuthService>().logout();
+    }
   }
 
   @override
@@ -66,7 +54,8 @@ class _ProfileView extends StatelessWidget {
               if (state is ProfileLoaded && !state.isEditing) {
                 return IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () => context.read<ProfileCubit>().toggleEdit(true),
+                  onPressed: () =>
+                      context.read<ProfileCubit>().toggleEdit(true),
                 );
               }
               return const SizedBox.shrink();

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/presentation/common_widgets/dialogs.dart';
+import 'package:resellio/presentation/common_widgets/list_item_card.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_cubit.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_state.dart';
@@ -49,6 +51,37 @@ class _MyTicketsViewState extends State<_MyTicketsView>
     if (!_tabController.indexIsChanging) {
       final filter = TicketFilter.values[_tabController.index];
       context.read<MyTicketsCubit>().setFilter(filter);
+    }
+  }
+
+  void _resellTicketDialog(BuildContext context, TicketDetailsModel ticket) async {
+    final priceString = await showInputDialog(
+      context: context,
+      title: 'Set Resale Price',
+      label: 'Price (USD)',
+      prefixText: '\$ ',
+      keyboardType: TextInputType.number,
+      confirmText: 'List for Resale',
+    );
+
+    if (priceString != null) {
+      final price = double.tryParse(priceString);
+      if (price != null && price > 0) {
+        context.read<MyTicketsCubit>().listForResale(ticket.ticketId, price);
+      }
+    }
+  }
+
+  void _cancelResaleDialog(BuildContext context, TicketDetailsModel ticket) async {
+    final confirmed = await showConfirmationDialog(
+      context: context,
+      title: 'Cancel Resale?',
+      content:
+          const Text('Are you sure you want to remove this ticket from resale?'),
+      confirmText: 'Yes, Cancel',
+    );
+    if (confirmed == true) {
+      context.read<MyTicketsCubit>().cancelResale(ticket.ticketId);
     }
   }
 
@@ -131,9 +164,134 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                       final bool isProcessing =
                           state is TicketUpdateInProgress &&
                               state.processingTicketId == ticket.ticketId;
-                      return _TicketCard(
-                        ticket: ticket,
+                      final bool isResale = ticket.resellPrice != null;
+                      final bool isPast = ticket.eventStartDate != null &&
+                          ticket.eventStartDate!.isBefore(DateTime.now());
+
+                      return ListItemCard(
                         isProcessing: isProcessing,
+                        isDimmed: isPast,
+                        topContent: (isResale || isPast)
+                            ? Container(
+                                width: double.infinity,
+                                color: isResale
+                                    ? colorScheme.tertiary.withOpacity(0.1)
+                                    : Colors.grey.shade200,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 6, horizontal: 16),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      isResale ? Icons.sell : Icons.history,
+                                      size: 14,
+                                      color: isResale
+                                          ? colorScheme.tertiary
+                                          : Colors.grey.shade600,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      isResale ? 'On Resale' : 'Past Event',
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                        color: isResale
+                                            ? colorScheme.tertiary
+                                            : Colors.grey.shade600,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : null,
+                        leadingWidget: ticket.eventStartDate != null
+                            ? Container(
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: isPast
+                                      ? Colors.grey.shade200
+                                      : colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 8, horizontal: 4),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      DateFormat('MMM')
+                                          .format(ticket.eventStartDate!),
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: isPast
+                                              ? Colors.grey.shade600
+                                              : colorScheme
+                                                  .onPrimaryContainer),
+                                    ),
+                                    Text(
+                                      DateFormat('d')
+                                          .format(ticket.eventStartDate!),
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: isPast
+                                              ? Colors.grey.shade600
+                                              : colorScheme
+                                                  .onPrimaryContainer),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : null,
+                        title: Text(ticket.eventName ?? 'Unknown Event'),
+                        subtitle: ticket.resellPrice != null
+                            ? Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  'Listed for: ${NumberFormat.currency(locale: 'en_US', symbol: '\$').format(ticket.resellPrice)}',
+                                  style:
+                                      theme.textTheme.labelMedium?.copyWith(
+                                    color: colorScheme.tertiary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            : null,
+                        bottomContent: !isPast
+                            ? OverflowBar(
+                                alignment: MainAxisAlignment.end,
+                                children: [
+                                  TextButton.icon(
+                                    onPressed: isProcessing ? null : () {},
+                                    icon: const Icon(Icons.download_outlined,
+                                        size: 18),
+                                    label: const Text('Download'),
+                                  ),
+                                  if (isResale)
+                                    TextButton.icon(
+                                      onPressed: isProcessing
+                                          ? null
+                                          : () => _cancelResaleDialog(
+                                              context, ticket),
+                                      icon: const Icon(Icons.cancel_outlined,
+                                          size: 18),
+                                      label: const Text('Cancel Resale'),
+                                      style: TextButton.styleFrom(
+                                          foregroundColor:
+                                              colorScheme.tertiary),
+                                    )
+                                  else
+                                    TextButton.icon(
+                                      onPressed: isProcessing
+                                          ? null
+                                          : () =>
+                                              _resellTicketDialog(context, ticket),
+                                      icon: const Icon(Icons.sell_outlined,
+                                          size: 18),
+                                      label: const Text('Resell'),
+                                    ),
+                                ],
+                              )
+                            : null,
                       );
                     },
                   );
@@ -143,235 +301,6 @@ class _MyTicketsViewState extends State<_MyTicketsView>
               },
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TicketCard extends StatelessWidget {
-  final TicketDetailsModel ticket;
-  final bool isProcessing;
-
-  const _TicketCard({required this.ticket, required this.isProcessing});
-
-  void _resellTicketDialog(BuildContext context) {
-    final cubit = context.read<MyTicketsCubit>();
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        final priceController = TextEditingController();
-        return AlertDialog(
-          title: const Text('Set Resale Price'),
-          content: TextField(
-            controller: priceController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Price (USD)',
-              prefixText: '\$',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final price = double.tryParse(priceController.text);
-                if (price != null && price > 0) {
-                  cubit.listForResale(ticket.ticketId, price);
-                  Navigator.pop(dialogContext);
-                }
-              },
-              child: const Text('List for Resale'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _cancelResaleDialog(BuildContext context) {
-    final cubit = context.read<MyTicketsCubit>();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Cancel Resale?'),
-        content: const Text(
-            'Are you sure you want to remove this ticket from resale?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('No'),
-          ),
-          FilledButton(
-            onPressed: () {
-              cubit.cancelResale(ticket.ticketId);
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Yes, Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final bool isResale = ticket.resellPrice != null;
-    final bool isPast = ticket.eventStartDate != null &&
-        ticket.eventStartDate!.isBefore(DateTime.now());
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: isPast
-            ? BorderSide(color: Colors.grey.shade300, width: 1)
-            : BorderSide.none,
-      ),
-      elevation: isPast ? 0 : 2,
-      child: Column(
-        children: [
-          if (isProcessing) const LinearProgressIndicator(),
-          if (isResale || isPast)
-            Container(
-              width: double.infinity,
-              color: isResale
-                  ? colorScheme.tertiary.withOpacity(0.1)
-                  : Colors.grey.shade200,
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-              child: Row(
-                children: [
-                  Icon(
-                    isResale ? Icons.sell : Icons.history,
-                    size: 14,
-                    color: isResale
-                        ? colorScheme.tertiary
-                        : Colors.grey.shade600,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isResale ? 'On Resale' : 'Past Event',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: isResale
-                          ? colorScheme.tertiary
-                          : Colors.grey.shade600,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (ticket.eventStartDate != null)
-                  Container(
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: isPast
-                          ? Colors.grey.shade200
-                          : colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    child: Column(
-                      children: [
-                        Text(
-                          DateFormat('MMM').format(ticket.eventStartDate!),
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: isPast
-                                  ? Colors.grey.shade600
-                                  : colorScheme.onPrimaryContainer),
-                        ),
-                        Text(
-                          DateFormat('d').format(ticket.eventStartDate!),
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isPast
-                                  ? Colors.grey.shade600
-                                  : colorScheme.onPrimaryContainer),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ticket.eventName ?? 'Unknown Event',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isPast ? Colors.grey.shade600 : null,
-                        ),
-                      ),
-                      if (ticket.resellPrice != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            'Listed for: ${NumberFormat.currency(locale: 'en_US', symbol: '\$').format(ticket.resellPrice)}',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: colorScheme.tertiary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (!isPast)
-            Container(
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                border: Border(
-                  top: BorderSide(
-                      color: colorScheme.outlineVariant.withOpacity(0.5)),
-                ),
-              ),
-              child: OverflowBar(
-                alignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: isProcessing ? null : () {},
-                    icon: const Icon(Icons.download_outlined, size: 18),
-                    label: const Text('Download'),
-                  ),
-                  if (isResale)
-                    TextButton.icon(
-                      onPressed: isProcessing
-                          ? null
-                          : () => _cancelResaleDialog(context),
-                      icon: const Icon(Icons.cancel_outlined, size: 18),
-                      label: const Text('Cancel Resale'),
-                      style: TextButton.styleFrom(
-                          foregroundColor: colorScheme.tertiary),
-                    )
-                  else
-                    TextButton.icon(
-                      onPressed:
-                          isProcessing ? null : () => _resellTicketDialog(context),
-                      icon: const Icon(Icons.sell_outlined, size: 18),
-                      label: const Text('Resell'),
-                    ),
-                ],
-              ),
-            ),
         ],
       ),
     );
