@@ -184,7 +184,7 @@ class _AdminOrganizerVerificationPageState extends State<AdminOrganizerVerificat
 
               // Content
               Expanded(
-                child: Padding(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
