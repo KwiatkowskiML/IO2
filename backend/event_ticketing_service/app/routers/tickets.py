@@ -32,7 +32,7 @@ def list_tickets_endpoint(
             )
     
     tickets = repository.list_tickets(filters)
-    return [TicketDetails.model_validate(t) for t in tickets]
+    return [TicketDetails(**ticket_dict) for ticket_dict in tickets]
 
 
 @router.get("/tickets/{ticket_id}/download", response_model=TicketPDF)

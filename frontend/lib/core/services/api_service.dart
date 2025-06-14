@@ -325,9 +325,10 @@ class ApiService {
       'type_id': 1,
       'owner_id': 1,
       'seat': 'GA-123',
+      'original_price': 49.99,
       // Mocked relation data
-      'eventName': 'Epic Music Festival 1',
-      'eventStartDate':
+      'event_name': 'Epic Music Festival 1',
+      'event_start_date':
           DateTime.now().add(const Duration(days: 5)).toIso8601String(),
     }),
     TicketDetailsModel.fromJson({
@@ -336,9 +337,10 @@ class ApiService {
       'owner_id': 1,
       'seat': 'VIP-A1',
       'resell_price': 150.0,
+      'original_price': 129.99,
       // Mocked relation data
-      'eventName': 'Another Cool Concert',
-      'eventStartDate':
+      'event_name': 'Another Cool Concert',
+      'event_start_date':
           DateTime.now().add(const Duration(days: 10)).toIso8601String(),
     }),
   ];
@@ -517,7 +519,7 @@ class ApiService {
 
     try {
       await _dio.post('/tickets/$ticketId/resell', data: {
-        'resell_price': resellPrice,
+        'price': resellPrice,
       });
     } on DioException catch (e) {
       throw _handleDioError(e);
