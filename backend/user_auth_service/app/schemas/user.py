@@ -29,9 +29,9 @@ class UserResponse(BaseModel):
 
 
 class OrganizerResponse(UserResponse):
-    organizer_id: int
-    company_name: str
-    is_verified: bool
+    organizer_id: Optional[int] = None
+    company_name: Optional[str] = None
+    is_verified: Optional[bool] = None
 
     class Config:
         orm_mode = True

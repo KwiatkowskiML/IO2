@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.database import get_db
@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.security import OAuth2PasswordRequestForm
 from app.schemas.user import UserResponse, OrganizerResponse
 from app.models import User, Customer, Organizer, Administrator
-from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status
+from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status, Query
 from app.schemas.auth import (
     Token,
     UserCreate,
@@ -387,3 +387,169 @@ def unban_user(user_id: int, db: Session = Depends(get_db), admin: User = Depend
     db.commit()
 
     return {"message": "User has been unbanned"}
+
+
+@router.get("/users", response_model=List[OrganizerResponse])
+def list_users(
+        page: int = Query(1, ge=1, description="Page number"),
+        limit: int = Query(50, ge=1, le=100, description="Items per page"),
+        search: Optional[str] = Query(None,
+                                      description="Search by email, login, first_name, or last_name"),
+        user_type: Optional[str] = Query(None,
+                                         description="Filter by user type (customer, organizer, administrator)"),
+        is_active: Optional[bool] = Query(None, description="Filter by active status"),
+        is_verified: Optional[bool] = Query(None,
+                                            description="Filter by verification status (organizers only)"),
+        sort_by: str = Query("creation_date", description="Sort field"),
+        sort_order: str = Query("desc", description="Sort order (asc/desc)"),
+        db: Session = Depends(get_db),
+        admin: User = Depends(get_current_admin)
+):
+
+    query = db.query(User).outerjoin(Organizer, User.user_id == Organizer.user_id)
+
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                User.email.ilike(search_filter),
+                User.login.ilike(search_filter),
+                User.first_name.ilike(search_filter),
+                User.last_name.ilike(search_filter)
+            )
+        )
+
+    if user_type:
+        if user_type not in ["customer", "organizer", "administrator"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid user_type. Must be one of: customer, organizer, administrator"
+            )
+        query = query.filter(User.user_type == user_type)
+
+    if is_active is not None:
+        query = query.filter(User.is_active == is_active)
+
+    if is_verified is not None:
+        query = query.filter(
+            db.and_(
+                User.user_type == "organizer",
+                Organizer.is_verified == is_verified
+            )
+        )
+
+    if sort_by not in ["creation_date", "email", "first_name", "last_name", "user_type"]:
+        sort_by = "creation_date"
+
+    if sort_order.lower() == "asc":
+        query = query.order_by(getattr(User, sort_by).asc())
+    else:
+        query = query.order_by(getattr(User, sort_by).desc())
+
+    offset = (page - 1) * limit
+    users = query.offset(offset).limit(limit).all()
+
+    result = []
+    for user in users:
+        user_response = OrganizerResponse(
+            user_id=user.user_id,
+            email=user.email,
+            login=user.login,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            user_type=user.user_type,
+            is_active=user.is_active
+        )
+
+        if user.user_type == "organizer" and user.organizer:
+            organizer_response = OrganizerResponse(
+                user_id=user.user_id,
+                email=user.email,
+                login=user.login,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                user_type=user.user_type,
+                is_active=user.is_active,
+                organizer_id=user.organizer.organizer_id,
+                company_name=user.organizer.company_name,
+                is_verified=user.organizer.is_verified
+            )
+            result.append(organizer_response)
+        else:
+            result.append(user_response)
+
+    return result
+
+
+@router.get("/users/stats")
+def get_user_stats(
+        db: Session = Depends(get_db),
+        admin: User = Depends(get_current_admin)
+):
+
+    total_users = db.query(User).count()
+    active_users = db.query(User).filter(User.is_active == True).count()
+    banned_users = db.query(User).filter(User.is_active == False).count()
+
+    customers = db.query(User).filter(User.user_type == "customer").count()
+    organizers = db.query(User).filter(User.user_type == "organizer").count()
+    administrators = db.query(User).filter(User.user_type == "administrator").count()
+
+    verified_organizers = db.query(Organizer).filter(Organizer.is_verified == True).count()
+    pending_organizers = db.query(Organizer).filter(Organizer.is_verified == False).count()
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "banned_users": banned_users,
+        "users_by_type": {
+            "customers": customers,
+            "organizers": organizers,
+            "administrators": administrators
+        },
+        "organizer_stats": {
+            "verified": verified_organizers,
+            "pending": pending_organizers
+        }
+    }
+
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+def get_user_details(
+        user_id: int,
+        db: Session = Depends(get_db),
+        admin: User = Depends(get_current_admin)
+):
+
+    user = db.query(User).filter(User.user_id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    if user.user_type == "organizer":
+        organizer = db.query(Organizer).filter(Organizer.user_id == user.user_id).first()
+        if organizer:
+            return OrganizerResponse(
+                user_id=user.user_id,
+                email=user.email,
+                login=user.login,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                user_type=user.user_type,
+                is_active=user.is_active,
+                organizer_id=organizer.organizer_id,
+                company_name=organizer.company_name,
+                is_verified=organizer.is_verified
+            )
+
+    return UserResponse(
+        user_id=user.user_id,
+        email=user.email,
+        login=user.login,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        user_type=user.user_type,
+        is_active=user.is_active
+    )
