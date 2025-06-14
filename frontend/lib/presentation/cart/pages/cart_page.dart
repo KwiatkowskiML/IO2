@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:resellio/core/services/cart_service.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
+import 'package:go_router/go_router.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -23,6 +24,7 @@ class _CartPageState extends State<CartPage> {
     return PageLayout(
       title: 'Shopping Cart',
       showBackButton: true,
+      showCartButton: false,
       body:
           cartService.items.isEmpty
               ? Center(
@@ -159,6 +161,20 @@ class _CartPageState extends State<CartPage> {
                           text: 'PROCEED TO CHECKOUT',
                           onPressed: () async {
                             try {
+                              // Debug: Check cart contents
+                              print('Cart items count: ${cartService.items.length}');
+                              print('Cart total: ${cartService.totalPrice}');
+                              
+                              if (cartService.items.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Your cart is empty!'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                return;
+                              }
+                              
                               // Show loading indicator
                               showDialog(
                                 context: context,
@@ -175,13 +191,16 @@ class _CartPageState extends State<CartPage> {
                                 ),
                               );
 
+                              print('Starting checkout...');
                               // Call checkout API
                               final success = await cartService.checkout();
+                              print('Checkout result: $success');
                               
                               // Close loading dialog
                               if (mounted) Navigator.of(context).pop();
 
                               if (success) {
+                                print('Checkout successful, showing success message');
                                 // Show success message
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -194,10 +213,12 @@ class _CartPageState extends State<CartPage> {
                                     ),
                                   );
                                   
-                                  // Navigate back or to my tickets page
-                                  Navigator.of(context).pop(); // Go back to previous page
+                                  // Navigate to My Tickets page instead of just going back
+                                  // This prevents the blank page issue
+                                  context.go('/home/customer'); // Go to main page
                                 }
                               } else {
+                                print('Checkout failed with success=false');
                                 // Show error message
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -209,8 +230,12 @@ class _CartPageState extends State<CartPage> {
                                 }
                               }
                             } catch (e) {
+                              print('Checkout error: $e');
                               // Close loading dialog if still open
-                              if (mounted) Navigator.of(context).pop();
+                              if (mounted) {
+                                Navigator.of(context).popUntil((route) => 
+                                  route.isFirst || !route.willHandlePopInternally);
+                              }
                               
                               // Show error message
                               if (mounted) {
@@ -218,6 +243,7 @@ class _CartPageState extends State<CartPage> {
                                   SnackBar(
                                     content: Text('Error: ${e.toString()}'),
                                     backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 5),
                                   ),
                                 );
                               }

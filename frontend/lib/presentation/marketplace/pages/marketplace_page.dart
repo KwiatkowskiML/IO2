@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/services/api_service.dart';
+import 'package:resellio/core/services/cart_service.dart';
+import 'package:resellio/core/models/ticket_model.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 
 // Model for resale ticket listings
@@ -88,25 +90,77 @@ class _MarketplacePageState extends State<MarketplacePage> {
     }
   }
 
-  Future<void> _purchaseTicket(int ticketId) async {
+  Future<void> _purchaseTicket(ResaleTicketListing listing) async {
     try {
+      // Show confirmation dialog first
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Confirm Purchase'),
+            content: Text(
+              'Do you want to purchase this ticket for \$${listing.resellPrice.toStringAsFixed(2)}?\n\n'
+              'Event: ${listing.eventName}\n'
+              'Type: ${listing.ticketTypeDescription ?? 'Standard Ticket'}',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text('Purchase'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirmed != true) return;
+
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Processing your purchase...'),
+            ],
+          ),
+        ),
+      );
+
       final apiService = context.read<ApiService>();
-      await apiService.purchaseResaleTicket(ticketId);
+      await apiService.purchaseResaleTicket(listing.ticketId);
+      
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ticket purchased successfully!'),
+          SnackBar(
+            content: Text('Ticket purchased successfully! Check "My Tickets" to view your purchase.'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
           ),
         );
         _loadMarketplaceListings(); // Refresh listings
       }
     } catch (e) {
+      // Close loading dialog if still open
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to purchase ticket: $e'),
+            content: Text('Failed to purchase ticket: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -211,7 +265,7 @@ class _MarketplacePageState extends State<MarketplacePage> {
         final listing = _listings[index];
         return _TicketListingCard(
           listing: listing,
-          onPurchase: () => _purchaseTicket(listing.ticketId),
+          onPurchase: () => _purchaseTicket(listing),
         );
       },
     );
@@ -357,7 +411,7 @@ class _TicketListingCard extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: onPurchase,
-                  child: const Text('Buy Now'),
+                  child: const Text('Purchase'),
                 ),
               ],
             ),

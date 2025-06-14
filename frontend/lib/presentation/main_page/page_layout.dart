@@ -11,6 +11,7 @@ class PageLayout extends StatelessWidget {
   final Widget? floatingActionButton;
   final double maxContentWidth;
   final bool showBackButton;
+  final bool showCartButton;
   final Color? backgroundColor;
   final Color? appBarColor;
   final Widget? bottomNavigationBar;
@@ -23,6 +24,7 @@ class PageLayout extends StatelessWidget {
     this.floatingActionButton,
     this.maxContentWidth = 1200,
     this.showBackButton = false,
+    this.showCartButton = true,
     this.backgroundColor,
     this.appBarColor,
     this.bottomNavigationBar,
@@ -47,7 +49,7 @@ class PageLayout extends StatelessWidget {
         tooltip: 'Shopping Cart',
         icon: const Icon(Icons.shopping_cart_outlined),
         onPressed: () {
-          context.push('/cart');
+          context.go('/cart');
         },
       ),
     );
@@ -85,7 +87,8 @@ class PageLayout extends StatelessWidget {
                         : null,
                 actions: [
                   if (actions != null) ...actions!,
-                  cartIconButton,
+                  if (showCartButton)
+                    cartIconButton,
                   const SizedBox(width: 8),
                 ],
               )
@@ -137,7 +140,8 @@ class PageLayout extends StatelessWidget {
                       if (actions != null) ...actions!,
                       if (actions != null && actions!.isNotEmpty)
                         const SizedBox(width: 16),
-                      cartIconButton,
+                      if (showCartButton)
+                        cartIconButton,
                     ],
                   ),
                 ],

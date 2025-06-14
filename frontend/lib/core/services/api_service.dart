@@ -837,17 +837,33 @@ class ApiService {
   }
 
   Future<bool> checkout() async {
+    print('ApiService: Starting checkout, useMockData: $_shouldUseMockData');
+    
     if (_shouldUseMockData) {
+      print('ApiService: Using mock data, simulating checkout');
       await Future.delayed(const Duration(seconds: 2));
+      print('ApiService: Mock checkout completed successfully');
       return true; // Mock successful checkout
     }
 
     try {
+      print('ApiService: Making POST request to /cart/checkout');
       final response = await _dio.post('/cart/checkout');
-      return response.data == true;
+      print('ApiService: Checkout response status: ${response.statusCode}');
+      print('ApiService: Checkout response data: ${response.data}');
+      
+      final result = response.data == true;
+      print('ApiService: Checkout result: $result');
+      return result;
     } on DioException catch (e) {
+      print('ApiService: DioException during checkout: ${e.type}');
+      print('ApiService: Error message: ${e.message}');
+      print('ApiService: Response status: ${e.response?.statusCode}');
+      print('ApiService: Response data: ${e.response?.data}');
       throw _handleDioError(e);
     } catch (e) {
+      print('ApiService: General exception during checkout: $e');
+      print('ApiService: Exception type: ${e.runtimeType}');
       rethrow;
     }
   }

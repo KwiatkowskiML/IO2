@@ -76,13 +76,28 @@ class CartService extends ChangeNotifier {
   
   Future<bool> checkout() async {
     try {
+      print('CartService: Starting checkout with ${_items.length} items');
+      print('CartService: Total price: $totalPrice');
+      
+      // Log each item for debugging
+      for (var item in _items) {
+        print('CartService: Item - ${item.ticketType.description}, Qty: ${item.quantity}, Price: ${item.ticketType.price}');
+      }
+      
       final success = await _apiService.checkout();
+      print('CartService: API checkout result: $success');
+      
       if (success) {
+        print('CartService: Clearing cart after successful checkout');
         // Clear the cart after successful checkout
         await clearCart();
+      } else {
+        print('CartService: Checkout failed, keeping cart items');
       }
       return success;
     } catch (e) {
+      print('CartService: Checkout error: $e');
+      print('CartService: Error type: ${e.runtimeType}');
       rethrow;
     }
   }
