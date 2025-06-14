@@ -4,6 +4,8 @@ on:
   push:
     branches: [ main, dev ]
   pull_request:
+    # Be explicit about which events trigger the workflow for PRs
+    types: [ opened, synchronize, reopened ]
     branches: [ main, dev ]
   workflow_dispatch:
 
@@ -35,7 +37,7 @@ jobs:
 
     - name: Show logs on failure
       if: failure()
-      run: echo "Test script failed. Logs were part of the script output."
+      run: echo "Test script failed. Logs are part of the script output."
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -45,10 +47,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Make scripts executable
-      run: chmod +x ./scripts/utils/print.bash ./scripts/actions/run_tests.bash
-
+    # Combined the two run steps into one named step
+    - name: Prepare scripts and .env file
       run: |
+        chmod +x ./scripts/utils/print.bash ./scripts/actions/run_tests.bash
         echo "Creating .env file from template..."
         cp .env.template .env
         echo ".env file created."
@@ -58,4 +60,4 @@ jobs:
 
     - name: Show logs on failure
       if: failure()
-      run: echo "Test script failed. Logs were part of the script output."
+      run: echo "Test script failed. Logs are part of the script output."
