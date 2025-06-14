@@ -24,6 +24,13 @@ class TicketDetails(BaseModel):
     seat: Optional[str] = None
     owner_id: Optional[int] = None
     resell_price: Optional[float] = None
+    original_price: Optional[float] = None  # The price the user paid for the ticket
+
+    # Event information
+    event_name: Optional[str] = None
+    event_start_date: Optional[datetime] = None
+    event_location: Optional[str] = None
+    ticket_type_description: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

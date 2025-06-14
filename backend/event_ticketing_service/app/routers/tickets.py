@@ -12,11 +12,17 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
 @router.get("/", response_model=List[TicketDetails])
-def list_tickets_endpoint(filters: TicketFilter = Depends(), db: Session = Depends(get_db)):
+def list_tickets_endpoint(
+        filters: TicketFilter = Depends(),
+        db: Session = Depends(get_db),
+        user: dict = Depends(get_user_from_token)):
     repository = TicketRepository(db)
-    tickets = repository.list_tickets(filters)
-    return [TicketDetails.model_validate(t) for t in tickets]
 
+    if filters.owner_id is None:
+        filters.owner_id = user["user_id"]
+
+    tickets = repository.list_tickets(filters)
+    return [TicketDetails(**ticket_dict) for ticket_dict in tickets]
 
 @router.get("/{ticket_id}/download", response_model=TicketPDF)
 async def download_ticket(

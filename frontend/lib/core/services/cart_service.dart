@@ -19,35 +19,113 @@ class CartService extends ChangeNotifier {
     (sum, item) => sum + (item.quantity * item.ticketType.price),
   );
 
-  void addItem(TicketType ticketType) {
-    // Check if the item already exists in the cart
-    final index = _items.indexWhere(
-      (item) => item.ticketType.typeId == ticketType.typeId,
-    );
-
-    if (index != -1) {
-      // If it exists, increase the quantity
-      _items[index] = _items[index].copyWith(
-        quantity: _items[index].quantity + 1,
+  Future<void> addItem(TicketType ticketType) async {
+    try {
+      // Check if typeId is not null
+      if (ticketType.typeId == null) {
+        throw Exception('Ticket type ID is required');
+      }
+      
+      // Call the backend API to add item to cart
+      await _apiService.addToCart(ticketType.typeId!, 1);
+      
+      // Update local state
+      final index = _items.indexWhere(
+        (item) => item.ticketType.typeId == ticketType.typeId,
       );
-    } else {
-      // If not, add a new item
-      _items.add(CartItem(ticketType: ticketType, quantity: 1));
+
+      if (index != -1) {
+        // If it exists, increase the quantity
+        _items[index] = _items[index].copyWith(
+          quantity: _items[index].quantity + 1,
+        );
+      } else {
+        // If not, add a new item
+        _items.add(CartItem(ticketType: ticketType, quantity: 1));
+      }
+      notifyListeners();
+    } catch (e) {
+      // Handle errors - maybe show a snackbar in the UI
+      rethrow;
     }
-    // In a real app, you would also call the backend API here to add the item
-    // await _apiService.addToCart(ticketType.typeId, 1);
-    notifyListeners();
   }
 
-  void removeItem(TicketType ticketType) {
-    _items.removeWhere((item) => item.ticketType.typeId == ticketType.typeId);
-    // In a real app, you would call the backend to remove the item
-    notifyListeners();
+  Future<void> addResaleTicket(int ticketId, String eventName, String description, double price) async {
+    try {
+      print('CartService: Adding resale ticket $ticketId');
+      
+      // Call the backend API to add resale ticket to cart
+      await _apiService.addResaleTicketToCart(ticketId);
+      
+      // Create a temporary TicketType representation for the UI
+      final resaleTicketType = TicketType(
+        typeId: ticketId, // Use ticketId for local reference
+        eventId: 0, // Not applicable for resale
+        description: '$eventName - $description (Resale)',
+        price: price,
+        maxCount: 1,
+        currency: 'USD',
+      );
+      
+      // Update local state - resale tickets are unique, so don't merge quantities
+      _items.add(CartItem(ticketType: resaleTicketType, quantity: 1));
+      notifyListeners();
+      print('CartService: Added resale ticket to local state');
+    } catch (e) {
+      print('CartService: Error adding resale ticket: $e');
+      rethrow;
+    }
   }
 
-  void clearCart() {
+  Future<void> removeItem(TicketType ticketType) async {
+    try {
+      // Find the cart item to get its ID for backend removal
+      final itemIndex = _items.indexWhere((item) => item.ticketType.typeId == ticketType.typeId);
+      if (itemIndex != -1) {
+        // Note: This assumes we have a way to get cart item ID
+        // In a real implementation, you might need to modify the cart model
+        // to include cart item IDs from the backend
+        
+        // Remove from local state first
+        _items.removeAt(itemIndex);
+        notifyListeners();
+      }
+    } catch (e) {
+      // Handle errors
+      rethrow;
+    }
+  }
+
+  Future<void> clearCart() async {
     _items.clear();
-    // In a real app, you would call the backend to clear the cart
     notifyListeners();
+  }
+  
+  Future<bool> checkout() async {
+    try {
+      print('CartService: Starting checkout with ${_items.length} items');
+      print('CartService: Total price: $totalPrice');
+      
+      // Log each item for debugging
+      for (var item in _items) {
+        print('CartService: Item - ${item.ticketType.description}, Qty: ${item.quantity}, Price: ${item.ticketType.price}');
+      }
+      
+      final success = await _apiService.checkout();
+      print('CartService: API checkout result: $success');
+      
+      if (success) {
+        print('CartService: Clearing cart after successful checkout');
+        // Clear the cart after successful checkout
+        await clearCart();
+      } else {
+        print('CartService: Checkout failed, keeping cart items');
+      }
+      return success;
+    } catch (e) {
+      print('CartService: Checkout error: $e');
+      print('CartService: Error type: ${e.runtimeType}');
+      rethrow;
+    }
   }
 }

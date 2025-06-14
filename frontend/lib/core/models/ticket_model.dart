@@ -34,6 +34,7 @@ class TicketDetailsModel {
   final String? seat;
   final int? ownerId;
   final double? resellPrice;
+  final double? originalPrice;  // The price the user paid for the ticket
 
   // These fields are not in the base model but can be added for convenience
   final String? eventName;
@@ -45,6 +46,7 @@ class TicketDetailsModel {
     this.seat,
     this.ownerId,
     this.resellPrice,
+    this.originalPrice,
     this.eventName,
     this.eventStartDate,
   });
@@ -59,10 +61,16 @@ class TicketDetailsModel {
           json['resell_price'] != null
               ? (json['resell_price'] as num).toDouble()
               : null,
-      // Handle extra mocked data
-      eventName: json['eventName'],
+      originalPrice:
+          json['original_price'] != null
+              ? (json['original_price'] as num).toDouble()
+              : null,
+      // Handle both snake_case (from backend) and camelCase (from mock data)
+      eventName: json['event_name'] ?? json['eventName'],
       eventStartDate:
-          json['eventStartDate'] != null
+          json['event_start_date'] != null
+              ? DateTime.parse(json['event_start_date'])
+              : json['eventStartDate'] != null
               ? DateTime.parse(json['eventStartDate'])
               : null,
     );

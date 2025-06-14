@@ -4,10 +4,16 @@ import 'package:provider/provider.dart';
 import 'package:resellio/core/services/cart_service.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
+import 'package:go_router/go_router.dart';
 
-class CartPage extends StatelessWidget {
+class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
+  @override
+  State<CartPage> createState() => _CartPageState();
+}
+
+class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     final cartService = context.watch<CartService>();
@@ -18,6 +24,7 @@ class CartPage extends StatelessWidget {
     return PageLayout(
       title: 'Shopping Cart',
       showBackButton: true,
+      showCartButton: false,
       body:
           cartService.items.isEmpty
               ? Center(
@@ -82,8 +89,19 @@ class CartPage extends StatelessWidget {
                                     Icons.delete_outline,
                                     color: colorScheme.error,
                                   ),
-                                  onPressed: () {
-                                    cartService.removeItem(item.ticketType);
+                                  onPressed: () async {
+                                    try {
+                                      await cartService.removeItem(item.ticketType);
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error removing item: ${e.toString()}'),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                 ),
                               ],
@@ -141,16 +159,95 @@ class CartPage extends StatelessWidget {
                         const SizedBox(height: 24),
                         PrimaryButton(
                           text: 'PROCEED TO CHECKOUT',
-                          onPressed: () {
-                            // TODO: Implement checkout logic
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Checkout feature not yet implemented.',
+                          onPressed: () async {
+                            try {
+                              // Debug: Check cart contents
+                              print('Cart items count: ${cartService.items.length}');
+                              print('Cart total: ${cartService.totalPrice}');
+                              
+                              if (cartService.items.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Your cart is empty!'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              // Show loading indicator
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const AlertDialog(
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      CircularProgressIndicator(),
+                                      SizedBox(height: 16),
+                                      Text('Processing your order...'),
+                                    ],
+                                  ),
                                 ),
-                                backgroundColor: Colors.blue,
-                              ),
-                            );
+                              );
+
+                              print('Starting checkout...');
+                              // Call checkout API
+                              final success = await cartService.checkout();
+                              print('Checkout result: $success');
+                              
+                              // Close loading dialog
+                              if (mounted) Navigator.of(context).pop();
+
+                              if (success) {
+                                print('Checkout successful, showing success message');
+                                // Show success message
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Order successful! Your tickets have been added to "My Tickets".',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      duration: Duration(seconds: 4),
+                                    ),
+                                  );
+                                  
+                                  // Navigate to My Tickets page instead of just going back
+                                  // This prevents the blank page issue
+                                  context.go('/home/customer'); // Go to main page
+                                }
+                              } else {
+                                print('Checkout failed with success=false');
+                                // Show error message
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Checkout failed. Please try again.'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              print('Checkout error: $e');
+                              // Close loading dialog if still open
+                              if (mounted) {
+                                Navigator.of(context).popUntil((route) => 
+                                  route.isFirst || !route.willHandlePopInternally);
+                              }
+                              
+                              // Show error message
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: ${e.toString()}'),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 5),
+                                  ),
+                                );
+                              }
+                            }
                           },
                         ),
                       ],

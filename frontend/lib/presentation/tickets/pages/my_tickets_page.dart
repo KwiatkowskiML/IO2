@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/models/ticket_model.dart';
 import 'package:resellio/core/services/api_service.dart';
-import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 
@@ -63,20 +62,10 @@ class _MyTicketsPageState extends State<MyTicketsPage>
 
   void _loadMyTickets() {
     final apiService = context.read<ApiService>();
-    final authService = context.read<AuthService>();
-    final userId = authService.user?.userId;
-
-    if (userId == null) {
-      // Handle case where user is not logged in, though router should prevent this
-      setState(() {
-        _myTicketsFuture = Future.error("User not authenticated.");
-      });
-      return;
-    }
-
+    
     setState(() {
       _isLoading = true;
-      _myTicketsFuture = apiService.getMyTickets(userId);
+      _myTicketsFuture = apiService.getMyTickets();
     });
 
     _myTicketsFuture!.whenComplete(() {
@@ -88,7 +77,7 @@ class _MyTicketsPageState extends State<MyTicketsPage>
     });
   }
 
-  // Simulate placing a ticket for resale
+  // Place a ticket for resale
   void _resellTicket(TicketDetailsModel ticket) {
     showDialog(
       context: context,
@@ -110,16 +99,79 @@ class _MyTicketsPageState extends State<MyTicketsPage>
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Ticket listed for resale at \$${priceController.text}',
+              onPressed: () async {
+                final priceText = priceController.text;
+                if (priceText.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a price'),
+                      backgroundColor: Colors.red,
                     ),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                  );
+                  return;
+                }
+                
+                final price = double.tryParse(priceText);
+                if (price == null || price <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid price'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                
+                Navigator.pop(context);
+                
+                try {
+                  // Show loading
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const AlertDialog(
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Listing ticket for resale...'),
+                        ],
+                      ),
+                    ),
+                  );
+                  
+                  await context.read<ApiService>().listTicketForResale(ticket.ticketId, price);
+                  
+                  // Close loading dialog
+                  if (mounted) Navigator.of(context).pop();
+                  
+                  // Show success message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Ticket listed for resale at \$${price.toStringAsFixed(2)}'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    
+                    // Reload tickets to show updated status
+                    _loadMyTickets();
+                  }
+                } catch (e) {
+                  // Close loading dialog if still open
+                  if (mounted) Navigator.of(context).pop();
+                  
+                  // Show error message
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to list ticket: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
               child: const Text('List for Resale'),
             ),
@@ -151,7 +203,7 @@ class _MyTicketsPageState extends State<MyTicketsPage>
     });
   }
 
-  // Simulate canceling resale
+  // Cancel resale listing
   void _cancelResale(TicketDetailsModel ticket) {
     showDialog(
       context: context,
@@ -167,14 +219,57 @@ class _MyTicketsPageState extends State<MyTicketsPage>
                 child: const Text('No'),
               ),
               FilledButton(
-                onPressed: () {
+                onPressed: () async {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ticket removed from resale'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
+                  
+                  try {
+                    // Show loading
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (context) => const AlertDialog(
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Removing from resale...'),
+                          ],
+                        ),
+                      ),
+                    );
+                    
+                    await context.read<ApiService>().cancelResaleListing(ticket.ticketId);
+                    
+                    // Close loading dialog
+                    if (mounted) Navigator.of(context).pop();
+                    
+                    // Show success message
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ticket removed from resale'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      
+                      // Reload tickets to show updated status
+                      _loadMyTickets();
+                    }
+                  } catch (e) {
+                    // Close loading dialog if still open
+                    if (mounted) Navigator.of(context).pop();
+                    
+                    // Show error message
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to cancel resale: ${e.toString()}'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
                 },
                 child: const Text('Yes, Cancel Resale'),
               ),
@@ -540,6 +635,38 @@ class _MyTicketsPageState extends State<MyTicketsPage>
                                                             ),
                                                       ),
                                                     ],
+                                                  ),
+                                                if (ticket.originalPrice != null)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          top: 4,
+                                                        ),
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.attach_money,
+                                                          size: 14,
+                                                          color:
+                                                              colorScheme
+                                                                  .onSurfaceVariant,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
+                                                        Text(
+                                                          'Paid: ${NumberFormat.currency(locale: 'en_US', symbol: '\$').format(ticket.originalPrice)}',
+                                                          style: theme
+                                                              .textTheme
+                                                              .bodySmall
+                                                              ?.copyWith(
+                                                                color:
+                                                                    colorScheme
+                                                                        .onSurfaceVariant,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 if (ticket.eventStartDate !=
                                                     null)

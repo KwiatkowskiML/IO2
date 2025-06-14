@@ -6,8 +6,10 @@ from app.database import get_db
 from app.models.ticket import TicketModel
 from fastapi import HTTPException, status, Depends
 from app.filters.ticket_filter import TicketFilter
-from app.models.ticket_type import TicketTypeModel
 from app.schemas.ticket import TicketPDF, ResellTicketRequest
+from app.models.events import EventModel
+from app.models.ticket_type import TicketTypeModel
+from app.models.location import LocationModel
 
 
 class TicketRepository:
@@ -16,8 +18,25 @@ class TicketRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_tickets(self, filters: TicketFilter) -> List[TicketModel]:
-        query = self.db.query(TicketModel)
+    def list_tickets(self, filters: TicketFilter) -> List[dict]:
+        query = (
+            self.db.query(
+                TicketModel.ticket_id,
+                TicketModel.type_id,
+                TicketModel.seat,
+                TicketModel.owner_id,
+                TicketModel.resell_price,
+                TicketTypeModel.price.label('original_price'),
+                EventModel.name.label('event_name'),
+                EventModel.start_date.label('event_start_date'),
+                LocationModel.name.label('event_location'),
+                TicketTypeModel.description.label('ticket_type_description')
+            )
+            .join(TicketTypeModel, TicketModel.type_id == TicketTypeModel.type_id)
+            .join(EventModel, TicketTypeModel.event_id == EventModel.event_id)
+            .join(LocationModel, EventModel.location_id == LocationModel.location_id)
+        )
+
         if filters.ticket_id is not None:
             query = query.filter(TicketModel.ticket_id == filters.ticket_id)
         if filters.type_id is not None:
@@ -29,7 +48,26 @@ class TicketRepository:
                 query = query.filter(TicketModel.resell_price.isnot(None))
             else:
                 query = query.filter(TicketModel.resell_price.is_(None))
-        return query.all()
+        results = query.all()
+
+        # Convert to dictionaries that match the TicketDetails schema
+        tickets = []
+        for result in results:
+            ticket_dict = {
+                'ticket_id': result.ticket_id,
+                'type_id': result.type_id,
+                'seat': result.seat,
+                'owner_id': result.owner_id,
+                'resell_price': result.resell_price,
+                'original_price': result.original_price,
+                'event_name': result.event_name,
+                'event_start_date': result.event_start_date,
+                'event_location': result.event_location,
+                'ticket_type_description': result.ticket_type_description
+            }
+            tickets.append(ticket_dict)
+
+        return tickets
 
     def get_ticket(self, ticket_id: int) -> Optional[TicketModel]:
         ticket = self.db.get(TicketModel, ticket_id)
