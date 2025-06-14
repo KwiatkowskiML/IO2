@@ -1,15 +1,15 @@
 from typing import List, Optional
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.ticket import TicketModel
-from app.models.events import EventModel
-from app.models.ticket_type import TicketTypeModel
-from app.models.location import LocationModel
 from fastapi import HTTPException, status, Depends
 from app.filters.ticket_filter import TicketFilter
 from app.schemas.ticket import TicketPDF, ResellTicketRequest
+from app.models.events import EventModel
+from app.models.ticket_type import TicketTypeModel
+from app.models.location import LocationModel
 
 
 class TicketRepository:
@@ -19,7 +19,6 @@ class TicketRepository:
         self.db = db
 
     def list_tickets(self, filters: TicketFilter) -> List[dict]:
-        """Returns a list of tickets with event information"""
         query = (
             self.db.query(
                 TicketModel.ticket_id,
@@ -37,7 +36,7 @@ class TicketRepository:
             .join(EventModel, TicketTypeModel.event_id == EventModel.event_id)
             .join(LocationModel, EventModel.location_id == LocationModel.location_id)
         )
-        
+
         if filters.ticket_id is not None:
             query = query.filter(TicketModel.ticket_id == filters.ticket_id)
         if filters.type_id is not None:
@@ -49,9 +48,8 @@ class TicketRepository:
                 query = query.filter(TicketModel.resell_price.isnot(None))
             else:
                 query = query.filter(TicketModel.resell_price.is_(None))
-        
         results = query.all()
-        
+
         # Convert to dictionaries that match the TicketDetails schema
         tickets = []
         for result in results:
@@ -68,7 +66,7 @@ class TicketRepository:
                 'ticket_type_description': result.ticket_type_description
             }
             tickets.append(ticket_dict)
-        
+
         return tickets
 
     def get_ticket(self, ticket_id: int) -> Optional[TicketModel]:

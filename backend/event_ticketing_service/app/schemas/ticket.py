@@ -25,7 +25,7 @@ class TicketDetails(BaseModel):
     owner_id: Optional[int] = None
     resell_price: Optional[float] = None
     original_price: Optional[float] = None  # The price the user paid for the ticket
-    
+
     # Event information
     event_name: Optional[str] = None
     event_start_date: Optional[datetime] = None
