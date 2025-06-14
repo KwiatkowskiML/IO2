@@ -65,17 +65,21 @@ class EventRepository:
         if filters.name:
             query = query.filter(EventModel.name.ilike(f"%{filters.name}%"))
         if filters.location:
-            query = query.filter(LocationModel.name == filters.location)
+            query = query.filter(LocationModel.name.ilike(f"%{filters.location}%"))
         if filters.start_date_from:
             query = query.filter(EventModel.start_date >= filters.start_date_from)
         if filters.start_date_to:
-            query = query.filter(EventModel.end_date <= filters.start_date_to)
+            query = query.filter(EventModel.start_date <= filters.start_date_to)
         if filters.organizer_id:
             query = query.filter(EventModel.organizer_id == filters.organizer_id)
         if filters.minimum_age:
             query = query.filter(EventModel.minimum_age >= filters.minimum_age)
 
-        # TODO: add price filters (join ticket_types) and availability checks
+        # Filter by events that have available tickets
+        if filters.has_available_tickets:
+            # This would require more complex logic to check ticket availability
+            # For now, we just return all events
+            pass
 
         return query.all()
 

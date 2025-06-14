@@ -18,28 +18,28 @@ class EventFilterSheet extends StatefulWidget {
 
 class _EventFilterSheetState extends State<EventFilterSheet> {
   late EventFilterModel _currentFilters;
-  final _minPriceController = TextEditingController();
-  final _maxPriceController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _locationController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _currentFilters = widget.initialFilters;
-    _minPriceController.text = _currentFilters.minPrice?.toString() ?? '';
-    _maxPriceController.text = _currentFilters.maxPrice?.toString() ?? '';
+    _nameController.text = _currentFilters.name ?? '';
+    _locationController.text = _currentFilters.location ?? '';
   }
 
   @override
   void dispose() {
-    _minPriceController.dispose();
-    _maxPriceController.dispose();
+    _nameController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
   void _apply() {
     final newFilters = _currentFilters.copyWith(
-      minPrice: double.tryParse(_minPriceController.text),
-      maxPrice: double.tryParse(_maxPriceController.text),
+      name: _nameController.text.isNotEmpty ? _nameController.text : null,
+      location: _locationController.text.isNotEmpty ? _locationController.text : null,
     );
     widget.onApplyFilters(newFilters);
     Navigator.pop(context);
@@ -48,9 +48,45 @@ class _EventFilterSheetState extends State<EventFilterSheet> {
   void _clear() {
     setState(() {
       _currentFilters = const EventFilterModel();
-      _minPriceController.clear();
-      _maxPriceController.clear();
+      _nameController.clear();
+      _locationController.clear();
     });
+  }
+
+  Future<void> _selectDateFrom() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _currentFilters.startDateFrom ?? DateTime.now(),
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Select start date from',
+    );
+    if (picked != null) {
+      setState(() {
+        _currentFilters = _currentFilters.copyWith(startDateFrom: picked);
+      });
+    }
+  }
+
+  Future<void> _selectDateTo() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _currentFilters.startDateTo ?? 
+          (_currentFilters.startDateFrom?.add(const Duration(days: 7)) ?? DateTime.now().add(const Duration(days: 7))),
+      firstDate: _currentFilters.startDateFrom ?? DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Select start date to',
+    );
+    if (picked != null) {
+      setState(() {
+        _currentFilters = _currentFilters.copyWith(startDateTo: picked);
+      });
+    }
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Select date';
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   @override
@@ -64,7 +100,7 @@ class _EventFilterSheetState extends State<EventFilterSheet> {
         16 + MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Wrap(
-        runSpacing: 24,
+        runSpacing: 20,
         children: [
           // Header
           Row(
@@ -78,37 +114,93 @@ class _EventFilterSheetState extends State<EventFilterSheet> {
             ],
           ),
 
-          // Price Range
+          // Event Name Filter
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Price Range', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 16),
+              Text('Event Name', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Search by event name',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+
+          // Location Filter
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Location', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  labelText: 'Enter location name',
+                  prefixIcon: Icon(Icons.location_on),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+
+          // Date Range Filter
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Date Range', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _minPriceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Min Price',
-                        prefixText: '\$ ',
+                    child: OutlinedButton.icon(
+                      onPressed: _selectDateFrom,
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text('From: ${_formatDate(_currentFilters.startDateFrom)}'),
+                      style: OutlinedButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.all(16),
                       ),
-                      keyboardType: TextInputType.number,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: TextField(
-                      controller: _maxPriceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Max Price',
-                        prefixText: '\$ ',
+                    child: OutlinedButton.icon(
+                      onPressed: _selectDateTo,
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text('To: ${_formatDate(_currentFilters.startDateTo)}'),
+                      style: OutlinedButton.styleFrom(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.all(16),
                       ),
-                      keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
+              if (_currentFilters.startDateFrom != null || _currentFilters.startDateTo != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _currentFilters = _currentFilters.copyWith(
+                              startDateFrom: null,
+                              startDateTo: null,
+                            );
+                          });
+                        },
+                        icon: const Icon(Icons.clear, size: 16),
+                        label: const Text('Clear dates'),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
 

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:resellio/core/models/event_model.dart';
 import 'package:resellio/core/models/ticket_model.dart';
+import 'package:resellio/core/models/event_filter_model.dart';
 
 // --- API Configuration ---
 
@@ -159,6 +160,21 @@ class ApiService {
     try {
       final response = await _dio.post('/auth/register/organizer', data: data);
       return response.data['token'];
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> logout() async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      return;
+    }
+
+    try {
+      await _dio.post('/auth/logout');
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {
@@ -347,13 +363,26 @@ class ApiService {
 
   // --- API Methods ---
 
-  Future<List<Event>> getEvents() async {
+  Future<List<Event>> getEvents({EventFilterModel? filters}) async {
     if (_shouldUseMockData) {
       await Future.delayed(const Duration(seconds: 1));
       return _mockEvents;
     }
     try {
-      final response = await _dio.get('/events');
+      String endpoint = '/events';
+      
+      // Add query parameters if filters are provided
+      if (filters != null) {
+        final queryParams = filters.toQueryParameters();
+        if (queryParams.isNotEmpty) {
+          final queryString = queryParams.entries
+              .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+              .join('&');
+          endpoint = '$endpoint?$queryString';
+        }
+      }
+      
+      final response = await _dio.get(endpoint);
       return (response.data as List).map((e) => Event.fromJson(e)).toList();
     } catch (e) {
       debugPrint('Failed to get events: $e');

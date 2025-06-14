@@ -9,15 +9,13 @@ class EventsFilter(BaseModel):
     """Filter for querying events."""
 
     name: Optional[str] = Query(None, title="Event Name", description="Partial match for event name")
-    location: Optional[str] = Query(None, title="Location", description="Event location (exact match)")
+    location: Optional[str] = Query(None, title="Location", description="Partial match for event location")
     start_date_from: Optional[datetime] = Query(
         None, title="Start Date From", description="Events starting after this date"
     )
     start_date_to: Optional[datetime] = Query(
         None, title="Start Date To", description="Events starting before this date"
     )
-    min_price: Optional[float] = Query(None, ge=0, title="Minimum Price", description="Minimum ticket price available")
-    max_price: Optional[float] = Query(None, ge=0, title="Maximum Price", description="Maximum ticket price available")
     organizer_id: Optional[int] = Query(None, title="Organizer ID", description="Filter by specific organizer")
     minimum_age: Optional[int] = Query(
         None, ge=0, title="Minimum Age", description="Minimum required age for attendees"

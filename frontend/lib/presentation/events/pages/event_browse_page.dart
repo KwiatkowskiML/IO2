@@ -48,19 +48,16 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
   void _loadEvents() {
     final apiService = context.read<ApiService>();
     setState(() {
-      _eventsFuture = apiService.getEvents();
+      _eventsFuture = apiService.getEvents(filters: _currentFilters);
     });
   }
 
   void _applyFilters(EventFilterModel newFilters) {
-    if (_currentFilters != newFilters) {
-      setState(() {
-        _currentFilters = newFilters;
-        _selectedCategory =
-            'All'; // Reset category selection when applying filters
-      });
-      _loadEvents();
-    }
+    setState(() {
+      _currentFilters = newFilters;
+      _selectedCategory = 'All'; // Reset category selection when applying filters
+    });
+    _loadEvents();
   }
 
   void _showFilterSheet() {
@@ -81,18 +78,20 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
   }
 
   void _performSearch(String query) {
-    if (query != _searchQuery) {
-      setState(() {
-        _searchQuery = query;
-      });
-      _loadEvents();
-    }
+    setState(() {
+      _searchQuery = query;
+      // Update the current filters with the search query
+      _currentFilters = _currentFilters.copyWith(name: query.isNotEmpty ? query : null);
+    });
+    _loadEvents();
   }
 
   void _selectCategory(String category) {
     if (category != _selectedCategory) {
       setState(() {
         _selectedCategory = category;
+        // Don't modify filters for category selection since backend doesn't support it yet
+        // This could be added later if categories are implemented in backend
       });
       _loadEvents();
     }

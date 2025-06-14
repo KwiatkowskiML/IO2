@@ -108,10 +108,21 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void logout() {
-    _token = null;
-    _user = null;
-    _apiService.setAuthToken(null);
-    notifyListeners();
+  Future<void> logout() async {
+    try {
+      // Call backend logout endpoint if we have a token
+      if (_token != null) {
+        await _apiService.logout();
+      }
+    } catch (e) {
+      // Even if backend logout fails, we still want to clear local state
+      debugPrint('Backend logout failed: $e');
+    } finally {
+      // Clear local state regardless of backend response
+      _token = null;
+      _user = null;
+      _apiService.setAuthToken(null);
+      notifyListeners();
+    }
   }
 }

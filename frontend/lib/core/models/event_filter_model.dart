@@ -3,16 +3,12 @@ class EventFilterModel {
   final String? location;
   final DateTime? startDateFrom;
   final DateTime? startDateTo;
-  final double? minPrice;
-  final double? maxPrice;
 
   const EventFilterModel({
     this.name,
     this.location,
     this.startDateFrom,
     this.startDateTo,
-    this.minPrice,
-    this.maxPrice,
   });
 
   // Check if any filters are active
@@ -20,9 +16,7 @@ class EventFilterModel {
       name != null ||
       location != null ||
       startDateFrom != null ||
-      startDateTo != null ||
-      minPrice != null ||
-      maxPrice != null;
+      startDateTo != null;
 
   //copyWith method for immutability
   EventFilterModel copyWith({
@@ -30,16 +24,12 @@ class EventFilterModel {
     String? location,
     DateTime? startDateFrom,
     DateTime? startDateTo,
-    double? minPrice,
-    double? maxPrice,
   }) {
     return EventFilterModel(
       name: name ?? this.name,
       location: location ?? this.location,
       startDateFrom: startDateFrom ?? this.startDateFrom,
       startDateTo: startDateTo ?? this.startDateTo,
-      minPrice: minPrice ?? this.minPrice,
-      maxPrice: maxPrice ?? this.maxPrice,
     );
   }
 
@@ -51,9 +41,7 @@ class EventFilterModel {
         other.name == name &&
         other.location == location &&
         other.startDateFrom == startDateFrom &&
-        other.startDateTo == startDateTo &&
-        other.minPrice == minPrice &&
-        other.maxPrice == maxPrice;
+        other.startDateTo == startDateTo;
   }
 
   @override
@@ -61,8 +49,29 @@ class EventFilterModel {
     return name.hashCode ^
         location.hashCode ^
         startDateFrom.hashCode ^
-        startDateTo.hashCode ^
-        minPrice.hashCode ^
-        maxPrice.hashCode;
+        startDateTo.hashCode;
+  }
+
+  // Convert to query parameters for API calls
+  Map<String, String> toQueryParameters() {
+    final Map<String, String> params = {};
+    
+    if (name != null && name!.isNotEmpty) {
+      params['name'] = name!;
+    }
+    
+    if (location != null && location!.isNotEmpty) {
+      params['location'] = location!;
+    }
+    
+    if (startDateFrom != null) {
+      params['start_date_from'] = startDateFrom!.toIso8601String();
+    }
+    
+    if (startDateTo != null) {
+      params['start_date_to'] = startDateTo!.toIso8601String();
+    }
+    
+    return params;
   }
 }
