@@ -51,6 +51,7 @@ class MarketplacePage extends StatefulWidget {
 class _MarketplacePageState extends State<MarketplacePage> {
   List<ResaleTicketListing> _listings = [];
   bool _isLoading = true;
+  bool _isPurchasing = false; // Add this for purchase action
   String? _error;
   
   // Filter state
@@ -90,37 +91,42 @@ class _MarketplacePageState extends State<MarketplacePage> {
     }
   }
 
-  Future<void> _addToCart(ResaleTicketListing listing) async {
+ Future<void> _purchaseTicket(ResaleTicketListing listing) async {
+    setState(() {
+      _isPurchasing = true; // Indicate purchase is in progress
+    });
     try {
-      print('Marketplace: Adding ticket ${listing.ticketId} to cart');
-      
-      // Use the cart service to add resale ticket
-      await context.read<CartService>().addResaleTicket(
-        listing.ticketId,
-        listing.eventName,
-        listing.ticketTypeDescription ?? 'Standard Ticket',
-        listing.resellPrice,
-      );
-      
-      if (mounted) {
+      final apiService = context.read<ApiService>();
+
+      bool success = await apiService.purchaseResaleTicket(listing.ticketId);
+
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${listing.eventName} ticket added to cart!'),
+            content: Text('${listing.eventName} ticket purchased successfully!'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 3),
           ),
         );
-        _loadMarketplaceListings(); // Refresh listings
+        _loadMarketplaceListings(); // Refresh listings, the purchased one should be gone
       }
+
     } catch (e) {
-      print('Marketplace: Error adding to cart: $e');
+      print('Marketplace: Error purchasing ticket: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding to cart: ${e.toString()}'),
+            content: Text('Error purchasing ticket: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPurchasing = false; // Purchase attempt finished
+        });
       }
     }
   }
@@ -222,7 +228,8 @@ class _MarketplacePageState extends State<MarketplacePage> {
         final listing = _listings[index];
         return _TicketListingCard(
           listing: listing,
-          onAddToCart: () => _addToCart(listing),
+          onPurchaseTicket: () => _purchaseTicket(listing),
+          isPurchasing: _isPurchasing
         );
       },
     );
@@ -231,11 +238,13 @@ class _MarketplacePageState extends State<MarketplacePage> {
 
 class _TicketListingCard extends StatelessWidget {
   final ResaleTicketListing listing;
-  final VoidCallback onAddToCart;
+  final VoidCallback onPurchaseTicket;
+  final bool isPurchasing;
 
   const _TicketListingCard({
     required this.listing,
-    required this.onAddToCart,
+    required this.onPurchaseTicket,
+    required this.isPurchasing
   });
 
   @override
@@ -244,7 +253,7 @@ class _TicketListingCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     
     final savings = listing.originalPrice - listing.resellPrice;
-    final savingsPercent = (savings / listing.originalPrice * 100).round();
+    final savingsPercent = listing.originalPrice > 0 ? (savings / listing.originalPrice * 100).round() : 0;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -275,7 +284,7 @@ class _TicketListingCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (savings > 0)
+                if (savings > 0 && listing.originalPrice > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -367,9 +376,15 @@ class _TicketListingCard extends StatelessWidget {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: onAddToCart,
-                  child: const Text('Add to Cart'),
-                ),
+                  onPressed: isPurchasing ? null : onPurchaseTicket,
+                  child: isPurchasing
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Buy Now'),
+                  ),
               ],
             ),
           ],

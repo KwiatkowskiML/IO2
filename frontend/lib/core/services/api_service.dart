@@ -469,20 +469,29 @@ class ApiService {
     }
   }
 
-  Future<void> purchaseResaleTicket(int ticketId) async {
+ Future<bool> purchaseResaleTicket(int ticketId) async {
     if (_shouldUseMockData) {
       await Future.delayed(const Duration(seconds: 1));
-      return; // Simulate successful purchase
+      debugPrint('ApiService (Mock): Purchased resale ticket ID: $ticketId');
+      return true; // Simulate successful purchase
     }
 
     try {
-      await _dio.post('/resale/purchase', data: {
-        'ticket_id': ticketId,
-      });
+      // The backend expects a JSON body like {"ticket_id": ticketId}
+      await _dio.post(
+        '/resale/purchase', // Endpoint relative to baseUrl
+        data: {
+          'ticket_id': ticketId,
+        },
+      );
+      debugPrint('ApiService: Successfully purchased resale ticket ID: $ticketId');
+      return true;
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      debugPrint('ApiService: Error purchasing resale ticket ID $ticketId: ${e.response?.statusCode} - ${e.message}');
+      throw _handleDioError(e); // Propagate the formatted error
     } catch (e) {
-      rethrow;
+      debugPrint('ApiService: Unknown error purchasing resale ticket ID $ticketId: $e');
+      rethrow; // Propagate other errors
     }
   }
 
