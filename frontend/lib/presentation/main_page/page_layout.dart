@@ -33,11 +33,123 @@ class PageLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool useAppBar = ResponsiveLayout.isMobile(context);
+    final bool isMobile = ResponsiveLayout.isMobile(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final cartIconButton = BlocBuilder<CartCubit, CartState>(
+    return Scaffold(
+      backgroundColor: backgroundColor ?? colorScheme.surface,
+      appBar: isMobile ? _buildMobileAppBar(context, theme, colorScheme) : null,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isMobile) _buildDesktopHeader(context, theme, colorScheme),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxContentWidth),
+                child: Padding(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: isMobile ? 0 : 24.0),
+                  child: body,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: floatingActionButton,
+      bottomNavigationBar: bottomNavigationBar,
+    );
+  }
+
+  PreferredSizeWidget _buildMobileAppBar(
+      BuildContext context, ThemeData theme, ColorScheme colorScheme) {
+    return AppBar(
+      backgroundColor: appBarColor ?? colorScheme.surface,
+      scrolledUnderElevation: 2,
+      elevation: 0,
+      centerTitle: false,
+      title: Text(
+        title,
+        style: theme.textTheme.titleLarge,
+      ),
+      leading: showBackButton
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home/customer');
+                }
+              },
+            )
+          : null,
+      actions: [
+        if (actions != null) ...actions!,
+        if (showCartButton) const _CartIconButton(),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  Widget _buildDesktopHeader(
+      BuildContext context, ThemeData theme, ColorScheme colorScheme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: appBarColor ?? colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 1,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          if (showBackButton)
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded),
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home/customer');
+                }
+              },
+            ),
+          Expanded(
+            child: Text(
+              title,
+              style: theme.textTheme.headlineMedium,
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (actions != null) ...actions!,
+              if (actions != null && actions!.isNotEmpty)
+                const SizedBox(width: 16),
+              if (showCartButton) const _CartIconButton(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CartIconButton extends StatelessWidget {
+  const _CartIconButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return BlocBuilder<CartCubit, CartState>(
       builder: (context, state) {
         final count = state is CartLoaded ? state.items.length : 0;
         return Badge(
@@ -57,103 +169,6 @@ class PageLayout extends StatelessWidget {
           ),
         );
       },
-    );
-
-    return Scaffold(
-      backgroundColor: backgroundColor ?? colorScheme.surface,
-      appBar: useAppBar
-          ? AppBar(
-              backgroundColor: appBarColor ?? colorScheme.surface,
-              scrolledUnderElevation: 2,
-              elevation: 0,
-              centerTitle: false,
-              title: Text(
-                title,
-                style: theme.textTheme.titleLarge,
-              ),
-              leading: showBackButton
-                  ? IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/home/customer');
-                        }
-                      },
-                    )
-                  : null,
-              actions: [
-                if (actions != null) ...actions!,
-                if (showCartButton) cartIconButton,
-                const SizedBox(width: 8),
-              ],
-            )
-          : null,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!useAppBar)
-            Container(
-              decoration: BoxDecoration(
-                color: appBarColor ?? colorScheme.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 1,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (showBackButton)
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                      onPressed: () {
-                        if (context.canPop()) {
-                          context.pop();
-                        } else {
-                          context.go('/home/customer');
-                        }
-                      },
-                    ),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: theme.textTheme.headlineMedium,
-                    ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (actions != null) ...actions!,
-                      if (actions != null && actions!.isNotEmpty)
-                        const SizedBox(width: 16),
-                      if (showCartButton) cartIconButton,
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxContentWidth),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: useAppBar ? 0 : 24.0),
-                  child: body,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: floatingActionButton,
-      bottomNavigationBar: bottomNavigationBar,
     );
   }
 }

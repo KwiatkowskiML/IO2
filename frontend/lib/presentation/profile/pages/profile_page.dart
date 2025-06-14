@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
-import 'package:resellio/presentation/common_widgets/custom_text_form_field.dart';
 import 'package:resellio/presentation/common_widgets/dialogs.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/profile/cubit/profile_cubit.dart';
 import 'package:resellio/presentation/profile/cubit/profile_state.dart';
+import 'package:resellio/presentation/profile/widgets/account_info.dart';
+import 'package:resellio/presentation/profile/widgets/profile_form.dart';
+import 'package:resellio/presentation/profile/widgets/profile_header.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -84,176 +85,21 @@ class _ProfileView extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _ProfileHeader(userProfile: userProfile),
+                      ProfileHeader(userProfile: userProfile),
                       const SizedBox(height: 32),
-                      _ProfileForm(
+                      ProfileForm(
                         userProfile: userProfile,
                         isEditing: isEditing,
                         isSaving: isSaving,
                       ),
                       const SizedBox(height: 32),
-                      _AccountInfo(userProfile: userProfile),
+                      AccountInfo(userProfile: userProfile),
                     ],
                   ),
                 );
               },
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileHeader extends StatelessWidget {
-  final UserProfile userProfile;
-  const _ProfileHeader({required this.userProfile});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text('Welcome, ${userProfile.firstName}!',
-        style: Theme.of(context).textTheme.headlineMedium);
-  }
-}
-
-class _ProfileForm extends StatefulWidget {
-  final UserProfile userProfile;
-  final bool isEditing;
-  final bool isSaving;
-
-  const _ProfileForm(
-      {required this.userProfile,
-      required this.isEditing,
-      required this.isSaving});
-
-  @override
-  State<_ProfileForm> createState() => _ProfileFormState();
-}
-
-class _ProfileFormState extends State<_ProfileForm> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _firstNameController;
-  late TextEditingController _lastNameController;
-  late TextEditingController _loginController;
-
-  @override
-  void initState() {
-    super.initState();
-    _firstNameController =
-        TextEditingController(text: widget.userProfile.firstName);
-    _lastNameController =
-        TextEditingController(text: widget.userProfile.lastName);
-    _loginController = TextEditingController(text: widget.userProfile.login ?? '');
-  }
-
-  @override
-  void didUpdateWidget(covariant _ProfileForm oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.userProfile != oldWidget.userProfile) {
-      _firstNameController.text = widget.userProfile.firstName;
-      _lastNameController.text = widget.userProfile.lastName;
-      _loginController.text = widget.userProfile.login ?? '';
-    }
-  }
-
-  @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _loginController.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    if (_formKey.currentState!.validate()) {
-      context.read<ProfileCubit>().updateProfile({
-        'first_name': _firstNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'login': _loginController.text.trim(),
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        children: [
-          CustomTextFormField(
-            controller: _firstNameController,
-            enabled: widget.isEditing,
-            labelText: 'First Name',
-            validator: (v) => v!.isEmpty ? 'Required' : null,
-          ),
-          const SizedBox(height: 16),
-          CustomTextFormField(
-            controller: _lastNameController,
-            enabled: widget.isEditing,
-            labelText: 'Last Name',
-            validator: (v) => v!.isEmpty ? 'Required' : null,
-          ),
-          const SizedBox(height: 16),
-          CustomTextFormField(
-            controller: _loginController,
-            enabled: widget.isEditing,
-            labelText: 'Username',
-            validator: (v) => v!.isEmpty ? 'Required' : null,
-          ),
-          if (widget.isEditing) ...[
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () =>
-                        context.read<ProfileCubit>().toggleEdit(false),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: widget.isSaving ? null : _save,
-                    child: widget.isSaving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Save'),
-                  ),
-                ),
-              ],
-            ),
-          ]
-        ],
-      ),
-    );
-  }
-}
-
-class _AccountInfo extends StatelessWidget {
-  final UserProfile userProfile;
-  const _AccountInfo({required this.userProfile});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.email),
-              title: const Text('Email'),
-              subtitle: Text(userProfile.email),
-            ),
-            ListTile(
-              leading: const Icon(Icons.verified_user),
-              title: const Text('Status'),
-              subtitle: Text(userProfile.isActive ? 'Active' : 'Inactive'),
-            ),
-          ],
         ),
       ),
     );

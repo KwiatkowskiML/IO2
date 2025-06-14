@@ -38,7 +38,7 @@ class _CartView extends StatelessWidget {
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(
               content: Text('Error: ${state.message}'),
-              backgroundColor: Colors.red,
+              backgroundColor: theme.colorScheme.error,
             ));
         }
       },

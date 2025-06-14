@@ -117,7 +117,7 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(state.message),
-                      backgroundColor: Colors.red,
+                      backgroundColor: colorScheme.error,
                     ),
                   );
                 }
@@ -181,8 +181,9 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                             ? Container(
                                 width: double.infinity,
                                 color: isResale
-                                    ? colorScheme.tertiary.withOpacity(0.1)
-                                    : Colors.grey.shade200,
+                                    ? colorScheme.tertiaryContainer
+                                        .withOpacity(0.5)
+                                    : colorScheme.surfaceContainerHighest,
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 6, horizontal: 16),
                                 child: Row(
@@ -191,8 +192,8 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                       isResale ? Icons.sell : Icons.history,
                                       size: 14,
                                       color: isResale
-                                          ? colorScheme.tertiary
-                                          : Colors.grey.shade600,
+                                          ? colorScheme.onTertiaryContainer
+                                          : colorScheme.onSurfaceVariant,
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
@@ -200,8 +201,8 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                       style: theme.textTheme.labelSmall
                                           ?.copyWith(
                                         color: isResale
-                                            ? colorScheme.tertiary
-                                            : Colors.grey.shade600,
+                                            ? colorScheme.onTertiaryContainer
+                                            : colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                   ],
@@ -213,7 +214,7 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                 width: 50,
                                 decoration: BoxDecoration(
                                   color: isPast
-                                      ? Colors.grey.shade200
+                                      ? colorScheme.surfaceContainerHighest
                                       : colorScheme.primaryContainer,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -227,7 +228,7 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                       style: theme.textTheme.labelMedium
                                           ?.copyWith(
                                               color: isPast
-                                                  ? Colors.grey.shade600
+                                                  ? colorScheme.onSurfaceVariant
                                                   : colorScheme
                                                       .onPrimaryContainer),
                                     ),
@@ -237,7 +238,7 @@ class _MyTicketsViewState extends State<_MyTicketsView>
                                       style: theme.textTheme.titleMedium
                                           ?.copyWith(
                                               color: isPast
-                                                  ? Colors.grey.shade600
+                                                  ? colorScheme.onSurfaceVariant
                                                   : colorScheme
                                                       .onPrimaryContainer),
                                     ),
