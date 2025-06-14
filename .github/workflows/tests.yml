@@ -48,14 +48,12 @@ jobs:
     - name: Make scripts executable
       run: chmod +x ./scripts/utils/print.bash ./scripts/actions/run_tests.bash
 
-    - name: Create .env file for Docker Compose
       run: |
         echo "Creating .env file from template..."
         cp .env.template .env
         echo ".env file created."
 
     - name: Run Frontend (Flutter) tests via Docker Compose
-      # This single command handles Docker startup, testing, and shutdown
       run: ./scripts/actions/run_tests.bash frontend local
 
     - name: Show logs on failure

@@ -10,7 +10,7 @@ SUITE="${1:-}"
 TARGET_ENV="${2:-}"
 TEST_SELECTOR="${3:-}"
 
-# --- Function for Backend Tests ---
+# Function for Backend Tests 
 run_backend_tests() {
     # Validation
     if [[ -z "$TARGET_ENV" || ("$TARGET_ENV" != "local" && "$TARGET_ENV" != "aws") ]]; then
@@ -34,7 +34,7 @@ run_backend_tests() {
 
         # Start services in the background
         pretty_info "Building and starting services in the background..."
-        docker-compose up -d --build
+        docker compose up -d --build
         pretty_success "Services are starting."
 
         # Wait for API Gateway to be ready
@@ -109,7 +109,7 @@ run_backend_tests() {
     if [[ "$TARGET_ENV" == "local" ]]; then
         pretty_info "Cleaning up Docker services..."
         cd "$PROJECT_ROOT"
-        docker-compose down -v
+        docker compose down -v
     fi
 
     gen_separator '='
@@ -123,7 +123,7 @@ run_backend_tests() {
     exit $TEST_EXIT_CODE
 }
 
-# --- Function for Frontend Tests ---
+# Function for Frontend Tests 
 run_frontend_tests() {
     # Validation
     if [[ -n "$TARGET_ENV" && "$TARGET_ENV" != "local" ]]; then
@@ -144,7 +144,7 @@ run_frontend_tests() {
 
     # 1. Build and start all backend services in the background.
     pretty_info "Building and starting dependent services in the background..."
-    docker-compose up -d --build
+    docker compose up -d --build
     pretty_success "Backend services are starting."
 
     # 2. Wait for the API Gateway to be ready before running tests.
@@ -159,12 +159,12 @@ run_frontend_tests() {
 
     # 3. Run the Flutter test container as a one-off task.
     pretty_info "Running Flutter test container..."
-    docker-compose run --rm flutter-tester
+    docker compose run --rm flutter-tester
     TEST_EXIT_CODE=$?
 
     # 4. Clean up all services started by this script.
     pretty_info "Cleaning up all services..."
-    docker-compose down -v
+    docker compose down -v
 
     gen_separator '='
     if [[ $TEST_EXIT_CODE -eq 0 ]]; then
@@ -178,7 +178,7 @@ run_frontend_tests() {
 }
 
 
-# --- Main Dispatcher ---
+# Main Dispatcher 
 case "$SUITE" in
     "backend")
         run_backend_tests
