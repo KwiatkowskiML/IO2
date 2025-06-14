@@ -74,9 +74,9 @@ graph TD
     subgraph "AWS Cloud"
         direction LR
         ALB[Application Load Balancer]
-        EcsAuth[Auth Service (ECS Fargate)]
-        EcsEvents[Events/Tickets Service (ECS Fargate)]
-        EcsDBInit[DB Init Task (ECS Fargate)]
+        EcsAuth["Auth Service (ECS Fargate)"]
+        EcsEvents["Events/Tickets Service (ECS Fargate)"]
+        EcsDBInit["DB Init Task (ECS Fargate)"]
         AuroraDB[(Aurora DB)]
         Secrets[AWS Secrets Manager]
 
@@ -99,8 +99,7 @@ graph TD
     end
 
     Flutter --> LocalGateway
-    Flutter --> ALB
-```
+    Flutter --> ALB`
 
 ## Tech Stack
 
