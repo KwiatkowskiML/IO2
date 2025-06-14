@@ -57,6 +57,21 @@ class UserModel {
       roleId: jwtData['role_id'],
     );
   }
+
+  bool get isAdmin => role == UserRole.admin;
+  bool get isOrganizer => role == UserRole.organizer;
+  bool get isCustomer => role == UserRole.customer;
+
+  String get roleDisplayName {
+    switch (role) {
+      case UserRole.admin:
+        return 'Administrator';
+      case UserRole.organizer:
+        return 'Organizer';
+      case UserRole.customer:
+        return 'Customer';
+    }
+  }
 }
 
 class AuthService extends ChangeNotifier {
@@ -104,6 +119,7 @@ class AuthService extends ChangeNotifier {
     final jwtData = tryDecodeJwt(token);
     if (jwtData != null) {
       _user = UserModel.fromJwt(jwtData);
+      debugPrint('User logged in: ${_user?.email} with role: ${_user?.role}');
     }
     notifyListeners();
   }
@@ -114,4 +130,30 @@ class AuthService extends ChangeNotifier {
     _apiService.setAuthToken(null);
     notifyListeners();
   }
+  String? getAuthToken() {
+    return _token;
+  }
+
+  bool get hasAdminPrivileges {
+    return _user?.isAdmin ?? false;
+  }
+
+  bool get hasOrganizerPrivileges {
+    return _user?.isOrganizer ?? false;
+  }
+
+  int? get roleSpecificId {
+    return _user?.roleId;
+  }
+
+  Map<String, String> getAuthHeaders() {
+    if (_token == null) {
+      throw Exception('No authentication token available');
+    }
+    return {
+      'Authorization': 'Bearer $_token',
+      'Content-Type': 'application/json',
+    };
+  }
+
 }

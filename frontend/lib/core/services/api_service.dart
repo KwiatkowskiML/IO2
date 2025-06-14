@@ -469,6 +469,308 @@ class ApiService {
     }
   }
 
+  Future<List<dynamic>> getAllUsers({
+    int page = 1,
+    int limit = 50,
+    String? search,
+    String? userType,
+    bool? isActive,
+    bool? isVerified,
+    String sortBy = 'creation_date',
+    String sortOrder = 'desc',
+  }) async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return [
+        {
+          'user_id': 1,
+          'email': 'customer1@example.com',
+          'login': 'customer1',
+          'first_name': 'Alice',
+          'last_name': 'Customer',
+          'user_type': 'customer',
+          'is_active': true,
+        },
+        {
+          'user_id': 2,
+          'email': 'organizer1@example.com',
+          'login': 'organizer1',
+          'first_name': 'Bob',
+          'last_name': 'Organizer',
+          'user_type': 'organizer',
+          'is_active': true,
+          'organizer_id': 1,
+          'company_name': 'Bob Events Inc',
+          'is_verified': true,
+        },
+        {
+          'user_id': 3,
+          'email': 'banned@example.com',
+          'login': 'banned_user',
+          'first_name': 'Charlie',
+          'last_name': 'Banned',
+          'user_type': 'customer',
+          'is_active': false,
+        },
+      ];
+    }
+
+    try {
+      // Build query parameters
+      Map<String, String> params = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+        'sort_by': sortBy,
+        'sort_order': sortOrder,
+      };
+
+      if (search != null && search.isNotEmpty) {
+        params['search'] = search;
+      }
+      if (userType != null) {
+        params['user_type'] = userType;
+      }
+      if (isActive != null) {
+        params['is_active'] = isActive.toString();
+      }
+      if (isVerified != null) {
+        params['is_verified'] = isVerified.toString();
+      }
+
+      final queryString = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+
+      final response = await _dio.get(
+        '/auth/users?$queryString',
+        options: Options(headers: {'Authorization': 'Bearer $_authToken'}),
+      );
+      return response.data as List;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getUserStats() async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return {
+        "total_users": 10,
+        "active_users": 8,
+        "banned_users": 2,
+        "users_by_type": {
+          "customers": 6,
+          "organizers": 3,
+          "administrators": 1
+        },
+        "organizer_stats": {
+          "verified": 2,
+          "pending": 1
+        }
+      };
+    }
+
+    try {
+      final response = await _dio.get(
+        '/auth/users/stats',
+        options: Options(headers: {'Authorization': 'Bearer $_authToken'}),
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getUserDetails(int userId) async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return {
+        'user_id': userId,
+        'email': 'user$userId@example.com',
+        'login': 'user$userId',
+        'first_name': 'User',
+        'last_name': '$userId',
+        'user_type': 'customer',
+        'is_active': true,
+      };
+    }
+
+    try {
+      final response = await _dio.get(
+        '/auth/users/$userId',
+        options: Options(headers: {'Authorization': 'Bearer $_authToken'}),
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getPendingOrganizers() async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return [
+        {
+          'user_id': 10,
+          'email': 'organizer1@example.com',
+          'login': 'organizer1',
+          'first_name': 'John',
+          'last_name': 'Organizer',
+          'user_type': 'organizer',
+          'is_active': true,
+          'organizer_id': 5,
+          'company_name': 'Event Company 1',
+          'is_verified': false,
+        },
+        {
+          'user_id': 11,
+          'email': 'organizer2@example.com',
+          'login': 'organizer2',
+          'first_name': 'Jane',
+          'last_name': 'Events',
+          'user_type': 'organizer',
+          'is_active': true,
+          'organizer_id': 6,
+          'company_name': 'Party Planners Inc',
+          'is_verified': false,
+        },
+      ];
+    }
+
+    try {
+      final response = await _dio.get(
+        '/auth/pending-organizers',
+        options: Options(headers: {'Authorization': 'Bearer $_authToken'}),
+      );
+      return response.data as List;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyOrganizer(int organizerId, bool approve) async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return {
+        'user_id': 10,
+        'email': 'organizer1@example.com',
+        'first_name': 'John',
+        'last_name': 'Organizer',
+        'organizer_id': organizerId,
+        'company_name': 'Event Company 1',
+        'is_verified': approve,
+      };
+    }
+
+    try {
+      final response = await _dio.post(
+        '/auth/verify-organizer',
+        data: {
+          'organizer_id': organizerId,
+          'approve': approve,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $_authToken'}),
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+// --- Admin Event Authorization Methods ---
+
+  Future<List<dynamic>> getPendingEvents() async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return [
+        {
+          'event_id': 1,
+          'organizer_id': 1,
+          'name': 'Pending Music Festival',
+          'description': 'A great music festival awaiting approval',
+          'start_date': DateTime.now().add(const Duration(days: 30)).toIso8601String(),
+          'end_date': DateTime.now().add(const Duration(days: 30, hours: 8)).toIso8601String(),
+          'location_name': 'Central Park',
+          'status': 'pending',
+          'total_tickets': 500,
+          'minimum_age': 18,
+          'categories': ['Music', 'Festival'],
+        },
+        {
+          'event_id': 2,
+          'organizer_id': 2,
+          'name': 'Tech Conference 2025',
+          'description': 'Annual technology conference',
+          'start_date': DateTime.now().add(const Duration(days: 45)).toIso8601String(),
+          'end_date': DateTime.now().add(const Duration(days: 45, hours: 6)).toIso8601String(),
+          'location_name': 'Convention Center',
+          'status': 'pending',
+          'total_tickets': 200,
+          'categories': ['Technology', 'Conference'],
+        },
+      ];
+    }
+
+    try {
+      final response = await _dio.get('/events');
+      final allEvents = response.data as List;
+      // Filter for pending events
+      return allEvents.where((event) => event['status'] == 'pending').toList();
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> authorizeEvent(int eventId) async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return true;
+    }
+
+    try {
+      final response = await _dio.post(
+        '/events/authorize/$eventId',
+        options: Options(headers: {'Authorization': 'Bearer $_authToken'}),
+      );
+      return response.data == true;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> rejectEvent(int eventId) async {
+    if (_shouldUseMockData) {
+      await Future.delayed(const Duration(seconds: 1));
+      return true;
+    }
+
+    try {
+      // Note: This endpoint might need to be implemented in the backend
+      // For now, we'll use a generic approach
+      final response = await _dio.delete(
+        '/events/$eventId',
+        options: Options(headers: {'Authorization': 'Bearer $_authToken'}),
+      );
+      return response.data == true;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> purchaseResaleTicket(int ticketId) async {
     if (_shouldUseMockData) {
       await Future.delayed(const Duration(seconds: 1));
@@ -642,97 +944,6 @@ class ApiService {
 
     try {
       final response = await _dio.get('/events?organizer_id=$organizerId');
-      return response.data as List;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  // --- Admin Methods ---
-
-  Future<List<dynamic>> getPendingOrganizers() async {
-    if (_shouldUseMockData) {
-      await Future.delayed(const Duration(seconds: 1));
-      return [
-        {
-          'user_id': 10,
-          'email': 'organizer1@example.com',
-          'first_name': 'John',
-          'last_name': 'Organizer',
-          'company_name': 'Event Company 1',
-          'is_verified': false,
-          'organizer_id': 5,
-        },
-        {
-          'user_id': 11,
-          'email': 'organizer2@example.com',
-          'first_name': 'Jane',
-          'last_name': 'Events',
-          'company_name': 'Party Planners Inc',
-          'is_verified': false,
-          'organizer_id': 6,
-        },
-      ];
-    }
-
-    try {
-      final response = await _dio.get('/auth/pending-organizers');
-      return response.data as List;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<void> verifyOrganizer(int organizerId) async {
-    if (_shouldUseMockData) {
-      await Future.delayed(const Duration(seconds: 1));
-      return;
-    }
-
-    try {
-      await _dio.post('/auth/verify-organizer', data: {
-        'organizer_id': organizerId,
-      });
-    } on DioException catch (e) {
-      throw _handleDioError(e);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<List<dynamic>> getAllUsers() async {
-    if (_shouldUseMockData) {
-      await Future.delayed(const Duration(seconds: 1));
-      return [
-        {
-          'user_id': 1,
-          'email': 'customer1@example.com',
-          'first_name': 'Alice',
-          'last_name': 'Customer',
-          'user_type': 'customer',
-          'is_active': true,
-        },
-        {
-          'user_id': 2,
-          'email': 'organizer1@example.com',
-          'first_name': 'Bob',
-          'last_name': 'Organizer',
-          'user_type': 'organizer',
-          'is_active': true,
-        },
-        {
-          'user_id': 3,
-          'email': 'banned@example.com',
-          'first_name': 'Charlie',
-          'last_name': 'Banned',
-          'user_type': 'customer',
-          'is_active': false,
-        },
-      ];
-    }
-
-    try {
-      final response = await _dio.get('/admin/users'); // This endpoint might need to be created
       return response.data as List;
     } catch (e) {
       rethrow;

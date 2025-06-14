@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:resellio/core/services/api_service.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
@@ -12,8 +13,9 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  Map<String, dynamic>? _stats;
   List<dynamic> _pendingOrganizers = [];
-  List<dynamic> _allUsers = [];
+  List<dynamic> _pendingEvents = [];
   bool _isLoading = true;
   String? _error;
 
@@ -31,13 +33,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     try {
       final apiService = context.read<ApiService>();
-      
+
+      // Load user statistics
+      final stats = await apiService.getUserStats();
+
+      // Load pending organizers
       final pendingOrganizers = await apiService.getPendingOrganizers();
-      final allUsers = await apiService.getAllUsers();
-      
+
+      // Load pending events
+      final pendingEvents = await apiService.getPendingEvents();
+
       setState(() {
+        _stats = stats;
         _pendingOrganizers = pendingOrganizers;
-        _allUsers = allUsers;
+        _pendingEvents = pendingEvents;
         _isLoading = false;
       });
     } catch (e) {
@@ -116,7 +125,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Widget _buildWelcomeCard() {
     final authService = context.read<AuthService>();
     final user = authService.user;
-    
+
     return Card(
       child: Container(
         width: double.infinity,
@@ -170,11 +179,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Widget _buildSystemOverview() {
-    final totalUsers = _allUsers.length;
-    final activeUsers = _allUsers.where((u) => u['is_active'] == true).length;
-    final inactiveUsers = totalUsers - activeUsers;
-    final organizersCount = _allUsers.where((u) => u['user_type'] == 'organizer').length;
-    final customersCount = _allUsers.where((u) => u['user_type'] == 'customer').length;
+    if (_stats == null) return const SizedBox.shrink();
+
+    final totalUsers = _stats!['total_users'] ?? 0;
+    final activeUsers = _stats!['active_users'] ?? 0;
+    final bannedUsers = _stats!['banned_users'] ?? 0;
+    final usersByType = _stats!['users_by_type'] ?? {};
+    final organizerStats = _stats!['organizer_stats'] ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +224,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             Expanded(
               child: _buildStatCard(
                 title: 'Customers',
-                value: customersCount.toString(),
+                value: (usersByType['customers'] ?? 0).toString(),
                 icon: Icons.person,
                 color: Colors.purple,
               ),
@@ -222,7 +233,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             Expanded(
               child: _buildStatCard(
                 title: 'Organizers',
-                value: organizersCount.toString(),
+                value: (usersByType['organizers'] ?? 0).toString(),
                 icon: Icons.business,
                 color: Colors.orange,
               ),
@@ -235,7 +246,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             Expanded(
               child: _buildStatCard(
                 title: 'Pending Verifications',
-                value: _pendingOrganizers.length.toString(),
+                value: (organizerStats['pending'] ?? 0).toString(),
                 icon: Icons.pending_actions,
                 color: Colors.amber,
               ),
@@ -243,8 +254,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             const SizedBox(width: 16),
             Expanded(
               child: _buildStatCard(
-                title: 'Inactive Users',
-                value: inactiveUsers.toString(),
+                title: 'Banned Users',
+                value: bannedUsers.toString(),
                 icon: Icons.person_off,
                 color: Colors.red,
               ),
@@ -324,11 +335,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 description: 'View and manage all users',
                 icon: Icons.people_outline,
                 color: Colors.blue,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('User Management page - Coming Soon!')),
-                  );
-                },
+                onTap: () => context.go('/admin/users'),
               ),
             ),
             const SizedBox(width: 16),
@@ -338,11 +345,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 description: 'Review pending verifications',
                 icon: Icons.verified_user_outlined,
                 color: Colors.green,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Organizer Verification page - Coming Soon!')),
-                  );
-                },
+                onTap: () => context.go('/admin/organizers'),
               ),
             ),
           ],
@@ -352,27 +355,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           children: [
             Expanded(
               child: _buildActionCard(
-                title: 'System Settings',
-                description: 'Configure system parameters',
-                icon: Icons.settings_outlined,
+                title: 'Authorize Events',
+                description: 'Review pending events',
+                icon: Icons.event_available_outlined,
                 color: Colors.purple,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('System Settings page - Coming Soon!')),
-                  );
-                },
+                onTap: () => context.go('/admin/events'),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: _buildActionCard(
-                title: 'Reports',
-                description: 'View system analytics',
-                icon: Icons.analytics_outlined,
+                title: 'System Settings',
+                description: 'Configure system parameters',
+                icon: Icons.settings_outlined,
                 color: Colors.orange,
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reports page - Coming Soon!')),
+                    const SnackBar(content: Text('System Settings - Coming Soon!')),
                   );
                 },
               ),
@@ -433,6 +432,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Widget _buildPendingTasks() {
+    final pendingOrganizerCount = _pendingOrganizers.length;
+    final pendingEventCount = _pendingEvents.length;
+    final totalPending = pendingOrganizerCount + pendingEventCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -445,7 +448,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
             ),
             const Spacer(),
-            if (_pendingOrganizers.isNotEmpty)
+            if (totalPending > 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -453,7 +456,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  _pendingOrganizers.length.toString(),
+                  totalPending.toString(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -464,7 +467,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ],
         ),
         const SizedBox(height: 16),
-        if (_pendingOrganizers.isEmpty)
+        if (totalPending == 0)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(32),
@@ -485,7 +488,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'No pending organizer verifications',
+                    'No pending tasks at the moment',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -494,103 +497,43 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
             ),
           )
-        else
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.pending_actions,
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Organizer Verifications Pending',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+        else ...[
+          if (pendingOrganizerCount > 0)
+            Card(
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${_pendingOrganizers.length} organizer(s) waiting for verification',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ...(_pendingOrganizers.take(3).map((organizer) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: Text(
-                            organizer['first_name']?[0]?.toUpperCase() ?? 'O',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${organizer['first_name']} ${organizer['last_name']}',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                organizer['company_name'] ?? 'No company',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ))),
-                  if (_pendingOrganizers.length > 3) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      '... and ${_pendingOrganizers.length - 3} more',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Verification page - Coming Soon!')),
-                        );
-                      },
-                      icon: const Icon(Icons.verified_user),
-                      label: const Text('Review Verifications'),
-                    ),
-                  ),
-                ],
+                  child: const Icon(Icons.verified_user, color: Colors.orange),
+                ),
+                title: Text('Organizer Verifications'),
+                subtitle: Text('$pendingOrganizerCount pending verification(s)'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () => context.go('/admin/organizers'),
               ),
             ),
-          ),
+          if (pendingEventCount > 0)
+            Card(
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.event_available, color: Colors.purple),
+                ),
+                title: Text('Event Authorizations'),
+                subtitle: Text('$pendingEventCount pending authorization(s)'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () => context.go('/admin/events'),
+              ),
+            ),
+        ],
       ],
     );
   }
-} 
+}

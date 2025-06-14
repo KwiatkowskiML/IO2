@@ -1,3 +1,5 @@
+// Update your existing app_router.dart file with these changes:
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:resellio/core/models/event_model.dart';
@@ -9,6 +11,10 @@ import 'package:resellio/presentation/main_page/main_layout.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 import 'package:resellio/presentation/events/pages/event_details_page.dart';
 import 'package:resellio/presentation/cart/pages/cart_page.dart';
+// Import admin pages
+import 'package:resellio/presentation/admin/pages/admin_user_management_page.dart';
+import 'package:resellio/presentation/admin/pages/admin_organizer_verification_page.dart';
+import 'package:resellio/presentation/admin/pages/admin_event_authorization_page.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthService authService) {
@@ -18,11 +24,14 @@ class AppRouter {
       redirect: (BuildContext context, GoRouterState state) {
         final bool loggedIn = authService.isLoggedIn;
         final String? userRoleName = authService.user?.role.name;
+        final bool isAdmin = authService.hasAdminPrivileges;
 
         final bool onAuthRoute =
             state.uri.path.startsWith('/welcome') ||
-            state.uri.path.startsWith('/login') ||
-            state.uri.path.startsWith('/register');
+                state.uri.path.startsWith('/login') ||
+                state.uri.path.startsWith('/register');
+
+        final bool onAdminRoute = state.uri.path.startsWith('/admin');
 
         // If user is not logged in and not on an auth route, redirect to welcome
         if (!loggedIn && !onAuthRoute) {
@@ -34,10 +43,16 @@ class AppRouter {
           return '/home/${userRoleName ?? 'customer'}';
         }
 
+        // If non-admin user tries to access admin routes, redirect to their home
+        if (onAdminRoute && !isAdmin) {
+          return '/home/${userRoleName ?? 'customer'}';
+        }
+
         // No redirect needed
         return null;
       },
       routes: <RouteBase>[
+        // Auth routes
         GoRoute(
           path: '/welcome',
           builder: (context, state) => const WelcomeScreen(),
@@ -54,7 +69,7 @@ class AppRouter {
           },
         ),
 
-        // This route uses a parameter to determine the user role
+        // Main app routes
         GoRoute(
           path: '/home/:userType',
           builder: (context, state) {
@@ -65,6 +80,7 @@ class AppRouter {
               case 'organizer':
                 role = UserRole.organizer;
                 break;
+              case 'administrator':
               case 'admin':
                 role = UserRole.admin;
                 break;
@@ -76,6 +92,7 @@ class AppRouter {
           },
         ),
 
+        // Event details route
         GoRoute(
           path: '/event/:id',
           builder: (context, state) {
@@ -85,7 +102,6 @@ class AppRouter {
             if (event != null) {
               return EventDetailsPage(event: event);
             } else if (eventId != null) {
-              // If event is not passed, fetch it by ID
               return EventDetailsPage(eventId: int.tryParse(eventId));
             } else {
               return Scaffold(
@@ -95,17 +111,43 @@ class AppRouter {
             }
           },
         ),
-        GoRoute(path: '/cart', builder: (context, state) => const CartPage()),
+
+        // Cart route
+        GoRoute(
+          path: '/cart',
+          builder: (context, state) => const CartPage(),
+        ),
+
+        // Admin routes
+        GoRoute(
+          path: '/admin',
+          redirect: (context, state) => '/admin/dashboard',
+        ),
+        GoRoute(
+          path: '/admin/dashboard',
+          builder: (context, state) => MainLayout(userRole: UserRole.admin),
+        ),
+        GoRoute(
+          path: '/admin/users',
+          builder: (context, state) => const AdminUserManagementPage(),
+        ),
+        GoRoute(
+          path: '/admin/organizers',
+          builder: (context, state) => const AdminOrganizerVerificationPage(),
+        ),
+        GoRoute(
+          path: '/admin/events',
+          builder: (context, state) => const AdminEventAuthorizationPage(),
+        ),
       ],
-      errorBuilder:
-          (context, state) => Scaffold(
-            appBar: AppBar(title: const Text('Page Not Found')),
-            body: Center(
-              child: Text(
-                'Error: The requested page "${state.uri}" could not be found.\n${state.error}',
-              ),
-            ),
+      errorBuilder: (context, state) => Scaffold(
+        appBar: AppBar(title: const Text('Page Not Found')),
+        body: Center(
+          child: Text(
+            'Error: The requested page "${state.uri}" could not be found.\n${state.error}',
           ),
+        ),
+      ),
     );
   }
 }
