@@ -17,6 +17,10 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", "admin-secret-key")
 
+# Initial admin credentials from environment
+INITIAL_ADMIN_EMAIL = os.getenv("INITIAL_ADMIN_EMAIL", "admin@resellio.com")
+INITIAL_ADMIN_PASSWORD = os.getenv("INITIAL_ADMIN_PASSWORD", "AdminPassword123!")
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
@@ -70,6 +74,11 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 def generate_reset_token():
     """Generate a random token for password reset"""
     return secrets.token_urlsafe(32)
+
+
+def verify_initial_admin_credentials(email: str, password: str) -> bool:
+    """Verify if the provided credentials match the initial admin credentials"""
+    return email == INITIAL_ADMIN_EMAIL and password == INITIAL_ADMIN_PASSWORD
 
 
 def get_current_user(token_data: dict = Depends(get_token_data), db: Session = Depends(get_db)):

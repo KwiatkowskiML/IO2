@@ -28,6 +28,7 @@ from app.security import (
     create_access_token,
     verify_admin_secret,
     generate_reset_token,
+    verify_initial_admin_credentials,
 )
 
 # Future import for email sending functionality
@@ -38,8 +39,8 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post("/register/customer", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_customer(
-    user: UserCreate,
-    db: Session = Depends(get_db),
+        user: UserCreate,
+        db: Session = Depends(get_db),
 ):
     """Register a new customer account"""
     try:
@@ -98,7 +99,8 @@ def register_customer(
 
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed due to database error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Registration failed due to database error")
 
 
 @router.post("/register/organizer", response_model=Token, status_code=status.HTTP_201_CREATED)
@@ -108,12 +110,14 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
         # Check if email already exists
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Email already registered")
 
         # Check if login already exists
         db_login = db.query(User).filter(User.login == user.login).first()
         if db_login:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Login already taken")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Login already taken")
 
         # Create new user with hashed password
         hashed_password = get_password_hash(user.password)
@@ -131,7 +135,8 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
         db.flush()  # Flush to get the user_id without committing
 
         # Create organizer record
-        db_organizer = Organizer(user_id=db_user.user_id, company_name=user.company_name, is_verified=False)
+        db_organizer = Organizer(user_id=db_user.user_id, company_name=user.company_name,
+                                 is_verified=False)
         db.add(db_organizer)
 
         db.commit()
@@ -158,25 +163,32 @@ def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
 
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed due to database error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Registration failed due to database error")
 
 
 @router.post("/register/admin", response_model=Token, status_code=status.HTTP_201_CREATED)
-def register_admin(user: AdminCreate, db: Session = Depends(get_db)):
-    """Register a new administrator account (requires admin secret key)"""
-    # Verify admin secret key
+def register_admin(
+        user: AdminCreate,
+        db: Session = Depends(get_db),
+        current_admin: User = Depends(get_current_admin)
+):
+    """Register a new administrator account (requires existing admin authentication)"""
+    # Verify admin secret key (additional security layer)
     verify_admin_secret(user.admin_secret_key)
 
     try:
         # Check if email already exists
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Email already registered")
 
         # Check if login already exists
         db_login = db.query(User).filter(User.login == user.login).first()
         if db_login:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Login already taken")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Login already taken")
 
         # Create new admin with hashed password
         hashed_password = get_password_hash(user.password)
@@ -217,13 +229,70 @@ def register_admin(user: AdminCreate, db: Session = Depends(get_db)):
 
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed due to database error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Registration failed due to database error")
 
 
 @router.post("/token", response_model=Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
+                           db: Session = Depends(get_db)):
     """Login endpoint that exchanges username (email) and password for an access token"""
-    # Find the user
+
+    # Check if this is the initial admin login attempt
+    if verify_initial_admin_credentials(form_data.username, form_data.password):
+        # Create or get the initial admin user
+        admin_user = db.query(User).filter(User.email == form_data.username).first()
+
+        if not admin_user:
+            # Create the initial admin user if it doesn't exist
+            hashed_password = get_password_hash(form_data.password)
+            admin_user = User(
+                email=form_data.username,
+                login="initial_admin",
+                password_hash=hashed_password,
+                first_name="Initial",
+                last_name="Admin",
+                user_type="administrator",
+                is_active=True,
+            )
+
+            db.add(admin_user)
+            db.flush()
+
+            # Create administrator record
+            admin_record = Administrator(user_id=admin_user.user_id)
+            db.add(admin_record)
+
+            db.commit()
+            db.refresh(admin_user)
+            db.refresh(admin_record)
+        else:
+            # Get the admin record for existing user
+            admin_record = db.query(Administrator).filter(
+                Administrator.user_id == admin_user.user_id).first()
+            if not admin_record:
+                # Create missing admin record if needed
+                admin_record = Administrator(user_id=admin_user.user_id)
+                db.add(admin_record)
+                db.commit()
+                db.refresh(admin_record)
+
+        # Generate access token for initial admin
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={
+                "sub": admin_user.email,
+                "role": admin_user.user_type,
+                "user_id": admin_user.user_id,
+                "role_id": admin_record.admin_id,
+                "name": admin_user.first_name,
+            },
+            expires_delta=access_token_expires,
+        )
+
+        return {"token": access_token, "message": "Initial admin login successful"}
+
+    # Regular user login flow
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
@@ -236,7 +305,6 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account banned")
 
-
     role_id = None
 
     # Check if the organizer is verified
@@ -244,10 +312,12 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         organizer = db.query(Organizer).filter(Organizer.user_id == user.user_id).first()
         role_id = organizer.organizer_id
         if not organizer.is_verified:
-            return {"token": "", "message": "Your account is pending verification by an administrator"}
+            return {"token": "",
+                    "message": "Your account is pending verification by an administrator"}
 
     if user.user_type == "administrator":
-        role_id = db.query(Administrator).filter(Administrator.user_id == user.user_id).first().admin_id
+        role_id = db.query(Administrator).filter(
+            Administrator.user_id == user.user_id).first().admin_id
     elif user.user_type == "customer":
         role_id = db.query(Customer).filter(Customer.user_id == user.user_id).first().customer_id
 
@@ -275,13 +345,16 @@ def logout():
     """Logout (client should discard the token)"""
     return {"message": "Logout successful"}
 
+
 @router.post("/verify-organizer", response_model=OrganizerResponse)
 def verify_organizer(
-    verification: VerificationRequest, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)
+        verification: VerificationRequest, db: Session = Depends(get_db),
+        admin: User = Depends(get_current_admin)
 ):
     """Verify or reject an organizer account (admin only)"""
     # Find the organizer
-    organizer = db.query(Organizer).filter(Organizer.organizer_id == verification.organizer_id).first()
+    organizer = db.query(Organizer).filter(
+        Organizer.organizer_id == verification.organizer_id).first()
 
     if not organizer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizer not found")
@@ -312,7 +385,8 @@ def verify_organizer(
 
 
 @router.get("/pending-organizers", response_model=List[OrganizerResponse])
-def list_pending_organizers(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def list_pending_organizers(db: Session = Depends(get_db),
+                            admin: User = Depends(get_current_admin)):
     """List all organizers pending verification (admin only)"""
     # Join User and Organizer tables to get all unverified organizers
     unverified_organizers = (
@@ -336,7 +410,8 @@ def list_pending_organizers(db: Session = Depends(get_db), admin: User = Depends
 
 @router.post("/request-password-reset")
 def request_password_reset(
-    reset_request: PasswordReset, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
+        reset_request: PasswordReset, background_tasks: BackgroundTasks,
+        db: Session = Depends(get_db)
 ):
     """Request a password reset link via email"""
     user = db.query(User).filter(User.email == reset_request.email).first()
@@ -375,7 +450,8 @@ def ban_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(
 
 
 @router.post("/unban-user/{user_id}")
-def unban_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def unban_user(user_id: int, db: Session = Depends(get_db),
+               admin: User = Depends(get_current_admin)):
     """Unban a user (admin only)"""
     user = db.query(User).filter(User.user_id == user_id).first()
 
@@ -407,7 +483,6 @@ def list_users(
         db: Session = Depends(get_db),
         admin: User = Depends(get_current_admin)
 ):
-
     query = db.query(User).outerjoin(Organizer, User.user_id == Organizer.user_id)
 
     if search:
@@ -488,7 +563,6 @@ def get_user_stats(
         db: Session = Depends(get_db),
         admin: User = Depends(get_current_admin)
 ):
-
     total_users = db.query(User).count()
     active_users = db.query(User).filter(User.is_active == True).count()
     banned_users = db.query(User).filter(User.is_active == False).count()
@@ -516,13 +590,12 @@ def get_user_stats(
     }
 
 
-@router.get("/users/{user_id}", response_model=UserResponse)
+@router.get("/users/{user_id}", response_model=OrganizerResponse)
 def get_user_details(
         user_id: int,
         db: Session = Depends(get_db),
         admin: User = Depends(get_current_admin)
 ):
-
     user = db.query(User).filter(User.user_id == user_id).first()
     if not user:
         raise HTTPException(

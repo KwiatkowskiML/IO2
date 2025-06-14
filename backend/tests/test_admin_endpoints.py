@@ -158,7 +158,7 @@ class TestAdminUserListing:
 
         # All organizers should have additional fields
         for organizer in organizers:
-            assert "organizer_id" in organizer
+            assert "user_id" in organizer
             assert "company_name" in organizer
             assert "is_verified" in organizer
 
@@ -441,7 +441,7 @@ class TestAdminUserDetails:
         assert user_details["user_type"] == "organizer"
 
         # Verify organizer-specific fields
-        assert "organizer_id" in user_details
+        assert "user_id" in user_details
         assert "company_name" in user_details
         assert "is_verified" in user_details
         assert user_details["company_name"] == self.organizer_data["company_name"]

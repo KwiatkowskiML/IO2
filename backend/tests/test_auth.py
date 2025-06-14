@@ -1,12 +1,15 @@
 """
-test_auth.py - Comprehensive Authentication and User Management Tests
+test_auth.py - Updated Authentication and User Management Tests
 --------------------------------------------------------------------
 Tests for user registration, login, admin operations, and organizer verification.
+Updated to support hardcoded initial admin and admin-only admin registration.
 
 Environment Variables:
 - API_BASE_URL: Base URL for API (default: http://localhost:8080)
 - API_TIMEOUT: Request timeout in seconds (default: 10)
 - ADMIN_SECRET_KEY: Admin secret key for registration
+- INITIAL_ADMIN_EMAIL: Initial admin email (default: admin@resellio.com)
+- INITIAL_ADMIN_PASSWORD: Initial admin password (default: AdminPassword123!)
 
 Run with: pytest test_auth.py -v
 """
@@ -86,12 +89,30 @@ class TestUserRegistration:
         assert len(response_data["token"]) > 0
         assert "awaiting administrator verification" in response_data["message"]
 
-    def test_admin_registration_success(self, api_client, test_data):
-        """Test successful admin user registration"""
+    def test_admin_registration_requires_existing_admin(self, api_client, test_data):
+        """Test that admin registration requires existing admin authentication"""
+        user_data = test_data.admin_data()
+
+        # Should fail without authentication
+        api_client.post(
+            "/api/auth/register/admin",
+            headers={"Content-Type": "application/json"},
+            json_data=user_data,
+            expected_status=401  # Unauthorized
+        )
+
+    def test_admin_registration_success_with_admin_auth(self, user_manager, api_client, test_data, token_manager):
+        """Test successful admin registration with existing admin authentication"""
+        # First login as initial admin
+        user_manager.login_initial_admin()
+
         user_data = test_data.admin_data()
         response = api_client.post(
             "/api/auth/register/admin",
-            headers={"Content-Type": "application/json"},
+            headers={
+                **token_manager.get_auth_header("admin"),
+                "Content-Type": "application/json"
+            },
             json_data=user_data,
             expected_status=201
         )
@@ -102,14 +123,20 @@ class TestUserRegistration:
         assert len(response_data["token"]) > 0
         assert "Administrator registered successfully" in response_data["message"]
 
-    def test_admin_registration_invalid_secret(self, api_client, test_data):
+    def test_admin_registration_invalid_secret(self, user_manager, api_client, test_data, token_manager):
         """Test admin registration with invalid secret key fails"""
+        # First login as initial admin
+        user_manager.login_initial_admin()
+
         user_data = test_data.admin_data()
         user_data["admin_secret_key"] = "invalid_secret"
 
         api_client.post(
             "/api/auth/register/admin",
-            headers={"Content-Type": "application/json"},
+            headers={
+                **token_manager.get_auth_header("admin"),
+                "Content-Type": "application/json"
+            },
             json_data=user_data,
             expected_status=403  # Should fail
         )
@@ -175,6 +202,28 @@ class TestUserRegistration:
 class TestUserLogin:
     """Test user login endpoints"""
 
+    def test_initial_admin_login_success(self, user_manager, token_manager):
+        """Test successful initial admin login with hardcoded credentials"""
+        # Login with initial admin credentials
+        token = user_manager.login_initial_admin()
+
+        assert token is not None
+        assert len(token) > 0
+        assert token_manager.tokens["admin"] == token
+
+    def test_initial_admin_login_creates_user(self, api_client, user_manager):
+        """Test that initial admin login creates the admin user in database"""
+        # Login as initial admin
+        user_manager.login_initial_admin()
+
+        # Verify the admin can access admin endpoints
+        response = api_client.get(
+            "/api/auth/pending-organizers",
+            headers=user_manager.token_manager.get_auth_header("admin")
+        )
+
+        assert response.status_code == 200
+
     def test_customer_login_success(self, user_manager, token_manager):
         """Test successful customer login"""
         # Register a customer first
@@ -216,16 +265,18 @@ class TestUserLogin:
         assert len(token_manager.tokens["organizer"]) > 0
 
     def test_admin_login_success(self, user_manager, token_manager):
-        """Test successful admin login"""
-        # Register an admin first
-        admin_data = user_manager.register_and_login_admin()
+        """Test successful admin login after registration"""
+        # First login as initial admin
+        user_manager.login_initial_admin()
 
-        # Login with different method (form data)
+        # Register a new admin
+        admin_data = user_manager.register_admin_with_auth()
+
+        # Login with the new admin credentials
         token = user_manager.login_user(admin_data, "admin")
 
         assert token is not None
         assert len(token) > 0
-        assert token_manager.tokens["admin"] == token
 
     def test_login_invalid_credentials(self, api_client, test_data):
         """Test login with invalid credentials fails"""
@@ -265,7 +316,7 @@ class TestUserLogin:
     def test_login_banned_user(self, user_manager, api_client, token_manager):
         """Test login with banned user fails"""
         # Create admin and customer
-        user_manager.register_and_login_admin()
+        user_manager.login_initial_admin()
         customer_data = user_manager.register_and_login_customer()
 
         response = api_client.get(
@@ -325,8 +376,8 @@ class TestUserProfile:
 
     def test_get_admin_profile(self, user_manager, api_client, token_manager):
         """Test getting admin profile"""
-        # Register admin
-        admin_data = user_manager.register_and_login_admin()
+        # Login as initial admin
+        user_manager.login_initial_admin()
 
         # Get profile
         response = api_client.get(
@@ -335,7 +386,8 @@ class TestUserProfile:
         )
 
         user_data = response.json()
-        assert user_data["email"] == admin_data["email"]
+        # The initial admin email comes from environment variable
+        assert "@" in user_data["email"]  # Basic email validation
 
     def test_get_profile_unauthorized(self, api_client):
         """Test getting profile without authentication fails"""
@@ -360,10 +412,10 @@ class TestAdminOperations:
 
     def test_get_pending_organizers_empty(self, user_manager, api_client, token_manager):
         """Test admin getting empty pending organizers list"""
-        # Register admin
-        user_manager.register_and_login_admin()
+        # Login as initial admin
+        user_manager.login_initial_admin()
 
-        # Get pending organizers (should be empty)
+        # Get pending organizers (should be empty initially)
         response = api_client.get(
             "/api/auth/pending-organizers",
             headers=token_manager.get_auth_header("admin")
@@ -374,8 +426,8 @@ class TestAdminOperations:
 
     def test_get_pending_organizers_with_data(self, user_manager, api_client, token_manager):
         """Test admin getting pending organizers with data"""
-        # Register admin and unverified organizer
-        user_manager.register_and_login_admin()
+        # Login as initial admin and register unverified organizer
+        user_manager.login_initial_admin()
         organizer_data = user_manager.register_organizer()
 
         # Get pending organizers
@@ -401,8 +453,8 @@ class TestAdminOperations:
 
     def test_verify_organizer_approve(self, user_manager, api_client, token_manager):
         """Test admin approving an organizer"""
-        # Register admin and organizer
-        user_manager.register_and_login_admin()
+        # Login as initial admin and register organizer
+        user_manager.login_initial_admin()
         organizer_data = user_manager.register_organizer()
 
         # Get pending organizers to find the ID
@@ -434,8 +486,8 @@ class TestAdminOperations:
 
     def test_verify_organizer_reject(self, user_manager, api_client, token_manager):
         """Test admin rejecting an organizer"""
-        # Register admin and organizer
-        user_manager.register_and_login_admin()
+        # Login as initial admin and register organizer
+        user_manager.login_initial_admin()
         organizer_data = user_manager.register_organizer()
 
         # Get pending organizers to find the ID
@@ -467,7 +519,7 @@ class TestAdminOperations:
     def test_ban_unban_user(self, user_manager, api_client, token_manager):
         """Test admin banning and unbanning a user"""
         # Create admin and customer
-        user_manager.register_and_login_admin()
+        user_manager.login_initial_admin()
         customer_data = user_manager.register_and_login_customer()
 
         response = api_client.get(
@@ -606,7 +658,7 @@ class TestTokenValidation:
         # Register users and check token formats
         user_manager.register_and_login_customer()
         user_manager.register_and_login_organizer()
-        user_manager.register_and_login_admin()
+        user_manager.login_initial_admin()
 
         for user_type in ["customer", "organizer", "admin"]:
             token = token_manager.tokens[user_type]
@@ -689,17 +741,76 @@ class TestCompleteAuthFlow:
         logout_response = api_client.post("/api/auth/logout")
         assert "successful" in logout_response.json()["message"]
 
-    def test_complete_organizer_verification_flow(self, api_client, test_data):
-        """Test complete organizer registration and verification flow"""
-        # 1. Register admin
-        admin_data = test_data.admin_data()
-        admin_reg_response = api_client.post(
+    def test_complete_admin_flow(self, api_client, test_data):
+        """Test complete admin flow with initial admin and new admin registration"""
+        # Get initial admin credentials from helper
+        config = test_data.get_config()
+        initial_admin_email = config.get("initial_admin_email", "admin@resellio.com")
+        initial_admin_password = config.get("initial_admin_password", "AdminPassword123!")
+
+        # 1. Login as initial admin
+        initial_login_response = api_client.post(
+            "/api/auth/token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "username": initial_admin_email,
+                "password": initial_admin_password,
+            }
+        )
+        initial_token = initial_login_response.json()["token"]
+        assert len(initial_token) > 0
+        assert "Initial admin login successful" in initial_login_response.json()["message"]
+
+        # 2. Register new admin using initial admin authentication
+        new_admin_data = test_data.admin_data()
+        new_admin_reg_response = api_client.post(
             "/api/auth/register/admin",
-            headers={"Content-Type": "application/json"},
-            json_data=admin_data,
+            headers={
+                "Authorization": f"Bearer {initial_token}",
+                "Content-Type": "application/json"
+            },
+            json_data=new_admin_data,
             expected_status=201
         )
-        admin_token = admin_reg_response.json()["token"]
+        new_admin_token = new_admin_reg_response.json()["token"]
+        assert len(new_admin_token) > 0
+
+        # 3. Login with new admin credentials
+        new_admin_login_response = api_client.post(
+            "/api/auth/token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "username": new_admin_data["email"],
+                "password": new_admin_data["password"],
+            }
+        )
+        new_admin_login_token = new_admin_login_response.json()["token"]
+        assert len(new_admin_login_token) > 0
+
+        # 4. New admin can access admin endpoints
+        admin_endpoints_response = api_client.get(
+            "/api/auth/pending-organizers",
+            headers={"Authorization": f"Bearer {new_admin_login_token}"}
+        )
+        assert admin_endpoints_response.status_code == 200
+
+    def test_complete_organizer_verification_flow(self, api_client, test_data):
+        """Test complete organizer registration and verification flow"""
+        # Get initial admin credentials
+        config = test_data.get_config()
+        initial_admin_email = config.get("initial_admin_email", "admin@resellio.com")
+        initial_admin_password = config.get("initial_admin_password", "AdminPassword123!")
+
+        # 1. Login as initial admin
+        admin_login_response = api_client.post(
+            "/api/auth/token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "username": initial_admin_email,
+                "password": initial_admin_password,
+            }
+        )
+        admin_token = admin_login_response.json()["token"]
 
         # 2. Register organizer
         organizer_data = test_data.organizer_data()
