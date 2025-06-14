@@ -135,6 +135,50 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(color: theme.colorScheme.primary),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  // Admin login information
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50.withOpacity(0.1),
+                      border: Border.all(color: Colors.blue.shade400),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.admin_panel_settings, color: Colors.blue.shade400, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Admin Access',
+                              style: TextStyle(
+                                color: Colors.blue.shade400,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'To access admin features, login with:',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Email: admin@test.com',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13),
+                        ),
+                        Text(
+                          'Password: AdminPassword123!',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

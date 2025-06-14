@@ -13,7 +13,6 @@ class AdminDashboardPage extends StatefulWidget {
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
   List<dynamic> _pendingOrganizers = [];
-  List<dynamic> _allUsers = [];
   bool _isLoading = true;
   String? _error;
 
@@ -31,13 +30,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     try {
       final apiService = context.read<ApiService>();
-      
       final pendingOrganizers = await apiService.getPendingOrganizers();
-      final allUsers = await apiService.getAllUsers();
       
       setState(() {
         _pendingOrganizers = pendingOrganizers;
-        _allUsers = allUsers;
         _isLoading = false;
       });
     } catch (e) {
@@ -45,6 +41,30 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _verifyOrganizer(int organizerId, bool approve) async {
+    try {
+      final apiService = context.read<ApiService>();
+      await apiService.verifyOrganizer(organizerId, approve: approve);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(approve ? 'Organizer approved successfully!' : 'Organizer rejected successfully!'),
+          backgroundColor: approve ? Colors.green : Colors.orange,
+        ),
+      );
+      
+      // Reload data
+      _loadDashboardData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -105,9 +125,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           const SizedBox(height: 24),
           _buildSystemOverview(),
           const SizedBox(height: 24),
-          _buildQuickActions(),
-          const SizedBox(height: 24),
-          _buildPendingTasks(),
+          _buildPendingOrganizers(),
         ],
       ),
     );
@@ -130,38 +148,33 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ],
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.admin_panel_settings,
-                  color: Colors.white,
-                  size: 32,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome, Administrator!',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'System status and administrative controls',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ],
+            Icon(
+              Icons.admin_panel_settings,
+              color: Colors.white,
+              size: 32,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome, Administrator!',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-              ],
+                  Text(
+                    'Manage organizer verifications and user accounts',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -170,11 +183,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Widget _buildSystemOverview() {
-    final totalUsers = _allUsers.length;
-    final activeUsers = _allUsers.where((u) => u['is_active'] == true).length;
-    final inactiveUsers = totalUsers - activeUsers;
-    final organizersCount = _allUsers.where((u) => u['user_type'] == 'organizer').length;
-    final customersCount = _allUsers.where((u) => u['user_type'] == 'customer').length;
+    final pendingCount = _pendingOrganizers.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,63 +199,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           children: [
             Expanded(
               child: _buildStatCard(
-                title: 'Total Users',
-                value: totalUsers.toString(),
-                icon: Icons.people,
-                color: Colors.blue,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Active Users',
-                value: activeUsers.toString(),
-                icon: Icons.person_add_alt_1,
-                color: Colors.green,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                title: 'Customers',
-                value: customersCount.toString(),
-                icon: Icons.person,
-                color: Colors.purple,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Organizers',
-                value: organizersCount.toString(),
-                icon: Icons.business,
-                color: Colors.orange,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
                 title: 'Pending Verifications',
-                value: _pendingOrganizers.length.toString(),
+                value: pendingCount.toString(),
                 icon: Icons.pending_actions,
-                color: Colors.amber,
+                color: pendingCount > 0 ? Colors.amber : Colors.green,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: _buildStatCard(
-                title: 'Inactive Users',
-                value: inactiveUsers.toString(),
-                icon: Icons.person_off,
-                color: Colors.red,
+                title: 'Admin Functions',
+                value: '4',
+                icon: Icons.settings,
+                color: Colors.blue,
+                subtitle: 'Available Actions',
               ),
             ),
           ],
@@ -260,6 +226,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     required String value,
     required IconData icon,
     required Color color,
+    String? subtitle,
   }) {
     return Card(
       child: Padding(
@@ -278,7 +245,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   child: Icon(
                     icon,
                     color: color,
-                    size: 20,
+                    size: 24,
                   ),
                 ),
                 const Spacer(),
@@ -299,147 +266,29 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Actions',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                title: 'Manage Users',
-                description: 'View and manage all users',
-                icon: Icons.people_outline,
-                color: Colors.blue,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('User Management page - Coming Soon!')),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildActionCard(
-                title: 'Verify Organizers',
-                description: 'Review pending verifications',
-                icon: Icons.verified_user_outlined,
-                color: Colors.green,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Organizer Verification page - Coming Soon!')),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                title: 'System Settings',
-                description: 'Configure system parameters',
-                icon: Icons.settings_outlined,
-                color: Colors.purple,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('System Settings page - Coming Soon!')),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildActionCard(
-                title: 'Reports',
-                description: 'View system analytics',
-                icon: Icons.analytics_outlined,
-                color: Colors.orange,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reports page - Coming Soon!')),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard({
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(height: 12),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
               Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
+                subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildPendingTasks() {
+  Widget _buildPendingOrganizers() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Text(
-              'Pending Tasks',
+              'Organizer Verifications',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -449,7 +298,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: Colors.amber,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -477,7 +326,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'All tasks completed!',
+                    'All caught up!',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Colors.green,
                       fontWeight: FontWeight.bold,
@@ -495,7 +344,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ),
           )
         else
-          Card(
+          ...(_pendingOrganizers.map((organizer) => Card(
+            margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -503,93 +353,106 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        Icons.pending_actions,
-                        color: Colors.orange,
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                        child: Text(
+                          organizer['first_name']?[0]?.toUpperCase() ?? 'O',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Organizer Verifications Pending',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${organizer['first_name']} ${organizer['last_name']}',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              organizer['email'],
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            if (organizer['company_name'] != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.business,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    organizer['company_name'],
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber),
+                        ),
+                        child: const Text(
+                          'PENDING',
+                          style: TextStyle(
+                            color: Colors.amber,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '${_pendingOrganizers.length} organizer(s) waiting for verification',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
                   const SizedBox(height: 16),
-                  ...(_pendingOrganizers.take(3).map((organizer) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          child: Text(
-                            organizer['first_name']?[0]?.toUpperCase() ?? 'O',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _verifyOrganizer(organizer['organizer_id'], false),
+                          icon: const Icon(Icons.close, color: Colors.red),
+                          label: const Text('Reject', style: TextStyle(color: Colors.red)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.red),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${organizer['first_name']} ${organizer['last_name']}',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                organizer['company_name'] ?? 'No company',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ))),
-                  if (_pendingOrganizers.length > 3) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      '... and ${_pendingOrganizers.length - 3} more',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Verification page - Coming Soon!')),
-                        );
-                      },
-                      icon: const Icon(Icons.verified_user),
-                      label: const Text('Review Verifications'),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _verifyOrganizer(organizer['organizer_id'], true),
+                          icon: const Icon(Icons.check),
+                          label: const Text('Approve'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
+          ))),
       ],
     );
   }

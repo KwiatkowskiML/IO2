@@ -72,10 +72,19 @@ class AuthService extends ChangeNotifier {
   Future<void> login(String email, String password) async {
     try {
       final token = await _apiService.login(email, password);
-      _setTokenAndUser(token);
+      final jwtData = tryDecodeJwt(token);
+
+      if (jwtData != null) {
+        _token = token;
+        _user = UserModel.fromJwt(jwtData);
+        _apiService.setAuthToken(_token);
+        
+        notifyListeners();
+      } else {
+        throw 'Invalid token received';
+      }
     } catch (e) {
-      // Rethrow to be caught in the UI
-      rethrow;
+      throw 'Login failed: $e';
     }
   }
 

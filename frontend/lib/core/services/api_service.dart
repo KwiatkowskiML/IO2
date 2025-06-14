@@ -712,7 +712,7 @@ class ApiService {
     }
   }
 
-  Future<void> verifyOrganizer(int organizerId) async {
+  Future<void> verifyOrganizer(int organizerId, {bool approve = true}) async {
     if (_shouldUseMockData) {
       await Future.delayed(const Duration(seconds: 1));
       return;
@@ -721,6 +721,7 @@ class ApiService {
     try {
       await _dio.post('/auth/verify-organizer', data: {
         'organizer_id': organizerId,
+        'approve': approve,
       });
     } on DioException catch (e) {
       throw _handleDioError(e);

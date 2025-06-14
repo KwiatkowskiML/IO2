@@ -7,14 +7,13 @@ class MainLayout extends StatelessWidget {
   const MainLayout({
     super.key,
     required this.userRole,
-
   });
 
   @override
   Widget build(BuildContext context) {
     return AdaptiveNavigation(
       userRole: userRole,
-      body: Container(),
+      body: const SizedBox.shrink(),
     );
   }
 }
