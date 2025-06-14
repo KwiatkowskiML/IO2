@@ -8,6 +8,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.schemas.user import UserResponse, OrganizerResponse
 from app.models import User, Customer, Organizer, Administrator
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status, Query
+from sqlalchemy import and_, or_
+
 from app.schemas.auth import (
     Token,
     UserCreate,
@@ -405,13 +407,16 @@ def list_users(
         db: Session = Depends(get_db),
         admin: User = Depends(get_current_admin)
 ):
+    """List all users with filtering and pagination (admin only)"""
 
+    # Base query with joins for organizer verification status
     query = db.query(User).outerjoin(Organizer, User.user_id == Organizer.user_id)
 
+    # Apply filters
     if search:
         search_filter = f"%{search}%"
         query = query.filter(
-            db.or_(
+            or_(
                 User.email.ilike(search_filter),
                 User.login.ilike(search_filter),
                 User.first_name.ilike(search_filter),
@@ -431,13 +436,15 @@ def list_users(
         query = query.filter(User.is_active == is_active)
 
     if is_verified is not None:
+        # Only apply verification filter for organizers
         query = query.filter(
-            db.and_(
+            and_(
                 User.user_type == "organizer",
                 Organizer.is_verified == is_verified
             )
         )
 
+    # Apply sorting
     if sort_by not in ["creation_date", "email", "first_name", "last_name", "user_type"]:
         sort_by = "creation_date"
 
@@ -446,11 +453,14 @@ def list_users(
     else:
         query = query.order_by(getattr(User, sort_by).desc())
 
+    # Apply pagination
     offset = (page - 1) * limit
     users = query.offset(offset).limit(limit).all()
 
+    # Convert to response format
     result = []
     for user in users:
+        # Create base user response
         user_response = OrganizerResponse(
             user_id=user.user_id,
             email=user.email,
@@ -461,6 +471,7 @@ def list_users(
             is_active=user.is_active
         )
 
+        # For organizers, include organizer-specific fields
         if user.user_type == "organizer" and user.organizer:
             organizer_response = OrganizerResponse(
                 user_id=user.user_id,
