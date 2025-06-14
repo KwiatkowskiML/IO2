@@ -7,7 +7,7 @@ import 'package:resellio/presentation/tickets/pages/my_tickets_page.dart';
 import 'package:resellio/presentation/marketplace/pages/marketplace_page.dart';
 import 'package:resellio/presentation/profile/pages/profile_page.dart';
 import 'package:resellio/presentation/organizer/pages/organizer_dashboard_page.dart';
-import 'package:resellio/presentation/organizer/pages/create_event_page.dart';
+// import 'package:resellio/presentation/organizer/pages/create_event_page.dart'; // Deleted
 import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
 
 enum UserRole { customer, organizer, admin }
@@ -62,9 +62,9 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
             label: 'Dashboard',
           ),
           NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
-            label: 'Create',
+            icon: Icon(Icons.event_note_outlined),
+            selectedIcon: Icon(Icons.event_note),
+            label: 'My Events',
           ),
           NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
@@ -136,9 +136,9 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
             label: Text('Dashboard'),
           ),
           NavigationRailDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
-            label: Text('Create'),
+            icon: Icon(Icons.event_note_outlined),
+            selectedIcon: Icon(Icons.event_note),
+            label: Text('My Events'),
           ),
           NavigationRailDestination(
             icon: Icon(Icons.bar_chart_outlined),
@@ -191,7 +191,7 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
       case UserRole.organizer:
         screens = [
           const OrganizerDashboardPage(),
-          const CreateEventPage(),
+          const Center(child: Text('My Events Page (Organizer) - Coming Soon!')),
           const Center(child: Text('Statistics Page (Organizer) - Coming Soon!')),
           const ProfilePage(),
         ];

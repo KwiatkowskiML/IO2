@@ -586,31 +586,6 @@ class ApiService {
 
   // --- Organizer Methods ---
 
-  Future<Map<String, dynamic>> createEvent(Map<String, dynamic> eventData) async {
-    if (_shouldUseMockData) {
-      await Future.delayed(const Duration(seconds: 1));
-      return {
-        'event_id': 999,
-        'name': eventData['name'],
-        'description': eventData['description'],
-        'start_date': eventData['start_date'],
-        'end_date': eventData['end_date'],
-        'location_name': eventData['location_name'],
-        'status': 'pending',
-        'organizer_id': 1,
-      };
-    }
-
-    try {
-      final response = await _dio.post('/events/', data: eventData);
-      return response.data;
-    } on DioException catch (e) {
-      throw _handleDioError(e);
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   Future<List<dynamic>> getOrganizerEvents(int organizerId) async {
     if (_shouldUseMockData) {
       await Future.delayed(const Duration(seconds: 1));
@@ -641,7 +616,7 @@ class ApiService {
     }
 
     try {
-      final response = await _dio.get('/events?organizer_id=$organizerId');
+      final response = await _dio.get('/events', queryParameters: {'organizer_id': organizerId});
       return response.data as List;
     } catch (e) {
       rethrow;
