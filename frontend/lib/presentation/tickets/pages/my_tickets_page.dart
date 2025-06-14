@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:resellio/core/models/ticket_model.dart';
 import 'package:resellio/core/repositories/ticket_repository.dart';
-import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_cubit.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_state.dart';

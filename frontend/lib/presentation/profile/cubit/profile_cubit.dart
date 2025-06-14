@@ -36,9 +36,9 @@ class ProfileCubit extends Cubit<ProfileState> {
     try {
       await _userRepository.updateUserProfile(data);
       await loadProfile(); // Refresh after successful save
-    } on ApiException catch (e) {
+    } on ApiException {
       emit(ProfileLoaded(userProfile: loadedState.userProfile)); // Revert
-      throw e; // re-throw for listener
+      rethrow; // re-throw for listener
     } catch (e) {
       emit(ProfileLoaded(userProfile: loadedState.userProfile)); // Revert
       throw Exception('An unexpected error occurred.');

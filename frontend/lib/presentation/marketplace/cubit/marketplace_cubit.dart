@@ -35,11 +35,11 @@ class MarketplaceCubit extends Cubit<MarketplaceState> {
       await _resaleRepository.purchaseResaleTicket(ticketId);
       // On success, refresh the whole list
       await loadListings();
-    } on ApiException catch (e) {
+    } on ApiException {
       // Revert to loaded state on error to un-disable button
       emit(MarketplaceLoaded(loadedState.listings));
       // Then throw to be caught by BlocListener for SnackBar
-      throw e;
+      rethrow;
     } catch (e) {
       emit(MarketplaceLoaded(loadedState.listings));
       throw Exception('An unexpected error occurred during purchase.');

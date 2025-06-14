@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart';
 import 'package:resellio/core/models/event_filter_model.dart';
 import 'package:resellio/core/repositories/event_repository.dart';
 import 'package:resellio/core/utils/responsive_layout.dart';
