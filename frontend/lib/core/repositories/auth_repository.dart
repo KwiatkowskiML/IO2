@@ -33,9 +33,11 @@ class ApiAuthRepository implements AuthRepository {
   Future<String> registerCustomer(Map<String, dynamic> data) async {
     final response =
         await _apiClient.post('/auth/register/customer', data: data);
-    final token = response['token'] as String;
-    _apiClient.setAuthToken(token);
-    return token;
+     if (response != null && response['message'] is String) {
+      return response['message'] as String;
+    } else {
+      throw Exception('Customer registration failed or returned an unexpected response.');
+    }
   }
 
   @override
