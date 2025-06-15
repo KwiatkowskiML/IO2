@@ -39,10 +39,32 @@ class AdminEventsPage extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
-      if (approve) {
-        context.read<AdminDashboardCubit>().authorizeEvent(event.id);
+      try {
+        if (approve) {
+          await context.read<AdminDashboardCubit>().authorizeEvent(event.id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Event "${event.name}" has been authorized'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          await context.read<AdminDashboardCubit>().rejectEvent(event.id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Event "${event.name}" has been rejected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
-      // For reject, we would need a different API endpoint
     }
   }
 
@@ -477,7 +499,7 @@ class _EventDetailsDialog extends StatelessWidget {
         TextButton(
           onPressed: () {
             Navigator.of(context).pop();
-            // Trigger reject action
+            // Trigger reject action from parent context
           },
           style: TextButton.styleFrom(foregroundColor: Colors.red),
           child: const Text('Reject'),
@@ -485,7 +507,7 @@ class _EventDetailsDialog extends StatelessWidget {
         ElevatedButton(
           onPressed: () {
             Navigator.of(context).pop();
-            // Trigger authorize action
+            // Trigger authorize action from parent context
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,

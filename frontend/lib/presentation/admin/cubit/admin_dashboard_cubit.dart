@@ -115,6 +115,21 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
     }
   }
 
+  Future<void> rejectEvent(int eventId) async {
+    if (state is AdminDashboardLoaded) {
+      emit(EventAuthorizationInProgress(eventId));
+    }
+
+    try {
+      await _adminRepository.rejectEvent(eventId);
+      await loadDashboard();
+    } on ApiException catch (e) {
+      emit(AdminDashboardError(e.message));
+      await Future.delayed(const Duration(seconds: 2));
+      await loadDashboard();
+    }
+  }
+
   Future<void> registerAdmin(Map<String, dynamic> adminData) async {
     try {
       emit(AdminDashboardLoading());

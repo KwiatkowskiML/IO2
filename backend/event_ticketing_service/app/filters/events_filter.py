@@ -25,3 +25,6 @@ class EventsFilter(BaseModel):
     has_available_tickets: Optional[bool] = Query(
         None, title="Has Available Tickets", description="Events with remaining tickets"
     )
+    status: Optional[str] = Query(
+        None, title="Event Status", description="Filter by event status (pending, created, rejected, cancelled)"
+    )

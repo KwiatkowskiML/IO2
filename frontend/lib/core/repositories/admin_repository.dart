@@ -18,6 +18,7 @@ abstract class AdminRepository {
   Future<void> banUser(int userId);
   Future<void> unbanUser(int userId);
   Future<void> authorizeEvent(int eventId);
+  Future<void> rejectEvent(int eventId);
   Future<String> registerAdmin(Map<String, dynamic> adminData);
   Future<UserDetails> getUserDetails(int userId);
   Future<AdminStats> getAdminStats();
@@ -67,34 +68,11 @@ class ApiAdminRepository implements AdminRepository {
 
   @override
   Future<List<Event>> getPendingEvents() async {
-    // Mock implementation - replace with actual API endpoint when available
-    await Future.delayed(const Duration(milliseconds: 500));
-    return [
-      Event(
-        id: 1,
-        organizerId: 1,
-        name: 'Summer Music Festival 2025',
-        description: 'A fantastic summer music festival featuring top artists',
-        start: DateTime(2025, 7, 15, 18, 0),
-        end: DateTime(2025, 7, 15, 23, 0),
-        location: 'Central Park Amphitheater',
-        status: 'pending',
-        category: ['Music', 'Festival'],
-        totalTickets: 5000,
-      ),
-      Event(
-        id: 2,
-        organizerId: 2,
-        name: 'Tech Conference 2025',
-        description: 'Annual technology conference with industry leaders',
-        start: DateTime(2025, 9, 10, 9, 0),
-        end: DateTime(2025, 9, 10, 17, 0),
-        location: 'Convention Center',
-        status: 'pending',
-        category: ['Technology', 'Conference'],
-        totalTickets: 1500,
-      ),
-    ];
+    final data = await _apiClient.get('/events', queryParams: {
+      'status': 'pending',
+      'limit': 100,
+    });
+    return (data as List).map((e) => Event.fromJson(e)).toList();
   }
 
   @override
@@ -117,9 +95,13 @@ class ApiAdminRepository implements AdminRepository {
 
   @override
   Future<void> authorizeEvent(int eventId) async {
-    // Mock implementation - replace with actual API endpoint
-    await Future.delayed(const Duration(milliseconds: 500));
-    // await _apiClient.post('/events/authorize/$eventId');
+    await _apiClient.post('/events/authorize/$eventId');
+  }
+
+  @override
+  Future<void> rejectEvent(int eventId) async {
+    // Add reject event endpoint
+    await _apiClient.post('/events/reject/$eventId');
   }
 
   @override
