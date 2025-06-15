@@ -33,6 +33,17 @@ async def authorize_event(
     return True
 
 
+@router.post("/reject/{event_id}", response_model=bool)
+async def reject_event(
+    event_id: int = Path(..., title="Event ID"),
+    event_repo: EventRepository = Depends(get_event_repository),
+    current_admin = Depends(get_current_admin)
+):
+    """Reject an event (requires admin authentication)"""
+    event_repo.reject_event(event_id)
+    return True
+
+
 @router.get("", response_model=List[EventDetails])
 def get_events_endpoint(
     filters: EventsFilter = Depends(),
