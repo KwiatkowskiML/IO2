@@ -8,6 +8,8 @@ import 'package:resellio/presentation/marketplace/pages/marketplace_page.dart';
 import 'package:resellio/presentation/profile/pages/profile_page.dart';
 import 'package:resellio/presentation/organizer/pages/organizer_dashboard_page.dart';
 import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
+import 'package:resellio/presentation/organizer/pages/organizer_events_page.dart';
+import 'package:resellio/presentation/organizer/pages/organizer_stats_page.dart';
 
 enum UserRole { customer, organizer, admin }
 
@@ -40,8 +42,8 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
       case UserRole.organizer:
         return [
           const OrganizerDashboardPage(),
-          const Center(child: Text('My Events Page (Organizer) - Coming Soon!')),
-          const Center(child: Text('Statistics Page (Organizer) - Coming Soon!')),
+          const OrganizerEventsPage(),
+          const OrganizerStatsPage(),
           const ProfilePage(),
         ];
       case UserRole.admin:
