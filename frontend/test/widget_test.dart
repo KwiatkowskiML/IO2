@@ -70,9 +70,8 @@ void main() {
     );
   }
 
-  testWidgets('App starts and shows WelcomeScreen correctly', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('App starts and shows WelcomeScreen correctly',
+      (WidgetTester tester) async {
     // Build the entire application widget tree.
     await tester.pumpWidget(buildTestableApp());
 
@@ -86,19 +85,13 @@ void main() {
     expect(find.text('RESELLIO'), findsOneWidget);
 
     // 3. Verify that both registration buttons are visible.
-    expect(
-      find.widgetWithText(ElevatedButton, 'REGISTER AS USER'),
-      findsOneWidget,
-    );
-    expect(
-      find.widgetWithText(ElevatedButton, 'REGISTER AS ORGANIZER'),
-      findsOneWidget,
-    );
+    expect(find.widgetWithText(ElevatedButton, 'REGISTER AS USER'),
+        findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'REGISTER AS ORGANIZER'),
+        findsOneWidget);
 
     // 4. Verify that the login prompt button is visible.
-    expect(
-      find.widgetWithText(TextButton, 'Already have an account? Log In'),
-      findsOneWidget,
-    );
+    expect(find.widgetWithText(TextButton, 'Already have an account? Log In'),
+        findsOneWidget);
   });
 }
