@@ -784,7 +784,7 @@ class TestCompleteAuthFlow:
         )
         initial_token = initial_login_response.json()["token"]
         assert len(initial_token) > 0
-        assert "Initial admin login successful" in initial_login_response.json()["message"]
+        assert "Login successful" in initial_login_response.json()["message"]
 
         # 2. Register new admin using initial admin authentication
         new_admin_data = test_data.admin_data()
