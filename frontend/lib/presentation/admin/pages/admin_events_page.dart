@@ -404,91 +404,101 @@ class _EventDetailsDialog extends StatelessWidget {
           ),
         ],
       ),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (event.imageUrl != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  event.imageUrl!,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 120,
-                    color: colorScheme.surfaceContainerHighest,
-                    child: Icon(
-                      Icons.image_not_supported,
-                      color: colorScheme.onSurfaceVariant,
+      content: SizedBox(
+        width: 500,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (event.imageUrl != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 120,
+                      maxWidth: double.infinity,
                     ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            _buildSection(
-              context,
-              'Event Information',
-              [
-                _buildDetailRow('Event Name', event.name),
-                _buildDetailRow('Description', event.description ?? 'No description'),
-                _buildDetailRow('Status', event.status.toUpperCase()),
-                _buildDetailRow('Event ID', event.id.toString()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildSection(
-              context,
-              'Date & Time',
-              [
-                _buildDetailRow('Date', dateFormat.format(event.start)),
-                _buildDetailRow(
-                  'Time',
-                  '${timeFormat.format(event.start)} - ${timeFormat.format(event.end)}',
-                ),
-                _buildDetailRow('Location', event.location),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildSection(
-              context,
-              'Event Details',
-              [
-                _buildDetailRow('Organizer ID', event.organizerId.toString()),
-                _buildDetailRow('Total Tickets', event.totalTickets.toString()),
-                if (event.minimumAge != null)
-                  _buildDetailRow('Minimum Age', '${event.minimumAge} years'),
-                if (event.category.isNotEmpty)
-                  _buildDetailRow('Categories', event.category.join(', ')),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber, color: Colors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This event requires authorization before it can be published and made available for ticket sales.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.orange.shade700,
+                    child: Image.network(
+                      event.imageUrl!,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 120,
+                        color: colorScheme.surfaceContainerHighest,
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              _buildSection(
+                context,
+                'Event Information',
+                [
+                  _buildDetailRow('Event Name', event.name),
+                  _buildDetailRow('Description', event.description ?? 'No description'),
+                  _buildDetailRow('Status', event.status.toUpperCase()),
+                  _buildDetailRow('Event ID', event.id.toString()),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              _buildSection(
+                context,
+                'Date & Time',
+                [
+                  _buildDetailRow('Date', dateFormat.format(event.start)),
+                  _buildDetailRow(
+                    'Time',
+                    '${timeFormat.format(event.start)} - ${timeFormat.format(event.end)}',
+                  ),
+                  _buildDetailRow('Location', event.location),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildSection(
+                context,
+                'Event Details',
+                [
+                  _buildDetailRow('Organizer ID', event.organizerId.toString()),
+                  _buildDetailRow('Total Tickets', event.totalTickets.toString()),
+                  if (event.minimumAge != null)
+                    _buildDetailRow('Minimum Age', '${event.minimumAge} years'),
+                  if (event.category.isNotEmpty)
+                    _buildDetailRow('Categories', event.category.join(', ')),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This event requires authorization before it can be published and made available for ticket sales.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
@@ -550,7 +560,13 @@ class _EventDetailsDialog extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(
+            child: Text(
+              value,
+              softWrap: true,
+              overflow: TextOverflow.visible,
+            ),
+          ),
         ],
       ),
     );
