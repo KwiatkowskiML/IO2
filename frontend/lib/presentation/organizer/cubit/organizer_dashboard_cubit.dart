@@ -20,6 +20,12 @@ class OrganizerDashboardCubit extends Cubit<OrganizerDashboardState> {
       return;
     }
 
+    if (!profile.isVerified) {
+      emit(OrganizerDashboardUnverified(
+          'Your account is pending verification.'));
+      return;
+    }
+
     final organizerId = profile.organizerId;
 
     try {
@@ -30,6 +36,27 @@ class OrganizerDashboardCubit extends Cubit<OrganizerDashboardState> {
       emit(OrganizerDashboardError(e.message));
     } catch (e) {
       emit(OrganizerDashboardError("An unexpected error occurred: $e"));
+    }
+  }
+
+  Future<void> cancelEvent(int eventId) async {
+    try {
+      await _eventRepository.cancelEvent(eventId);
+      await loadDashboard();
+    } on ApiException catch (e) {
+      emit(OrganizerDashboardError(e.message));
+    } catch (e) {
+      emit(OrganizerDashboardError("Failed to cancel event."));
+    }
+  }
+
+  Future<void> notifyParticipants(int eventId, String message) async {
+    try {
+      await _eventRepository.notifyParticipants(eventId, message);
+    } on ApiException catch (e) {
+      emit(OrganizerDashboardError(e.message));
+    } catch (e) {
+      emit(OrganizerDashboardError("Failed to send notification."));
     }
   }
 }

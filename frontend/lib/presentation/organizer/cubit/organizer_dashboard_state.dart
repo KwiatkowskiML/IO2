@@ -24,3 +24,10 @@ class OrganizerDashboardError extends OrganizerDashboardState {
   @override
   List<Object?> get props => [message];
 }
+
+class OrganizerDashboardUnverified extends OrganizerDashboardState {
+  final String message;
+  const OrganizerDashboardUnverified(this.message);
+  @override
+  List<Object?> get props => [message];
+}

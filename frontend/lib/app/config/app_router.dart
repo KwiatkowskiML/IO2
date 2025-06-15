@@ -9,6 +9,8 @@ import 'package:resellio/presentation/main_page/main_layout.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 import 'package:resellio/presentation/events/pages/event_details_page.dart';
 import 'package:resellio/presentation/cart/pages/cart_page.dart';
+import 'package:resellio/presentation/organizer/pages/create_event_page.dart';
+import 'package:resellio/presentation/organizer/pages/edit_event_page.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthService authService) {
@@ -96,6 +98,21 @@ class AppRouter {
           },
         ),
         GoRoute(path: '/cart', builder: (context, state) => const CartPage()),
+        GoRoute(
+            path: '/organizer/create-event',
+            builder: (context, state) => const CreateEventPage()),
+        GoRoute(
+            path: '/organizer/edit-event/:id',
+            builder: (context, state) {
+              final event = state.extra as Event?;
+              if (event == null) {
+                 return Scaffold(
+                  appBar: AppBar(title: const Text('Error')),
+                  body: const Center(child: Text('Event data is missing.')),
+                );
+              }
+              return EditEventPage(event: event);
+            }),
       ],
       errorBuilder:
           (context, state) => Scaffold(

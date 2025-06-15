@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
+import 'package:resellio/presentation/common_widgets/empty_state_widget.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_cubit.dart';
 import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_state.dart';
@@ -46,6 +47,12 @@ class _OrganizerDashboardView extends StatelessWidget {
             context.read<OrganizerDashboardCubit>().loadDashboard(),
         child: BlocBuilder<OrganizerDashboardCubit, OrganizerDashboardState>(
           builder: (context, state) {
+            if (state is OrganizerDashboardUnverified) {
+              return EmptyStateWidget(
+                  icon: Icons.verified_user_outlined,
+                  message: 'Verification Pending',
+                  details: state.message);
+            }
             return BlocStateWrapper<OrganizerDashboardLoaded>(
               state: state,
               onRetry: () =>

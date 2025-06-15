@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class QuickActions extends StatelessWidget {
   const QuickActions({super.key});
@@ -22,12 +23,7 @@ class QuickActions extends StatelessWidget {
                 title: 'Create Event',
                 icon: Icons.add_circle_outline,
                 color: Colors.green,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Create Event page - Coming Soon!')),
-                  );
-                },
+                onTap: () => context.push('/organizer/create-event'),
               ),
               _ActionCard(
                 title: 'View Analytics',
