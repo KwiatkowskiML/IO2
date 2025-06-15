@@ -383,8 +383,8 @@ class UserManager:
 
         # Extract and store token
         if customer_token:
-            self.token_manager.set_token("customer", customer_token)
-            self.token_manager.set_user("customer", customer_user_data)
+            self.token_manager.set_token("customer2", customer_token)
+            self.token_manager.set_user("customer2", customer_user_data)
         else:
             pytest.fail("Failed to retrieve token for customer after admin approval.")
 
