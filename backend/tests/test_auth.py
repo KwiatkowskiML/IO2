@@ -715,16 +715,24 @@ class TestCompleteAuthFlow:
         user_id = reg_response.json()["user_id"]
         assert user_id > 0
 
-        # register admin
-        admin_data = test_data.admin_data()
-        admin_reg_response = api_client.post(
-            "/api/auth/register/admin",
-            headers={"Content-Type": "application/json"},
-            json_data=admin_data,
-            expected_status=201
-        )
-        admin_token = admin_reg_response.json().get("token")
+        # 2. Login as initial admin (instead of registering a new admin)
+        config = test_data.get_config()
+        initial_admin_email = config.get("initial_admin_email", "admin@resellio.com")
+        initial_admin_password = config.get("initial_admin_password", "AdminPassword123!")
 
+        admin_login_response = api_client.post(
+            "/api/auth/token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "username": initial_admin_email,
+                "password": initial_admin_password,
+            },
+            expected_status=200
+        )
+        admin_token = admin_login_response.json().get("token")
+        assert admin_token is not None
+
+        # 3. Admin approves the customer
         approve_response = api_client.post(
             f"/api/auth/approve-user/{user_id}",
             headers={"Authorization": f"Bearer {admin_token}"},
@@ -733,7 +741,7 @@ class TestCompleteAuthFlow:
         approve_response_data = approve_response.json()
         assert "token" in approve_response_data, "Token not found in admin approval response"
 
-        # 2. Login
+        # 4. Login with customer credentials
         login_response = api_client.post(
             "/api/auth/token",
             headers={"Content-Type": "application/x-www-form-urlencoded"},
@@ -746,7 +754,7 @@ class TestCompleteAuthFlow:
         login_token = login_response.json()["token"]
         assert len(login_token) > 0
 
-        # 3. Access profile
+        # 5. Access profile
         profile_response = api_client.get(
             "/api/user/me",
             headers={"Authorization": f"Bearer {login_token}"}
@@ -755,10 +763,9 @@ class TestCompleteAuthFlow:
         profile_data = profile_response.json()
         assert profile_data["email"] == customer_data["email"]
 
-        # 4. Logout (stateless)
+        # 6. Logout (stateless)
         logout_response = api_client.post("/api/auth/logout")
         assert "successful" in logout_response.json()["message"]
-
     def test_complete_admin_flow(self, api_client, test_data):
         """Test complete admin flow with initial admin and new admin registration"""
         # Get initial admin credentials from helper
