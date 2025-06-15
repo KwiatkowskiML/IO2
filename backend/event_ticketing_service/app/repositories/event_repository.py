@@ -52,7 +52,22 @@ class EventRepository:
 
     def authorize_event(self, event_id: int) -> None:
         event = self.get_event(event_id)
+        if event.status != "pending":
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"Event must be in pending status to authorize. Current status: {event.status}"
+            )
         event.status = "created"
+        self.db.commit()
+
+    def reject_event(self, event_id: int) -> None:
+        event = self.get_event(event_id)
+        if event.status != "pending":
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"Event must be in pending status to reject. Current status: {event.status}"
+            )
+        event.status = "rejected"
         self.db.commit()
 
     def get_events(self, filters: EventsFilter) -> List[EventModel]:
@@ -76,6 +91,8 @@ class EventRepository:
             query = query.filter(EventModel.organizer_id == filters.organizer_id)
         if filters.minimum_age:
             query = query.filter(EventModel.minimum_age >= filters.minimum_age)
+        if filters.status:
+            query = query.filter(EventModel.status == filters.status)
 
         # TODO: add price filters (join ticket_types) and availability checks
 

@@ -45,6 +45,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SECRET_KEY=${SECRET_KEY}
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
     depends_on:
       db-init:
         condition: service_completed_successfully
@@ -62,6 +64,8 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - SECRET_KEY=${SECRET_KEY}
+      - EMAIL_API_KEY=${EMAIL_API_KEY}
+      - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
     depends_on:
       db-init:
         condition: service_completed_successfully
