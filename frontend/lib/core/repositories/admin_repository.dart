@@ -26,6 +26,11 @@ abstract class AdminRepository {
 
   Future<bool> canBanUser(int userId);
   Future<UserDetails> getUserById(int userId);
+  Future<void> approveUser(int userId);
+  Future<List<UserDetails>> getUnverifiedUsers({
+    int page = 1,
+    int limit = 50,
+  });
 }
 
 class ApiAdminRepository implements AdminRepository {
@@ -156,5 +161,25 @@ class ApiAdminRepository implements AdminRepository {
   bool _isAdminUser(String userType) {
     final normalizedType = userType.toLowerCase();
     return normalizedType == 'administrator' || normalizedType == 'admin';
+  }
+
+  @override
+  Future<void> approveUser(int userId) async {
+    await _apiClient.post('/auth/approve-user/$userId');
+  }
+
+  @override
+  Future<List<UserDetails>> getUnverifiedUsers({
+    int page = 1,
+    int limit = 50,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+      'is_active': false, // Get inactive users who might need verification
+    };
+
+    final data = await _apiClient.get('/auth/users', queryParams: queryParams);
+    return (data as List).map((e) => UserDetails.fromJson(e)).toList();
   }
 }

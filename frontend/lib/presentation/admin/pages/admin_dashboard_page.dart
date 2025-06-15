@@ -11,6 +11,7 @@ import 'package:resellio/presentation/admin/pages/admin_events_page.dart';
 import 'package:resellio/presentation/admin/pages/admin_registration_page.dart';
 import 'package:resellio/presentation/admin/pages/admin_overview_page.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
+import 'package:resellio/presentation/admin/pages/admin_verification_page.dart';
 
 class AdminMainPage extends StatefulWidget {
   final String? initialTab;
@@ -45,6 +46,13 @@ class _AdminMainPageState extends State<AdminMainPage> {
       icon: Icons.verified_user_outlined,
       selectedIcon: Icons.verified_user,
       route: '/admin/organizers',
+    ),
+    AdminTab(
+      id: 'verification',
+      title: 'Verification',
+      icon: Icons.mark_email_read_outlined,
+      selectedIcon: Icons.mark_email_read,
+      route: '/admin/verification',
     ),
     AdminTab(
       id: 'events',
@@ -87,6 +95,8 @@ class _AdminMainPageState extends State<AdminMainPage> {
         return const AdminUsersPage();
       case 'organizers':
         return const AdminOrganizersPage();
+      case 'verification':
+        return const AdminVerificationPage();
       case 'events':
         return const AdminEventsPage();
       case 'add-admin':
@@ -330,6 +340,12 @@ class _AdminMainView extends StatelessWidget {
             label: 'Pending Organizers',
             value: state.pendingOrganizers.length.toString(),
             color: Colors.orange,
+          ),
+          _StatRow(
+            icon: Icons.mark_email_read,
+            label: 'Unverified Users',
+            value: state.unverifiedUsers.length.toString(),
+            color: Colors.purple,
           ),
           _StatRow(
             icon: Icons.event_note,

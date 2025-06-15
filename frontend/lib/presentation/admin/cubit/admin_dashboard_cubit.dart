@@ -19,6 +19,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
         _adminRepository.getAllUsers(limit: 100),
         _adminRepository.getBannedUsers(),
         _adminRepository.getPendingEvents(),
+        _adminRepository.getUnverifiedUsers(limit: 100),
       ]);
 
       emit(AdminDashboardLoaded(
@@ -26,6 +27,7 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
         allUsers: results[1] as List<UserDetails>,
         bannedUsers: results[2] as List<UserDetails>,
         pendingEvents: results[3] as List<Event>,
+        unverifiedUsers: results[4] as List<UserDetails>,
       ));
     } on ApiException catch (e) {
       emit(AdminDashboardError(e.message));
@@ -175,6 +177,22 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
         );
       }
       throw Exception('Failed to get admin stats: $e');
+    }
+  }
+
+
+  Future<void> approveUser(int userId) async {
+    if (state is AdminDashboardLoaded) {
+      emit(UserApprovalInProgress(userId));
+    }
+
+    try {
+      await _adminRepository.approveUser(userId);
+      await loadDashboard(); // Refresh data
+    } on ApiException catch (e) {
+      emit(AdminDashboardError(e.message));
+      await Future.delayed(const Duration(seconds: 2));
+      await loadDashboard();
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:resellio/core/models/models.dart';
 
 abstract class AdminDashboardState extends Equatable {
   const AdminDashboardState();
+
   @override
   List<Object?> get props => [];
 }
@@ -16,21 +17,31 @@ class AdminDashboardLoaded extends AdminDashboardState {
   final List<UserDetails> allUsers;
   final List<UserDetails> bannedUsers;
   final List<Event> pendingEvents;
+  final List<UserDetails> unverifiedUsers;
 
   const AdminDashboardLoaded({
     required this.pendingOrganizers,
     required this.allUsers,
     required this.bannedUsers,
     required this.pendingEvents,
+    required this.unverifiedUsers,
   });
 
   @override
-  List<Object?> get props => [pendingOrganizers, allUsers, bannedUsers, pendingEvents];
+  List<Object?> get props => [
+    pendingOrganizers,
+    allUsers,
+    bannedUsers,
+    pendingEvents,
+    unverifiedUsers,
+  ];
 }
 
 class AdminDashboardError extends AdminDashboardState {
   final String message;
+
   const AdminDashboardError(this.message);
+
   @override
   List<Object?> get props => [message];
 }
@@ -40,14 +51,18 @@ class UserManagementLoading extends AdminDashboardState {}
 
 class UserBanInProgress extends AdminDashboardState {
   final int userId;
+
   const UserBanInProgress(this.userId);
+
   @override
   List<Object?> get props => [userId];
 }
 
 class UserUnbanInProgress extends AdminDashboardState {
   final int userId;
+
   const UserUnbanInProgress(this.userId);
+
   @override
   List<Object?> get props => [userId];
 }
@@ -55,7 +70,16 @@ class UserUnbanInProgress extends AdminDashboardState {
 // Event authorization states
 class EventAuthorizationInProgress extends AdminDashboardState {
   final int eventId;
+
   const EventAuthorizationInProgress(this.eventId);
+
   @override
   List<Object?> get props => [eventId];
+}
+
+class UserApprovalInProgress extends AdminDashboardState {
+  final int userId;
+  const UserApprovalInProgress(this.userId);
+  @override
+  List<Object?> get props => [userId];
 }

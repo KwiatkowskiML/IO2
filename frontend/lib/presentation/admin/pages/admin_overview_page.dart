@@ -123,22 +123,30 @@ class AdminOverviewPage extends StatelessWidget {
         onTap: () => context.go('/admin/organizers'),
       ),
       _StatCard(
+        title: 'Unverified Users',
+        value: state.unverifiedUsers.length.toString(),
+        icon: Icons.mark_email_read,
+        color: Colors.purple,
+        subtitle: 'Email not verified',
+        onTap: () => context.go('/admin/verification'),
+      ),
+      _StatCard(
         title: 'Pending Events',
         value: state.pendingEvents.length.toString(),
         icon: Icons.event_note,
-        color: Colors.purple,
+        color: Colors.indigo,
         subtitle: 'Awaiting approval',
         onTap: () => context.go('/admin/events'),
       ),
     ];
 
     return GridView.count(
-      crossAxisCount: isMobile ? 2 : 4,
+      crossAxisCount: isMobile ? 2 : 3, // Adjust to 3 columns for 5 items
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: isMobile ? 1.5 : 1.2, // Slightly increased for better spacing
+      childAspectRatio: isMobile ? 1.5 : 1.0,
       children: stats.map((stat) => _buildStatCard(context, stat)).toList(),
     );
   }
@@ -238,6 +246,13 @@ class AdminOverviewPage extends StatelessWidget {
         onTap: () => context.go('/admin/organizers'),
       ),
       _QuickAction(
+        title: 'Verify Users', // Add new action
+        description: 'Approve users awaiting email verification',
+        icon: Icons.mark_email_read,
+        color: Colors.purple,
+        onTap: () => context.go('/admin/verification'),
+      ),
+      _QuickAction(
         title: 'Manage Users',
         description: 'View and manage user accounts',
         icon: Icons.manage_accounts,
@@ -248,7 +263,7 @@ class AdminOverviewPage extends StatelessWidget {
         title: 'Review Events',
         description: 'Approve or reject pending events',
         icon: Icons.event_available,
-        color: Colors.purple,
+        color: Colors.indigo,
         onTap: () => context.go('/admin/events'),
       ),
       _QuickAction(
@@ -263,21 +278,9 @@ class AdminOverviewPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(
-              Icons.flash_on,
-              color: theme.colorScheme.primary,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Quick Actions',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        Text(
+          'Quick Actions',
+          style: theme.textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -286,12 +289,13 @@ class AdminOverviewPage extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: ResponsiveLayout.isMobile(context) ? 4 : 3.5,
+          childAspectRatio: ResponsiveLayout.isMobile(context) ? 4 : 3,
           children: actions.map((action) => _buildQuickActionCard(context, action)).toList(),
         ),
       ],
     );
   }
+
 
   Widget _buildQuickActionCard(BuildContext context, _QuickAction action) {
     final theme = Theme.of(context);
