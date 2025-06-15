@@ -26,15 +26,16 @@ class MyEventsLoaded extends MyEventsState {
     switch (activeFilter) {
       case EventStatusFilter.active:
         return allEvents
-            .where((event) => event.status.toLowerCase() == 'created')
+            .where((event) => event.status.toLowerCase() == EventStatus.created)
             .toList();
       case EventStatusFilter.pending:
         return allEvents
-            .where((event) => event.status.toLowerCase() == 'pending')
+            .where((event) => event.status.toLowerCase() == EventStatus.pending)
             .toList();
       case EventStatusFilter.cancelled:
         return allEvents
-            .where((event) => event.status.toLowerCase() == 'cancelled')
+            .where(
+                (event) => event.status.toLowerCase() == EventStatus.cancelled)
             .toList();
       case EventStatusFilter.all:
       default:

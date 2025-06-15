@@ -50,34 +50,50 @@ class _ProfileView extends StatelessWidget {
     final authService = context.watch<AuthService>();
     final isCustomer = authService.user?.role == UserRole.customer;
 
-    return BlocListener<ProfileCubit, ProfileState>(
-      listener: (context, state) {
-        if (state is ProfileLoaded && !state.isEditing) {
-          // Could show a "Saved!" snackbar here after an update.
-        }
-      },
-      child: PageLayout(
-        title: 'Profile',
-        showCartButton: isCustomer,
-        actions: [
-          BlocBuilder<ProfileCubit, ProfileState>(
-            builder: (context, state) {
-              if (state is ProfileLoaded && !state.isEditing) {
-                return IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () =>
-                      context.read<ProfileCubit>().toggleEdit(true),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _showLogoutDialog(context),
-          ),
-        ],
-        body: BlocBuilder<ProfileCubit, ProfileState>(
+    return PageLayout(
+      title: 'Profile',
+      showCartButton: isCustomer,
+      actions: [
+        BlocBuilder<ProfileCubit, ProfileState>(
+          builder: (context, state) {
+            if (state is ProfileLoaded && !state.isEditing) {
+              return IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => context.read<ProfileCubit>().toggleEdit(true),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          onPressed: () => _showLogoutDialog(context),
+        ),
+      ],
+      body: BlocListener<ProfileCubit, ProfileState>(
+        listener: (context, state) {
+          if (state is ProfileLoaded &&
+              !state.isEditing &&
+              state is! ProfileSaving) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                const SnackBar(
+                    content: Text('Profile saved successfully!'),
+                    backgroundColor: Colors.green),
+              );
+          }
+          if (state is ProfileUpdateError) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: Colors.red),
+              );
+          }
+        },
+        child: BlocBuilder<ProfileCubit, ProfileState>(
           builder: (context, state) {
             return BlocStateWrapper<ProfileLoaded>(
               state: state,

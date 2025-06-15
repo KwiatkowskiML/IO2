@@ -25,9 +25,18 @@ class ProfileSaving extends ProfileLoaded {
   const ProfileSaving({required super.userProfile}) : super(isEditing: true);
 }
 
-class ProfileError extends ProfileState {
+class ProfileInitialError extends ProfileState {
   final String message;
-  const ProfileError(this.message);
+  const ProfileInitialError(this.message);
   @override
   List<Object> get props => [message];
+}
+
+class ProfileUpdateError extends ProfileLoaded {
+  final String message;
+  const ProfileUpdateError({required super.userProfile, required this.message})
+      : super(isEditing: true);
+
+  @override
+  List<Object?> get props => [super.props, message];
 }

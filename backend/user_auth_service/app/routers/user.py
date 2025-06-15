@@ -73,7 +73,7 @@ def update_user_profile(
                 company_name=organizer.company_name,
                 is_verified=organizer.is_verified,
             )
-            
+
         return current_user
 
     except IntegrityError:
