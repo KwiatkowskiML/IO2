@@ -6,7 +6,7 @@ abstract class EventRepository {
   Future<List<Event>> getOrganizerEvents(int organizerId);
   Future<List<TicketType>> getTicketTypesForEvent(int eventId);
   Future<Event> createEvent(EventCreate eventData);
-  Future<Event> updateEvent(int eventId, EventCreate eventData);
+  Future<Event> updateEvent(int eventId, Map<String, dynamic> eventData);
   Future<bool> cancelEvent(int eventId);
   Future<void> notifyParticipants(int eventId, String message);
   Future<TicketType> createTicketType(Map<String, dynamic> data);
@@ -46,8 +46,8 @@ class ApiEventRepository implements EventRepository {
   }
 
   @override
-  Future<Event> updateEvent(int eventId, EventCreate eventData) async {
-    final data = await _apiClient.put('/events/$eventId', data: eventData.toJson());
+  Future<Event> updateEvent(int eventId, Map<String, dynamic> eventData) async {
+    final data = await _apiClient.put('/events/$eventId', data: eventData);
     return Event.fromJson(data);
   }
 

@@ -121,6 +121,7 @@ class _CreateEventViewState extends State<_CreateEventView> {
     return PageLayout(
       title: 'Create New Event',
       showBackButton: true,
+      showCartButton: false,
       body: BlocConsumer<EventFormCubit, EventFormState>(
         listener: (context, state) {
           if (state is EventFormSuccess) {

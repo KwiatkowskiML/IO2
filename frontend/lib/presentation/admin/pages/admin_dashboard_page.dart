@@ -28,6 +28,7 @@ class _AdminDashboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     return PageLayout(
       title: 'Admin Dashboard',
+      showCartButton: false,
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),

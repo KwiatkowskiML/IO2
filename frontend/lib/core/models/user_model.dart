@@ -1,4 +1,6 @@
-class UserProfile {
+import 'package:equatable/equatable.dart';
+
+class UserProfile extends Equatable {
   final int userId;
   final String email;
   final String? login;
@@ -7,7 +9,7 @@ class UserProfile {
   final String userType;
   final bool isActive;
 
-  UserProfile({
+  const UserProfile({
     required this.userId,
     required this.email,
     this.login,
@@ -33,6 +35,10 @@ class UserProfile {
       isActive: json['is_active'],
     );
   }
+
+  @override
+  List<Object?> get props =>
+      [userId, email, login, firstName, lastName, userType, isActive];
 }
 
 class OrganizerProfile extends UserProfile {
@@ -40,7 +46,7 @@ class OrganizerProfile extends UserProfile {
   final String companyName;
   final bool isVerified;
 
-  OrganizerProfile({
+  const OrganizerProfile({
     required super.userId,
     required super.email,
     super.login,
@@ -67,4 +73,8 @@ class OrganizerProfile extends UserProfile {
       isVerified: json['is_verified'],
     );
   }
+
+  @override
+  List<Object?> get props =>
+      super.props..addAll([organizerId, companyName, isVerified]);
 }

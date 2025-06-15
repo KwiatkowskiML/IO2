@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
 import 'package:resellio/presentation/common_widgets/dialogs.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
@@ -46,6 +47,9 @@ class _ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authService = context.watch<AuthService>();
+    final isCustomer = authService.user?.role == UserRole.customer;
+
     return BlocListener<ProfileCubit, ProfileState>(
       listener: (context, state) {
         if (state is ProfileLoaded && !state.isEditing) {
@@ -54,6 +58,7 @@ class _ProfileView extends StatelessWidget {
       },
       child: PageLayout(
         title: 'Profile',
+        showCartButton: isCustomer,
         actions: [
           BlocBuilder<ProfileCubit, ProfileState>(
             builder: (context, state) {

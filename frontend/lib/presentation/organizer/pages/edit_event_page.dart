@@ -35,7 +35,7 @@ class _EditEventViewState extends State<_EditEventView> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _totalTicketsController = TextEditingController();
+  final _minimumAgeController = TextEditingController();
   final _startDateController = TextEditingController();
   final _endDateController = TextEditingController();
 
@@ -47,7 +47,7 @@ class _EditEventViewState extends State<_EditEventView> {
     super.initState();
     _nameController.text = widget.event.name;
     _descriptionController.text = widget.event.description ?? '';
-    _totalTicketsController.text = widget.event.totalTickets.toString();
+    _minimumAgeController.text = widget.event.minimumAge?.toString() ?? '';
     _startDate = widget.event.start;
     _endDate = widget.event.end;
     _startDateController.text = DateFormat.yMd().add_jm().format(_startDate!);
@@ -58,7 +58,7 @@ class _EditEventViewState extends State<_EditEventView> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _totalTicketsController.dispose();
+    _minimumAgeController.dispose();
     _startDateController.dispose();
     _endDateController.dispose();
     super.dispose();
@@ -97,16 +97,16 @@ class _EditEventViewState extends State<_EditEventView> {
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      final eventData = EventCreate(
-        name: _nameController.text,
-        description: _descriptionController.text,
-        startDate: _startDate!,
-        endDate: _endDate!,
-        locationId: widget.event.id, // Assuming location is not changeable for simplicity
-        category: widget.event.category, // Assuming category is not changeable
-        totalTickets: int.parse(_totalTicketsController.text),
-      );
-      context.read<EventFormCubit>().updateEvent(widget.event.id, eventData);
+      final eventData = {
+        'name': _nameController.text,
+        'description': _descriptionController.text,
+        'start_date': _startDate!.toIso8601String(),
+        'end_date': _endDate!.toIso8601String(),
+        'minimum_age': int.tryParse(_minimumAgeController.text),
+      };
+      context
+          .read<EventFormCubit>()
+          .updateEvent(widget.event.id, eventData);
     }
   }
 
@@ -115,6 +115,7 @@ class _EditEventViewState extends State<_EditEventView> {
     return PageLayout(
       title: 'Edit Event',
       showBackButton: true,
+      showCartButton: false,
       body: BlocListener<EventFormCubit, EventFormState>(
         listener: (context, state) {
           if (state is EventFormSuccess) {
@@ -143,7 +144,8 @@ class _EditEventViewState extends State<_EditEventView> {
                 CustomTextFormField(
                   controller: _nameController,
                   labelText: 'Event Name',
-                  validator: (v) => v!.isEmpty ? 'Event name is required' : null,
+                  validator: (v) =>
+                      v!.isEmpty ? 'Event name is required' : null,
                 ),
                 const SizedBox(height: 16),
                 CustomTextFormField(
@@ -157,7 +159,8 @@ class _EditEventViewState extends State<_EditEventView> {
                   labelText: 'Start Date & Time',
                   readOnly: true,
                   onTap: () => _selectDateTime(context, true),
-                  validator: (v) => v!.isEmpty ? 'Start date is required' : null,
+                  validator: (v) =>
+                      v!.isEmpty ? 'Start date is required' : null,
                 ),
                 const SizedBox(height: 16),
                 CustomTextFormField(
@@ -169,14 +172,9 @@ class _EditEventViewState extends State<_EditEventView> {
                 ),
                 const SizedBox(height: 16),
                 CustomTextFormField(
-                  controller: _totalTicketsController,
-                  labelText: 'Total Tickets',
+                  controller: _minimumAgeController,
+                  labelText: 'Minimum Age (Optional)',
                   keyboardType: TextInputType.number,
-                  validator: (v) {
-                    if (v!.isEmpty) return 'Total tickets is required';
-                    if (int.tryParse(v) == null) return 'Enter a valid number';
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 32),
                 BlocBuilder<EventFormCubit, EventFormState>(

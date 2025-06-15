@@ -39,10 +39,11 @@ class EventFormCubit extends Cubit<EventFormState> {
     }
   }
 
-  Future<void> updateEvent(int eventId, EventCreate eventData) async {
+  Future<void> updateEvent(int eventId, Map<String, dynamic> eventData) async {
     try {
-      emit(EventFormSubmitting(locations: [])); // Simplified for update
-      final updatedEvent = await _eventRepository.updateEvent(eventId, eventData);
+      emit(const EventFormSubmitting(locations: []));
+      final updatedEvent =
+          await _eventRepository.updateEvent(eventId, eventData);
       emit(EventFormSuccess(updatedEvent.id));
     } on ApiException catch (e) {
       emit(EventFormError(e.message));

@@ -34,6 +34,7 @@ class _OrganizerDashboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     return PageLayout(
       title: 'Dashboard',
+      showCartButton: false,
       actions: [
         IconButton(
           icon: const Icon(Icons.refresh),
