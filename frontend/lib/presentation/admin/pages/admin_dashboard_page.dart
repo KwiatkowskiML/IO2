@@ -1,7 +1,11 @@
+// Enhanced admin_dashboard_page.dart with better logout functionality
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/core/utils/responsive_layout.dart';
 import 'package:resellio/presentation/admin/cubit/admin_dashboard_cubit.dart';
 import 'package:resellio/presentation/admin/cubit/admin_dashboard_state.dart';
@@ -12,6 +16,7 @@ import 'package:resellio/presentation/admin/pages/admin_registration_page.dart';
 import 'package:resellio/presentation/admin/pages/admin_overview_page.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/admin/pages/admin_verification_page.dart';
+import 'package:resellio/presentation/common_widgets/dialogs.dart';
 
 class AdminMainPage extends StatefulWidget {
   final String? initialTab;
@@ -87,6 +92,31 @@ class _AdminMainPageState extends State<AdminMainPage> {
     }
   }
 
+  // Enhanced logout function with confirmation
+  void _showLogoutDialog() async {
+    final confirmed = await showConfirmationDialog(
+      context: context,
+      title: 'Logout',
+      content: const Text('Are you sure you want to logout from the admin panel?'),
+      confirmText: 'Logout',
+      isDestructive: true,
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await context.read<AuthService>().logout();
+        // Navigation will be handled automatically by the router
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error during logout: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _getSelectedPage() {
     switch (_selectedTab) {
       case 'overview':
@@ -116,6 +146,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
         tabs: _tabs,
         selectedTab: _selectedTab,
         onTabChanged: _onTabChanged,
+        onLogout: _showLogoutDialog,
         body: _getSelectedPage(),
       ),
     );
@@ -126,12 +157,14 @@ class _AdminMainView extends StatelessWidget {
   final List<AdminTab> tabs;
   final String selectedTab;
   final Function(String) onTabChanged;
+  final VoidCallback onLogout;
   final Widget body;
 
   const _AdminMainView({
     required this.tabs,
     required this.selectedTab,
     required this.onTabChanged,
+    required this.onLogout,
     required this.body,
   });
 
@@ -140,11 +173,41 @@ class _AdminMainView extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isMobile = ResponsiveLayout.isMobile(context);
+    final authService = context.watch<AuthService>();
 
     return PageLayout(
       title: 'Admin Panel',
       showCartButton: false,
       actions: [
+        // Admin info and logout in the top bar
+        if (!isMobile) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.admin_panel_settings,
+                  size: 16,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  authService.user?.name ?? 'Admin',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
         BlocBuilder<AdminDashboardCubit, AdminDashboardState>(
           builder: (context, state) {
             return IconButton(
@@ -156,17 +219,55 @@ class _AdminMainView extends StatelessWidget {
             );
           },
         ),
+        // Logout button in top bar
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Logout',
+          onPressed: onLogout,
+        ),
       ],
       body: isMobile
           ? Column(
         children: [
           _buildMobileTabBar(theme, colorScheme),
+          // Mobile admin info bar
+          Container(
+            width: double.infinity,
+            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.admin_panel_settings,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Admin: ${authService.user?.name ?? 'Unknown'}',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: onLogout,
+                  icon: Icon(Icons.logout, size: 16),
+                  label: Text('Logout'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colorScheme.error,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(child: body),
         ],
       )
           : Row(
         children: [
-          _buildSidebar(theme, colorScheme),
+          _buildSidebar(theme, colorScheme, authService),
           Expanded(child: body),
         ],
       ),
@@ -212,7 +313,7 @@ class _AdminMainView extends StatelessWidget {
     );
   }
 
-  Widget _buildSidebar(ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildSidebar(ThemeData theme, ColorScheme colorScheme, AuthService authService) {
     return Container(
       width: 280,
       decoration: BoxDecoration(
@@ -225,7 +326,7 @@ class _AdminMainView extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Header
+          // Header with admin info
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -235,35 +336,82 @@ class _AdminMainView extends StatelessWidget {
                 ),
               ),
             ),
-            child: Row(
+            child: Column(
               children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.admin_panel_settings,
+                        color: colorScheme.onPrimaryContainer,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Admin Panel',
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'System Management',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Admin user info
                 Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
+                    color: colorScheme.secondaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    Icons.admin_panel_settings,
-                    color: colorScheme.onPrimaryContainer,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        'Admin Panel',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: colorScheme.secondary,
+                        child: Icon(
+                          Icons.person,
+                          color: colorScheme.onSecondary,
+                          size: 18,
                         ),
                       ),
-                      Text(
-                        'System Management',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              authService.user?.name ?? 'Admin User',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              'Administrator',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -290,14 +438,37 @@ class _AdminMainView extends StatelessWidget {
             ),
           ),
 
-          // Statistics Summary
-          BlocBuilder<AdminDashboardCubit, AdminDashboardState>(
-            builder: (context, state) {
-              if (state is AdminDashboardLoaded) {
-                return _buildStatsSummary(state, theme, colorScheme);
-              }
-              return const SizedBox.shrink();
-            },
+          // Enhanced logout section
+          Container(
+            margin: const EdgeInsets.all(12),
+            child: Column(
+              children: [
+                // Statistics Summary (existing)
+                BlocBuilder<AdminDashboardCubit, AdminDashboardState>(
+                  builder: (context, state) {
+                    if (state is AdminDashboardLoaded) {
+                      return _buildStatsSummary(state, theme, colorScheme);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                const SizedBox(height: 12),
+                // Prominent logout button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onLogout,
+                    icon: const Icon(Icons.logout, size: 18),
+                    label: const Text('Logout'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: colorScheme.error,
+                      side: BorderSide(color: colorScheme.error.withOpacity(0.5)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -310,7 +481,6 @@ class _AdminMainView extends StatelessWidget {
       ColorScheme colorScheme,
       ) {
     return Container(
-      margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withOpacity(0.5),

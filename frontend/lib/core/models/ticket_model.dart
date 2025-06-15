@@ -26,6 +26,17 @@ class TicketType {
       currency: json['currency'] ?? 'USD',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type_id': typeId,
+      'event_id': eventId,
+      'description': description,
+      'max_count': maxCount,
+      'price': price,
+      'currency': currency,
+    };
+  }
 }
 
 class TicketDetailsModel {

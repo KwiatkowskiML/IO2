@@ -3,6 +3,7 @@ import 'package:resellio/core/network/api_client.dart';
 
 abstract class EventRepository {
   Future<List<Event>> getEvents();
+  Future<List<Event>> getEventsWithParams(Map<String, dynamic> queryParams);
   Future<List<Event>> getOrganizerEvents(int organizerId);
   Future<List<TicketType>> getTicketTypesForEvent(int eventId);
   Future<Event> createEvent(EventCreate eventData);
@@ -26,9 +27,15 @@ class ApiEventRepository implements EventRepository {
   }
 
   @override
+  Future<List<Event>> getEventsWithParams(Map<String, dynamic> queryParams) async {
+    final data = await _apiClient.get('/events', queryParams: queryParams);
+    return (data as List).map((e) => Event.fromJson(e)).toList();
+  }
+
+  @override
   Future<List<Event>> getOrganizerEvents(int organizerId) async {
     final data =
-        await _apiClient.get('/events', queryParams: {'organizer_id': organizerId});
+    await _apiClient.get('/events', queryParams: {'organizer_id': organizerId});
     return (data as List).map((e) => Event.fromJson(e)).toList();
   }
 

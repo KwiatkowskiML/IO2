@@ -32,9 +32,8 @@ async def get_shopping_cart(
     cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     """Get items in the user's shopping cart"""
-    logger.info(f"Get shopping cart of {user}")
+    logger.info(f"Get shopping cart for user_id {user['user_id']}")
     user_id = user["user_id"]
-    logger.info(f"Get shopping cart for user_id {user_id}")
 
     cart_items_models = cart_repo.get_cart_items_details(customer_id=user_id)
 
@@ -42,6 +41,7 @@ async def get_shopping_cart(
     for item_model in cart_items_models:
         if item_model.ticket_type:
             cart_item_detail = CartItemWithDetails(
+                cart_item_id=item_model.cart_item_id,
                 ticket_type=TicketType.model_validate(item_model.ticket_type),
                 quantity=item_model.quantity
             )
@@ -73,8 +73,14 @@ async def add_to_cart(
             )
 
             return CartItemWithDetails(
+                cart_item_id=cart_item_model.cart_item_id,
                 ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
                 quantity=cart_item_model.quantity
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ticket type ID is required."
             )
     except HTTPException as e:
         # Re-raise HTTPExceptions from the repository (e.g., not found, bad request)
@@ -92,7 +98,7 @@ async def add_to_cart(
     response_model=bool,
 )
 async def remove_from_cart(
-    cart_item_id: int = Path(..., title="Cart Item ID", ge=1),
+    cart_item_id: int = Path(..., title="Cart Item ID"),
     user: dict = Depends(get_user_from_token),
     cart_repo = Depends(get_cart_repository)
 ):

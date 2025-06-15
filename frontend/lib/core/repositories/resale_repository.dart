@@ -5,6 +5,7 @@ import 'package:resellio/core/network/api_client.dart';
 abstract class ResaleRepository {
   Future<List<ResaleTicketListing>> getMarketplaceListings(
       {int? eventId, double? minPrice, double? maxPrice});
+  Future<List<ResaleTicketListing>> getMarketplaceListingsWithParams(Map<String, dynamic> queryParams);
   Future<TicketDetailsModel> purchaseResaleTicket(int ticketId);
   Future<List<ResaleTicketListing>> getMyResaleListings();
 }
@@ -22,14 +23,20 @@ class ApiResaleRepository implements ResaleRepository {
       if (maxPrice != null) 'max_price': maxPrice,
     };
     final data =
-        await _apiClient.get('/resale/marketplace', queryParams: queryParams);
+    await _apiClient.get('/resale/marketplace', queryParams: queryParams);
+    return (data as List).map((e) => ResaleTicketListing.fromJson(e)).toList();
+  }
+
+  @override
+  Future<List<ResaleTicketListing>> getMarketplaceListingsWithParams(Map<String, dynamic> queryParams) async {
+    final data = await _apiClient.get('/resale/marketplace', queryParams: queryParams);
     return (data as List).map((e) => ResaleTicketListing.fromJson(e)).toList();
   }
 
   @override
   Future<TicketDetailsModel> purchaseResaleTicket(int ticketId) async {
     final data =
-        await _apiClient.post('/resale/purchase', data: {'ticket_id': ticketId});
+    await _apiClient.post('/resale/purchase', data: {'ticket_id': ticketId});
     return TicketDetailsModel.fromJson(data);
   }
 
