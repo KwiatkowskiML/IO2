@@ -77,8 +77,10 @@ async def purchase_resale_ticket(
     """Purchase a ticket from the resale marketplace"""
     user = get_user_from_token(authorization)
     buyer_id = user["user_id"]
+    buyer_email = user["email"]
+    buyer_name = user["name"]
 
-    ticket = ticket_repo.buy_resale_ticket(purchase_request.ticket_id, buyer_id)
+    ticket = ticket_repo.buy_resale_ticket(purchase_request.ticket_id, buyer_id, buyer_email, buyer_name)
     return TicketDetails.model_validate(ticket)
 
 
