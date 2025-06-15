@@ -109,7 +109,7 @@ run_backend_tests() {
     if [[ "$TARGET_ENV" == "local" ]]; then
         pretty_info "Cleaning up Docker services..."
         cd "$PROJECT_ROOT"
-#        docker compose down -v
+        docker compose down -v
     fi
 
     gen_separator '='
@@ -164,7 +164,7 @@ run_frontend_tests() {
 
     # 4. Clean up all services started by this script.
     pretty_info "Cleaning up all services..."
-#    docker compose down -v
+    docker compose down -v
 
     gen_separator '='
     if [[ $TEST_EXIT_CODE -eq 0 ]]; then
