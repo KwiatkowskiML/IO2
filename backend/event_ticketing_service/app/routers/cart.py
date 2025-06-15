@@ -92,7 +92,7 @@ async def add_to_cart(
     response_model=bool,
 )
 async def remove_from_cart(
-    cart_item_id: int = Path(..., title="Cart Item ID", ge=1),
+    cart_item_id: int = Path(..., title="Cart Item ID"),
     user: dict = Depends(get_user_from_token),
     cart_repo = Depends(get_cart_repository)
 ):
