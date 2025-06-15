@@ -85,6 +85,45 @@ class CartRepository:
         self.db.refresh(existing_cart_item)
         return existing_cart_item
 
+    def add_item_from_resell(self, customer_id: int, ticket_id: int) -> CartItemModel:
+        if not ticket_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket ID must be provided")
+
+        ticket = self.db.query(TicketModel).filter(TicketModel.ticket_id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Ticket with ID {ticket_id} not found")
+        if ticket.resell_price is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket is not available for resale")
+        if ticket.owner_id == customer_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot add your own ticket to the cart")
+
+        # Get or create the shopping cart for the customer
+        cart = self.get_or_create_cart(customer_id)
+
+        # Check if the ticket is already in the cart
+        existing_cart_item = (
+            self.db.query(CartItemModel)
+            .filter(CartItemModel.cart_id == cart.cart_id, CartItemModel.ticket_id == ticket.ticket_id)
+            .first()
+        )
+        if existing_cart_item:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ticket with ID {ticket_id} is already in your cart",
+            )
+
+        existing_cart_item = CartItemModel(
+            cart_id=cart.cart_id,
+            ticket_id=ticket_id,
+            quantity=1,
+        )
+        self.db.add(existing_cart_item)
+        logger.info(f"Added ticket with ticket_id {ticket_id} to cart_id {cart.cart_id}")
+
+        self.db.commit()
+        self.db.refresh(existing_cart_item)
+        return existing_cart_item
+
     def remove_item(self, customer_id: int, cart_item_id: int) -> bool:
         # Get the shopping cart for the customer
         cart = self.db.query(ShoppingCartModel).filter(ShoppingCartModel.customer_id == customer_id).first()

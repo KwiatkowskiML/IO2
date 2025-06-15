@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:resellio/core/models/event_filter_model.dart';
+import 'package:resellio/presentation/common_widgets/custom_text_form_field.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 
 class EventFilterSheet extends StatefulWidget {
@@ -87,23 +88,19 @@ class _EventFilterSheetState extends State<EventFilterSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: CustomTextFormField(
                       controller: _minPriceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Min Price',
-                        prefixText: '\$ ',
-                      ),
+                      labelText: 'Min Price',
+                      prefixText: '\$ ',
                       keyboardType: TextInputType.number,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: TextField(
+                    child: CustomTextFormField(
                       controller: _maxPriceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Max Price',
-                        prefixText: '\$ ',
-                      ),
+                      labelText: 'Max Price',
+                      prefixText: '\$ ',
                       keyboardType: TextInputType.number,
                     ),
                   ),

@@ -1,27 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:resellio/core/models/event_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/models/event_filter_model.dart';
-import 'package:resellio/core/services/api_service.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/utils/responsive_layout.dart';
+import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
+import 'package:resellio/presentation/events/cubit/event_browse_cubit.dart';
+import 'package:resellio/presentation/events/cubit/event_browse_state.dart';
 import 'package:resellio/presentation/events/widgets/event_card.dart';
 import 'package:resellio/presentation/events/widgets/event_filter_sheet.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 
-class EventBrowsePage extends StatefulWidget {
+class EventBrowsePage extends StatelessWidget {
   const EventBrowsePage({super.key});
 
   @override
-  State<EventBrowsePage> createState() => _EventBrowsePageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          EventBrowseCubit(context.read<EventRepository>())..loadEvents(),
+      child: const _EventBrowseView(),
+    );
+  }
 }
 
-class _EventBrowsePageState extends State<EventBrowsePage> {
-  late Future<List<Event>> _eventsFuture;
+class _EventBrowseView extends StatefulWidget {
+  const _EventBrowseView();
+
+  @override
+  State<_EventBrowseView> createState() => _EventBrowseViewState();
+}
+
+class _EventBrowseViewState extends State<_EventBrowseView> {
   EventFilterModel _currentFilters = const EventFilterModel();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // Common categories for quick filters
   final List<String> _categories = [
     'All',
     'Music',
@@ -34,33 +47,9 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
   String _selectedCategory = 'All';
 
   @override
-  void initState() {
-    super.initState();
-    _loadEvents();
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _loadEvents() {
-    final apiService = context.read<ApiService>();
-    setState(() {
-      _eventsFuture = apiService.getEvents();
-    });
-  }
-
-  void _applyFilters(EventFilterModel newFilters) {
-    if (_currentFilters != newFilters) {
-      setState(() {
-        _currentFilters = newFilters;
-        _selectedCategory =
-            'All'; // Reset category selection when applying filters
-      });
-      _loadEvents();
-    }
   }
 
   void _showFilterSheet() {
@@ -74,28 +63,14 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
       builder: (context) {
         return EventFilterSheet(
           initialFilters: _currentFilters,
-          onApplyFilters: _applyFilters,
+          onApplyFilters: (newFilters) {
+            setState(() {
+              _currentFilters = newFilters;
+            });
+          },
         );
       },
     );
-  }
-
-  void _performSearch(String query) {
-    if (query != _searchQuery) {
-      setState(() {
-        _searchQuery = query;
-      });
-      _loadEvents();
-    }
-  }
-
-  void _selectCategory(String category) {
-    if (category != _selectedCategory) {
-      setState(() {
-        _selectedCategory = category;
-      });
-      _loadEvents();
-    }
   }
 
   @override
@@ -119,7 +94,6 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Container(
@@ -132,26 +106,29 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
                 decoration: InputDecoration(
                   hintText: 'Search events...',
                   prefixIcon: const Icon(Icons.search),
-                  suffixIcon:
-                      _searchQuery.isNotEmpty
-                          ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _performSearch('');
-                            },
-                          )
-                          : null,
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                        )
+                      : null,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                onSubmitted: _performSearch,
+                onSubmitted: (query) {
+                  setState(() {
+                    _searchQuery = query;
+                  });
+                },
                 textInputAction: TextInputAction.search,
               ),
             ),
           ),
-
-          // Category Filters
           SizedBox(
             height: 48,
             child: ListView.builder(
@@ -167,14 +144,17 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
                   child: ChoiceChip(
                     label: Text(category),
                     selected: isSelected,
-                    onSelected: (_) => _selectCategory(category),
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedCategory = category;
+                      });
+                    },
                     backgroundColor: colorScheme.surfaceContainerHighest,
                     selectedColor: colorScheme.primaryContainer,
                     labelStyle: TextStyle(
-                      color:
-                          isSelected
-                              ? colorScheme.onPrimaryContainer
-                              : colorScheme.onSurfaceVariant,
+                      color: isSelected
+                          ? colorScheme.onPrimaryContainer
+                          : colorScheme.onSurfaceVariant,
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
@@ -187,132 +167,36 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
               },
             ),
           ),
-
-          // Active Filters Indicator
-          if (filtersActive)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.filter_alt,
-                    size: 16,
-                    color: colorScheme.secondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Filters active',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.secondary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _currentFilters = const EventFilterModel();
-                        _selectedCategory = 'All';
-                      });
-                      _loadEvents();
-                    },
-                    child: const Text('Clear All'),
-                  ),
-                ],
-              ),
-            ),
-
-          // Results
           Expanded(
-            child: FutureBuilder<List<Event>>(
-              future: _eventsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  print('Error loading events: ${snapshot.error}');
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: colorScheme.error,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Failed to load events',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: colorScheme.error,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Please try again later',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _loadEvents,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No events found',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        if (_searchQuery.isNotEmpty ||
-                            filtersActive ||
-                            _selectedCategory != 'All')
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              'Try adjusting your filters or search criteria',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }
+            child: BlocBuilder<EventBrowseCubit, EventBrowseState>(
+              builder: (context, state) {
+                return BlocStateWrapper<EventBrowseLoaded>(
+                  state: state,
+                  onRetry: () => context.read<EventBrowseCubit>().loadEvents(),
+                  builder: (loadedState) {
+                    if (loadedState.events.isEmpty) {
+                      return const Center(child: Text('No events found.'));
+                    }
+                    final events = loadedState.events;
 
-                final events = snapshot.data!;
-
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent:
-                          ResponsiveLayout.isMobile(context) ? 300 : 350,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: events.length,
-                    itemBuilder: (context, index) {
-                      final event = events[index];
-                      return EventCard(event: event);
-                    },
-                  ),
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent:
+                              ResponsiveLayout.isMobile(context) ? 300 : 350,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: events.length,
+                        itemBuilder: (context, index) {
+                          return EventCard(event: events[index]);
+                        },
+                      ),
+                    );
+                  },
                 );
               },
             ),

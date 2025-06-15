@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/presentation/common_widgets/custom_text_form_field.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -105,63 +106,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Create an account to start buying and selling.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white70,
-                    ),
+                    style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
-                  TextFormField(
+                  CustomTextFormField(
                     controller: _firstNameController,
-                    decoration: const InputDecoration(labelText: 'First Name'),
+                    labelText: 'First Name',
                     validator:
                         (v) => v!.isEmpty ? 'First Name is required' : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  CustomTextFormField(
                     controller: _lastNameController,
-                    decoration: const InputDecoration(labelText: 'Last Name'),
+                    labelText: 'Last Name',
                     validator:
                         (v) => v!.isEmpty ? 'Last Name is required' : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  CustomTextFormField(
                     controller: _loginController,
-                    decoration: const InputDecoration(
-                      labelText: 'Username/Login',
-                    ),
+                    labelText: 'Username/Login',
                     validator:
                         (v) => v!.isEmpty ? 'Username is required' : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  CustomTextFormField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    labelText: 'Email',
                     keyboardType: TextInputType.emailAddress,
-                    validator:
-                        (v) =>
-                            v!.isEmpty || !v.contains('@')
-                                ? 'Enter a valid email'
-                                : null,
+                    validator: (v) => v!.isEmpty || !v.contains('@')
+                        ? 'Enter a valid email'
+                        : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  CustomTextFormField(
                     controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    labelText: 'Password',
                     obscureText: true,
-                    validator:
-                        (v) =>
-                            v!.length < 8
-                                ? 'Password must be 8+ characters'
-                                : null,
+                    validator: (v) =>
+                        v!.length < 8 ? 'Password must be 8+ characters' : null,
                   ),
                   if (isOrganizer) ...[
                     const SizedBox(height: 16),
-                    TextFormField(
+                    CustomTextFormField(
                       controller: _companyNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Company Name',
-                      ),
+                      labelText: 'Company Name',
                       validator:
                           (v) => v!.isEmpty ? 'Company Name is required' : null,
                     ),

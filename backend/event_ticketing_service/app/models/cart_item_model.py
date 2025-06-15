@@ -13,3 +13,4 @@ class CartItemModel(Base):
 
     cart = relationship("ShoppingCartModel", back_populates="items")
     ticket_type = relationship("TicketTypeModel")
+    ticket = relationship("TicketModel")
