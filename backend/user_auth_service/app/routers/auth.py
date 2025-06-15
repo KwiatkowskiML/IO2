@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from datetime import datetime, timedelta
 
@@ -7,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.security import OAuth2PasswordRequestForm
 from app.schemas.user import UserResponse, OrganizerResponse
 from app.models import User, Customer, Organizer, Administrator
-from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status
+from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status, Query
 from app.schemas.auth import (
     Token,
     UserCreate,
@@ -27,23 +28,27 @@ from app.security import (
     verify_admin_secret,
     generate_reset_token,
 )
+from app.services.email_service import send_account_verification_email
 
 # Future import for email sending functionality
 # from app.services.email import send_password_reset_email, send_verification_email
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-@router.post("/register/customer", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register/customer", status_code=status.HTTP_201_CREATED)
 def register_customer(
     user: UserCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """Register a new customer account"""
     try:
         # Check if email already exists
-        db_user = db.query(User).filter(User.email == user.email).first()
-        if db_user:
+        new_user = db.query(User).filter(User.email == user.email).first()
+        if new_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered",
@@ -59,44 +64,45 @@ def register_customer(
 
         # Create new user with hashed password
         hashed_password = get_password_hash(user.password)
-        db_user = User(
+        new_user = User(
             email=user.email,
             login=user.login,
             password_hash=hashed_password,
             first_name=user.first_name,
             last_name=user.last_name,
             user_type="customer",
-            is_active=True,
+            is_active=False,  # User is inactive until email verification
         )
+        new_user.set_email_verification_token()
 
-        db.add(db_user)
+        db.add(new_user)
         db.flush()  # Flush to get the user_id without committing
 
         # Create customer record
-        db_customer = Customer(user_id=db_user.user_id)
+        db_customer = Customer(user_id=new_user.user_id)
         db.add(db_customer)
 
         db.commit()
-        db.refresh(db_user)
+        db.refresh(new_user)
 
-        # Generate access token
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={
-                "sub": db_user.email,
-                "role": db_user.user_type,
-                "user_id": db_user.user_id,
-                "role_id": db_customer.customer_id,
-                "name": db_user.first_name,
-            },
-            expires_delta=access_token_expires,
+        # Send verification email in the background
+        background_tasks.add_task(
+            send_account_verification_email,
+            to_email=new_user.email,
+            user_name=new_user.first_name,
+            verification_token=new_user.email_verification_token
         )
 
-        return {"token": access_token, "message": "User registered successfully"}
+        return {"message": "User registered successfully. Please check your email to activate your account."}
 
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed due to database error")
+    except Exception as e:  # Catch other potential errors
+        db.rollback()
+        logger.error(f"Unexpected error during customer registration: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="An unexpected error occurred during registration.")
 
 
 @router.post("/register/organizer", response_model=Token, status_code=status.HTTP_201_CREATED)
@@ -387,3 +393,46 @@ def unban_user(user_id: int, db: Session = Depends(get_db), admin: User = Depend
     db.commit()
 
     return {"message": "User has been unbanned"}
+
+@router.get("/verify-email", response_model=Token, summary="Verify Email Address")
+async def verify_email_address(
+    token: str = Query(..., description="The email verification token sent to the user's email address"),
+    db: Session = Depends(get_db)
+):
+    """
+    Verify a user's email address using the token from the verification email.
+    If successful, activates the user and returns an access token for immediate login.
+    """
+    user_to_verify = db.query(User).filter(User.email_verification_token == token).first()
+
+    if not user_to_verify:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or already used verification token.")
+
+    if user_to_verify.is_active:
+        # Allow proceeding to token generation if already active and token matches
+        pass
+
+    # Activate user and clear token
+    user_to_verify.is_active = True
+    user_to_verify.clear_email_verification_token()
+    db.commit()
+    db.refresh(user_to_verify)
+
+    # Automatically log the user in by creating an access token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    customer_record = db.query(Customer).filter(Customer.user_id == user_to_verify.user_id).first()
+    if not customer_record:
+        logger.error(f"Customer record not found for verified user_id {user_to_verify.user_id}.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Account activated, but an error occurred retrieving profile details for login. Please try logging in manually.")
+
+    access_token = create_access_token(
+        data={
+            "sub": user_to_verify.email,
+            "role": user_to_verify.user_type,
+            "user_id": user_to_verify.user_id,
+            "role_id": customer_record.customer_id,
+            "name": user_to_verify.first_name,
+        },
+        expires_delta=access_token_expires,
+    )
+    return {"token": access_token, "message": "Account activated successfully. You are now logged in."}

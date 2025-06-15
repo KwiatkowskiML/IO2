@@ -9,3 +9,4 @@ python_multipart==0.0.20
 sqlalchemy==2.0.40
 uvicorn==0.34.0
 boto3
+sendgrid

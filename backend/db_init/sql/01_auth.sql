@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(255) NOT NULL,
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    user_type VARCHAR(20) NOT NULL -- 'customer', 'organizer', 'administrator'
+    user_type VARCHAR(20) NOT NULL, -- 'customer', 'organizer', 'administrator'
+    email_verification_token VARCHAR(255) NULL UNIQUE -- New column for verification token
 );
 
 CREATE TABLE IF NOT EXISTS customers (
