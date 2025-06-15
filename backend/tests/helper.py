@@ -652,7 +652,7 @@ class TicketManager:
 
     def list_tickets(self, filters: Dict = None) -> list:
         """List tickets with optional filters"""
-        url = "/api/tickets"
+        url = "/api/tickets/"
         if filters:
             query_params = "&".join([f"{k}={v}" for k, v in filters.items()])
             url = f"{url}?{query_params}"
