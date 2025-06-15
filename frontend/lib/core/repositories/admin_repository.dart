@@ -20,10 +20,12 @@ abstract class AdminRepository {
   Future<void> authorizeEvent(int eventId);
   Future<String> registerAdmin(Map<String, dynamic> adminData);
   Future<UserDetails> getUserDetails(int userId);
+  Future<AdminStats> getAdminStats();
 }
 
 class ApiAdminRepository implements AdminRepository {
   final ApiClient _apiClient;
+
   ApiAdminRepository(this._apiClient);
 
   @override
@@ -130,5 +132,11 @@ class ApiAdminRepository implements AdminRepository {
   Future<UserDetails> getUserDetails(int userId) async {
     final data = await _apiClient.get('/auth/users/$userId');
     return UserDetails.fromJson(data);
+  }
+
+  @override
+  Future<AdminStats> getAdminStats() async {
+    final data = await _apiClient.get('/auth/users/stats');
+    return AdminStats.fromJson(data);
   }
 }

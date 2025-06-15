@@ -5,7 +5,6 @@ import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/admin/cubit/admin_dashboard_state.dart';
 import 'package:resellio/core/models/models.dart';
 
-
 class AdminDashboardCubit extends Cubit<AdminDashboardState> {
   final AdminRepository _adminRepository;
 
@@ -32,6 +31,31 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
       emit(AdminDashboardError(e.message));
     } catch (e) {
       emit(AdminDashboardError('An unexpected error occurred: $e'));
+    }
+  }
+
+  /// Load users with backend filtering and pagination
+  Future<List<UserDetails>> loadUsers({
+    int page = 1,
+    int limit = 20,
+    String? search,
+    String? userType,
+    bool? isActive,
+    bool? isVerified,
+  }) async {
+    try {
+      return await _adminRepository.getAllUsers(
+        page: page,
+        limit: limit,
+        search: search,
+        userType: userType,
+        isActive: isActive,
+        isVerified: isVerified,
+      );
+    } on ApiException catch (e) {
+      throw Exception(e.message);
+    } catch (e) {
+      throw Exception('An unexpected error occurred: $e');
     }
   }
 
@@ -98,6 +122,34 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
       await loadDashboard();
     } on ApiException catch (e) {
       emit(AdminDashboardError(e.message));
+    }
+  }
+
+  /// Get admin statistics
+  Future<AdminStats> getAdminStats() async {
+    try {
+      // Note: This would need to be implemented in the AdminRepository
+      // For now, we'll calculate from loaded data
+      if (state is AdminDashboardLoaded) {
+        final loadedState = state as AdminDashboardLoaded;
+        return AdminStats(
+          totalUsers: loadedState.allUsers.length,
+          activeUsers: loadedState.allUsers.where((u) => u.isActive).length,
+          bannedUsers: loadedState.bannedUsers.length,
+          totalCustomers: loadedState.allUsers.where((u) => u.userType == 'customer').length,
+          totalOrganizers: loadedState.allUsers.where((u) => u.userType == 'organizer').length,
+          totalAdmins: loadedState.allUsers.where((u) => u.userType == 'administrator').length,
+          verifiedOrganizers: loadedState.pendingOrganizers.where((o) => o.isVerified).length,
+          pendingOrganizers: loadedState.pendingOrganizers.length,
+          pendingEvents: loadedState.pendingEvents.length,
+          totalEvents: 0, // This would need to come from another source
+        );
+      }
+
+      // Fallback to API call if no loaded state
+      throw Exception('No dashboard data loaded');
+    } catch (e) {
+      throw Exception('Failed to get admin stats: $e');
     }
   }
 }

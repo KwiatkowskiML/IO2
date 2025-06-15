@@ -66,6 +66,14 @@ class AdminOrganizersPage extends StatelessWidget {
                 // Header Section
                 Container(
                   padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                      ),
+                    ),
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -95,10 +103,11 @@ class AdminOrganizersPage extends StatelessWidget {
                     ],
                   ),
                 ),
+
                 // Organizers List
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: const EdgeInsets.all(16.0),
                     itemCount: loadedState.pendingOrganizers.length,
                     itemBuilder: (context, index) {
                       final organizer = loadedState.pendingOrganizers[index];
@@ -108,10 +117,8 @@ class AdminOrganizersPage extends StatelessWidget {
                         organizer: organizer,
                         isProcessing: isProcessing,
                         onViewDetails: () => _showOrganizerDetails(context, organizer),
-                        onApprove: () =>
-                            _showVerificationConfirmation(context, organizer, true),
-                        onReject: () =>
-                            _showVerificationConfirmation(context, organizer, false),
+                        onApprove: () => _showVerificationConfirmation(context, organizer, true),
+                        onReject: () => _showVerificationConfirmation(context, organizer, false),
                       );
                     },
                   ),
@@ -249,6 +256,7 @@ class _PendingOrganizerCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+
           // Action Buttons
           OverflowBar(
             alignment: MainAxisAlignment.end,
@@ -406,25 +414,6 @@ class _OrganizerDetailsDialog extends StatelessWidget {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Close'),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            // Trigger reject action - you might want to pass callbacks here
-          },
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: const Text('Reject'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            // Trigger approve action - you might want to pass callbacks here
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Approve'),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:resellio/presentation/admin/cubit/admin_dashboard_cubit.dart';
 import 'package:resellio/presentation/admin/cubit/admin_dashboard_state.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
@@ -106,6 +107,7 @@ class AdminOverviewPage extends StatelessWidget {
         icon: Icons.people,
         color: Colors.blue,
         subtitle: '${state.allUsers.where((u) => u.isActive).length} active',
+        onTap: () => context.go('/admin/users'),
       ),
       _StatCard(
         title: 'Banned Users',
@@ -113,6 +115,7 @@ class AdminOverviewPage extends StatelessWidget {
         icon: Icons.block,
         color: Colors.red,
         subtitle: 'Require attention',
+        onTap: () => context.go('/admin/users'),
       ),
       _StatCard(
         title: 'Pending Organizers',
@@ -120,6 +123,7 @@ class AdminOverviewPage extends StatelessWidget {
         icon: Icons.pending_actions,
         color: Colors.orange,
         subtitle: 'Awaiting verification',
+        onTap: () => context.go('/admin/organizers'),
       ),
       _StatCard(
         title: 'Pending Events',
@@ -127,6 +131,7 @@ class AdminOverviewPage extends StatelessWidget {
         icon: Icons.event_note,
         color: Colors.purple,
         subtitle: 'Awaiting approval',
+        onTap: () => context.go('/admin/events'),
       ),
     ];
 
@@ -146,59 +151,68 @@ class AdminOverviewPage extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: stat.color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    stat.icon,
-                    color: stat.color,
-                    size: 24,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  stat.value,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: stat.color,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  stat.title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                if (stat.subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    stat.subtitle!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+      child: InkWell(
+        onTap: stat.onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: stat.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      stat.icon,
+                      color: stat.color,
+                      size: 24,
                     ),
                   ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 14,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ],
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    stat.value,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: stat.color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    stat.title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  if (stat.subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      stat.subtitle!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -213,36 +227,28 @@ class AdminOverviewPage extends StatelessWidget {
         description: 'Review pending organizer applications',
         icon: Icons.verified_user,
         color: Colors.green,
-        onTap: () {
-          // Navigate to organizers tab
-        },
+        onTap: () => context.go('/admin/organizers'),
       ),
       _QuickAction(
         title: 'Manage Users',
         description: 'View and manage user accounts',
         icon: Icons.manage_accounts,
         color: Colors.blue,
-        onTap: () {
-          // Navigate to users tab
-        },
+        onTap: () => context.go('/admin/users'),
       ),
       _QuickAction(
         title: 'Review Events',
         description: 'Approve or reject pending events',
         icon: Icons.event_available,
         color: Colors.purple,
-        onTap: () {
-          // Navigate to events tab
-        },
+        onTap: () => context.go('/admin/events'),
       ),
       _QuickAction(
         title: 'Add Admin',
         description: 'Register new administrator',
         icon: Icons.person_add,
         color: Colors.orange,
-        onTap: () {
-          // Navigate to admin registration tab
-        },
+        onTap: () => context.go('/admin/add-admin'),
       ),
     ];
 
@@ -350,6 +356,7 @@ class AdminOverviewPage extends StatelessWidget {
                     subtitle: '${state.pendingOrganizers.first.companyName} awaiting verification',
                     time: 'Just now',
                     color: Colors.orange,
+                    onTap: () => context.go('/admin/organizers'),
                   ),
                   const Divider(),
                 ],
@@ -361,6 +368,7 @@ class AdminOverviewPage extends StatelessWidget {
                     subtitle: '${state.pendingEvents.first.name} needs review',
                     time: '1 hour ago',
                     color: Colors.purple,
+                    onTap: () => context.go('/admin/events'),
                   ),
                   const Divider(),
                 ],
@@ -372,6 +380,7 @@ class AdminOverviewPage extends StatelessWidget {
                     subtitle: 'Account violations detected',
                     time: '2 hours ago',
                     color: Colors.red,
+                    onTap: () => context.go('/admin/users'),
                   ),
                 ] else ...[
                   _buildActivityItem(
@@ -398,53 +407,71 @@ class AdminOverviewPage extends StatelessWidget {
         required String subtitle,
         required String time,
         required Color color,
+        VoidCallback? onTap,
       }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 20,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  subtitle,
+                  time,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
+                if (onTap != null) ...[
+                  const SizedBox(height: 4),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
               ],
             ),
-          ),
-          Text(
-            time,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -456,6 +483,7 @@ class _StatCard {
   final IconData icon;
   final Color color;
   final String? subtitle;
+  final VoidCallback? onTap;
 
   _StatCard({
     required this.title,
@@ -463,6 +491,7 @@ class _StatCard {
     required this.icon,
     required this.color,
     this.subtitle,
+    this.onTap,
   });
 }
 
