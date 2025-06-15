@@ -8,12 +8,17 @@ import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
 import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 
+const String apiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://localhost:8080/api',
+);
+
 void main() {
   runApp(
     MultiProvider(
       providers: [
         Provider<ApiClient>(
-          create: (_) => ApiClient('http://localhost:8080/api'),
+          create: (_) => ApiClient(apiBaseUrl),
         ),
         Provider<AuthRepository>(
           create: (context) => ApiAuthRepository(context.read<ApiClient>()),
