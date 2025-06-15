@@ -241,43 +241,89 @@ class UserManager:
 
     def register_and_login_customer(self) -> Dict[str, str]:
         """Register and login a customer user"""
-        user_data = self.data_generator.customer_data()
+        customer_user_data = self.data_generator.customer_data()
 
         # Register customer
-        response = self.api_client.post(
+        registration_response = self.api_client.post(
             "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
-            json_data=user_data,
+            json_data=customer_user_data,
             expected_status=201
         )
+        registration_response_data = registration_response.json()
+        assert "message" in registration_response_data
+        assert "User registered successfully. Please check your email to activate your account." in registration_response_data["message"]
+        assert "token" not in registration_response_data, "Token should not be returned at initial customer registration"
 
-        # Extract and store token
-        token = response.json().get("token")
-        if token:
-            self.token_manager.set_token("customer", token)
-            self.token_manager.set_user("customer", user_data)
+        customer_user_id = registration_response_data["user_id"]
 
-        return user_data
+        if not self.token_manager.tokens.get("admin"):
+            self.register_and_login_admin()
+
+        admin_auth_header = self.token_manager.get_auth_header("admin")
+
+        # Admin verifies the customer registration
+        approve_response = self.api_client.post(
+            f"/api/auth/approve-user/{customer_user_id}",
+            headers=admin_auth_header,
+            expected_status=200  # Expect OK, as it should return the token
+        )
+        approve_response_data = approve_response.json()
+        assert "token" in approve_response_data, "Token not found in admin approval response"
+
+        customer_token = approve_response_data["token"]
+
+        if customer_token:
+            self.token_manager.set_token("customer", customer_token)
+            self.token_manager.set_user("customer", customer_user_data)
+        else:
+            pytest.fail("Failed to retrieve token for customer after admin approval.")
+
+        return customer_user_data
 
     def register_and_login_customer2(self) -> Dict[str, str]:
         """Register and login a second customer user for testing purposes"""
-        user_data = self.data_generator.customer_data()
+        customer_user_data = self.data_generator.customer_data()
 
         # Register customer
-        response = self.api_client.post(
+        registration_response = self.api_client.post(
             "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
-            json_data=user_data,
+            json_data=customer_user_data,
             expected_status=201
         )
+        registration_response_data = registration_response.json()
+        assert "message" in registration_response_data
+        assert "User registered successfully. Please check your email to activate your account." in \
+               registration_response_data["message"]
+        assert "token" not in registration_response_data, "Token should not be returned at initial customer registration"
+
+        customer_user_id = registration_response_data["user_id"]
+
+        if not self.token_manager.tokens.get("admin"):
+            self.register_and_login_admin()
+
+        admin_auth_header = self.token_manager.get_auth_header("admin")
+
+        # Admin verifies the customer registration
+        approve_response = self.api_client.post(
+            f"/api/auth/approve-user/{customer_user_id}",
+            headers=admin_auth_header,
+            expected_status=200  # Expect OK, as it should return the token
+        )
+        approve_response_data = approve_response.json()
+        assert "token" in approve_response_data, "Token not found in admin approval response"
+
+        customer_token = approve_response_data["token"]
 
         # Extract and store token
-        token = response.json().get("token")
-        if token:
-            self.token_manager.set_token("customer2", token)
-            self.token_manager.set_user("customer2", user_data)
+        if customer_token:
+            self.token_manager.set_token("customer", customer_token)
+            self.token_manager.set_user("customer", customer_user_data)
+        else:
+            pytest.fail("Failed to retrieve token for customer after admin approval.")
 
-        return user_data
+        return customer_user_data
 
     def register_organizer(self) -> Dict[str, str]:
         """Register an organizer user (returns unverified organizer)"""

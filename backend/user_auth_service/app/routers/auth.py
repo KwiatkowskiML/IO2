@@ -47,23 +47,23 @@ def register_customer(
     db: Session = Depends(get_db),
 ):
     """Register a new customer account"""
+    # Check if email already exists
+    new_user = db.query(User).filter(User.email == user.email).first()
+    if new_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+
+    # Check if login already exists
+    db_login = db.query(User).filter(User.login == user.login).first()
+    if db_login:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Login already taken",
+        )
+
     try:
-        # Check if email already exists
-        new_user = db.query(User).filter(User.email == user.email).first()
-        if new_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
-            )
-
-        # Check if login already exists
-        db_login = db.query(User).filter(User.login == user.login).first()
-        if db_login:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Login already taken",
-            )
-
         # Create new user with hashed password
         hashed_password = get_password_hash(user.password)
         new_user = User(
@@ -95,7 +95,8 @@ def register_customer(
             verification_token=new_user.email_verification_token
         )
 
-        return {"message": "User registered successfully. Please check your email to activate your account."}
+        return {"message": "User registered successfully. Please check your email to activate your account.",
+                "user_id": new_user.user_id}
 
     except IntegrityError:
         db.rollback()
@@ -407,3 +408,17 @@ async def verify_email_address(
     """
     auth_repo = AuthRepository(db)
     return auth_repo.verify_email_and_generate_token(verification_token=token)
+
+@router.post("/approve-user/{user_id}")
+def approve_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Approve user (admin only)"""
+    user = db.query(User).filter(User.user_id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is active")
+
+    auth_repo = AuthRepository(db)
+    return auth_repo.verify_email_and_generate_token(verification_token=user.email_verification_token)
