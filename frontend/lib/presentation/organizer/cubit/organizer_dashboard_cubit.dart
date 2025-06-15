@@ -8,28 +8,31 @@ import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_state.
 class OrganizerDashboardCubit extends Cubit<OrganizerDashboardState> {
   final EventRepository _eventRepository;
   final AuthService _authService;
+  final UserRepository _userRepository;
 
-  OrganizerDashboardCubit(this._eventRepository, this._authService)
+  OrganizerDashboardCubit(
+      this._eventRepository, this._authService, this._userRepository)
       : super(OrganizerDashboardInitial());
 
   Future<void> loadDashboard() async {
-    final profile = _authService.detailedProfile;
-
-    if (profile is! OrganizerProfile) {
-      emit(const OrganizerDashboardError("User is not a valid organizer."));
-      return;
-    }
-
-    if (!profile.isVerified) {
-      emit(OrganizerDashboardUnverified(
-          'Your account is pending verification.'));
-      return;
-    }
-
-    final organizerId = profile.organizerId;
-
     try {
       emit(OrganizerDashboardLoading());
+
+      final profile = await _userRepository.getUserProfile();
+      _authService.updateDetailedProfile(profile);
+
+      if (profile is! OrganizerProfile) {
+        emit(const OrganizerDashboardError("User is not a valid organizer."));
+        return;
+      }
+
+      if (!profile.isVerified) {
+        emit(OrganizerDashboardUnverified(
+            'Your account is pending verification.'));
+        return;
+      }
+
+      final organizerId = profile.organizerId;
       final events = await _eventRepository.getOrganizerEvents(organizerId);
       emit(OrganizerDashboardLoaded(events));
     } on ApiException catch (e) {

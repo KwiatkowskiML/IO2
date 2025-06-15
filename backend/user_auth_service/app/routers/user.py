@@ -18,8 +18,6 @@ def read_users_me(current_user: User = Depends(get_current_user), db: Session = 
         if not organizer:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizer record not found for this user")
 
-        # The ORM object for a user doesn't contain the organizer-specific fields directly,
-        # so we must construct the response model instance manually with all required fields.
         return OrganizerResponse(
             user_id=current_user.user_id,
             email=current_user.email,
@@ -33,12 +31,10 @@ def read_users_me(current_user: User = Depends(get_current_user), db: Session = 
             is_verified=organizer.is_verified,
         )
 
-    # For customers and admins, returning the ORM object works because the fixed
-    # UserResponse schema can now be populated correctly.
     return current_user
 
 
-@router.put("/update-profile", response_model=UserResponse)
+@router.put("/update-profile", response_model=Union[OrganizerResponse, UserResponse])
 def update_user_profile(
     user_update: UserProfileUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
@@ -60,6 +56,24 @@ def update_user_profile(
         db.commit()
         db.refresh(current_user)
 
+        if current_user.user_type == "organizer":
+            organizer = db.query(Organizer).filter(Organizer.user_id == current_user.user_id).first()
+            if not organizer:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organizer record not found for this user")
+
+            return OrganizerResponse(
+                user_id=current_user.user_id,
+                email=current_user.email,
+                login=current_user.login,
+                first_name=current_user.first_name,
+                last_name=current_user.last_name,
+                user_type=current_user.user_type,
+                is_active=current_user.is_active,
+                organizer_id=organizer.organizer_id,
+                company_name=organizer.company_name,
+                is_verified=organizer.is_verified,
+            )
+            
         return current_user
 
     except IntegrityError:
@@ -80,7 +94,6 @@ def get_user_by_id(user_id: int, db: Session = Depends(get_db), current_user: Us
 
     response = UserResponse.from_orm(user)
 
-    # Remove login if requester is not an admin or the user themselves
     is_admin = current_user.user_type == "administrator"
     is_same_user = current_user.user_id == user.user_id
 

@@ -21,6 +21,7 @@ class OrganizerDashboardPage extends StatelessWidget {
       create: (context) => OrganizerDashboardCubit(
         context.read<EventRepository>(),
         context.read<AuthService>(),
+        context.read<UserRepository>(),
       )..loadDashboard(),
       child: const _OrganizerDashboardView(),
     );
