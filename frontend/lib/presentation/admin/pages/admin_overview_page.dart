@@ -97,7 +97,6 @@ class AdminOverviewPage extends StatelessWidget {
   }
 
   Widget _buildStatsGrid(BuildContext context, AdminDashboardLoaded state) {
-    final theme = Theme.of(context);
     final isMobile = ResponsiveLayout.isMobile(context);
 
     final stats = [
@@ -141,7 +140,7 @@ class AdminOverviewPage extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: isMobile ? 1.2 : 1.4,
+      childAspectRatio: isMobile ? 1.5 : 1.0, // Increased ratio to give more height
       children: stats.map((stat) => _buildStatCard(context, stat)).toList(),
     );
   }
@@ -155,50 +154,58 @@ class AdminOverviewPage extends StatelessWidget {
         onTap: stat.onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(12.0), // Reduced padding
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Header row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(6), // Reduced padding
                     decoration: BoxDecoration(
                       color: stat.color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Icon(
                       stat.icon,
                       color: stat.color,
-                      size: 24,
+                      size: 20, // Reduced icon size
                     ),
                   ),
                   Icon(
                     Icons.arrow_forward_ios,
-                    size: 14,
+                    size: 12, // Reduced arrow size
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+
+              // Spacer
+              const Spacer(),
+
+              // Value and title
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     stat.value,
-                    style: theme.textTheme.headlineMedium?.copyWith(
+                    style: theme.textTheme.headlineSmall?.copyWith( // Smaller headline
                       color: stat.color,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     stat.title,
-                    style: theme.textTheme.titleMedium?.copyWith(
+                    style: theme.textTheme.titleSmall?.copyWith( // Smaller title
                       color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   if (stat.subtitle != null) ...[
                     const SizedBox(height: 2),
@@ -206,7 +213,10 @@ class AdminOverviewPage extends StatelessWidget {
                       stat.subtitle!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
+                        fontSize: 11, // Smaller subtitle
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ],
