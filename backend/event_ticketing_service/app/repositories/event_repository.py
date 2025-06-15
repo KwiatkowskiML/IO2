@@ -13,7 +13,10 @@ from app.models.ticket_type import TicketTypeModel
 from fastapi import HTTPException, status, Depends
 from app.models.location import LocationModel
 from app.filters.events_filter import EventsFilter
+from app.repositories.ticket_repository import get_ticket_repository
 from app.schemas.event import EventBase, EventUpdate
+from app.schemas.ticket import TicketType
+
 
 
 class EventRepository:
@@ -52,6 +55,20 @@ class EventRepository:
         )
         self.db.add(event)
         self.db.commit()
+        self.db.refresh(event)
+
+        # Create standard ticket type
+        ticket_type = TicketType(
+            event_id=event.event_id,
+            description="Standard Ticket",
+            max_count=data.location_id,
+            price=data.standard_ticket_price,
+            currency="USD",
+            available_from=data.ticket_sales_start,
+        )
+        ticket_repo = get_ticket_repository(self.db)
+        ticket_repo.create_ticket_type(ticket_type)
+
         # After commit, re-query the event to get eager-loaded relationships for the response model.
         return self.get_event(event.event_id)
 
