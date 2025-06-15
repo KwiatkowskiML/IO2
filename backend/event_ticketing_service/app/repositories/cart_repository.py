@@ -85,6 +85,45 @@ class CartRepository:
         self.db.refresh(existing_cart_item)
         return existing_cart_item
 
+    def add_item_from_resell(self, customer_id: int, ticket_id: int) -> CartItemModel:
+        if not ticket_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket ID must be provided")
+
+        ticket = self.db.query(TicketModel).filter(TicketModel.ticket_id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Ticket with ID {ticket_id} not found")
+        if ticket.resell_price is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket is not available for resale")
+        if ticket.owner_id == customer_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot add your own ticket to the cart")
+
+        # Get or create the shopping cart for the customer
+        cart = self.get_or_create_cart(customer_id)
+
+        # Check if the ticket is already in the cart
+        existing_cart_item = (
+            self.db.query(CartItemModel)
+            .filter(CartItemModel.cart_id == cart.cart_id, CartItemModel.ticket_id == ticket.ticket_id)
+            .first()
+        )
+        if existing_cart_item:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ticket with ID {ticket_id} is already in your cart",
+            )
+
+        existing_cart_item = CartItemModel(
+            cart_id=cart.cart_id,
+            ticket_id=ticket_id,
+            quantity=1,
+        )
+        self.db.add(existing_cart_item)
+        logger.info(f"Added ticket with ticket_id {ticket_id} to cart_id {cart.cart_id}")
+
+        self.db.commit()
+        self.db.refresh(existing_cart_item)
+        return existing_cart_item
+
     def remove_item(self, customer_id: int, cart_item_id: int) -> bool:
         # Get the shopping cart for the customer
         cart = self.db.query(ShoppingCartModel).filter(ShoppingCartModel.customer_id == customer_id).first()
@@ -109,21 +148,87 @@ class CartRepository:
         logger.info(f"Removed cart_item_id {cart_item_id} from cart_id {cart.cart_id} of customer_id {customer_id}")
         return True
 
+    #----------------------------------------------------------
+    # Checkout methods
+    #----------------------------------------------------------
+    def _checkout_detailed_ticket(self, item: CartItemModel, customer_id: int) -> List[Dict[str, Any]]:
+        """
+        Processes a single detailed/standard cart item:
+        - Validates ticket type, event, and location.
+        - Checks ticket availability.
+        - Creates new TicketModel instances.
+        Returns a list of dictionaries, each for a created ticket, for email processing.
+        """
+        item_processed_tickets_info: List[Dict[str, Any]] = []
 
-    # TODO: Stripe integration for payment processing
+        # It's crucial that item.ticket_type and its nested relationships are loaded.
+        # If not loaded by the caller, load them here.
+        if not item.ticket_type:
+            item.ticket_type = self.db.query(TicketTypeModel).options(
+                joinedload(TicketTypeModel.event).joinedload(EventModel.location)
+            ).filter(TicketTypeModel.type_id == item.ticket_type_id).first()
+
+        ticket_type = item.ticket_type
+        event = ticket_type.event
+        location = event.location
+
+        # Basic validation
+        if not all([ticket_type, event, location]):
+            logger.error(f"Incomplete data for detailed cart_item_id {item.cart_item_id}. "
+                         f"TicketType: {bool(ticket_type)}, Event: {bool(event)}, Location: {bool(location)}")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error processing standard cart item details.")
+
+        # Check if there are enough tickets available
+        existing_tickets_count = (
+            self.db.query(func.count(TicketModel.ticket_id))
+            .filter(TicketModel.type_id == ticket_type.type_id)
+            .scalar() or 0
+        )
+
+        if existing_tickets_count + item.quantity > ticket_type.max_count:
+            available_tickets = ticket_type.max_count - existing_tickets_count
+            logger.warning(
+                f"Not enough tickets for event '{event.name}', type '{ticket_type.description or ticket_type.type_id}'. "
+                f"Requested: {item.quantity}, Available: {max(0, available_tickets)}, "
+                f"Existing: {existing_tickets_count}, Max: {ticket_type.max_count}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Not enough tickets available for '{event.name} - {ticket_type.description or 'selected type'}'. "
+                       f"Only {max(0, available_tickets)} left."
+            )
+
+        for _ in range(item.quantity):
+            new_ticket = TicketModel(
+                type_id=ticket_type.type_id,
+                owner_id=customer_id,
+                seat=None,
+                resell_price=None,
+            )
+            self.db.add(new_ticket) # Add to session, will be committed in the main checkout
+            item_processed_tickets_info.append({
+                "ticket_model": new_ticket,
+                "event_name": event.name,
+                "event_date": event.start_date.strftime("%B %d, %Y"),
+                "event_time": event.start_date.strftime("%I:%M %p"),
+                "venue_name": location.name,
+                "seat": new_ticket.seat, # Will be None unless logic is added
+            })
+        return item_processed_tickets_info
+
     def checkout(self, customer_id: int, user_email: str, user_name: str) -> bool:
         # Get or create the shopping cart for the customer to handle cases where the user has never had a cart.
         cart = self.get_or_create_cart(customer_id)
 
-        # Get all items in the cart with eager loading of related data
+        # Eagerly load relationships. This helps ensure data is available.
         cart_items = (
             self.db.query(CartItemModel)
             .filter(CartItemModel.cart_id == cart.cart_id)
             .options(
-                joinedload(CartItemModel.ticket_type)
-                .joinedload(TicketTypeModel.event)
-                .joinedload(EventModel.location)
-            ) # Eager load related data
+                selectinload(CartItemModel.ticket_type)  # For standard tickets
+                .selectinload(TicketTypeModel.event)
+                .selectinload(EventModel.location)
+            )
             .all()
         )
 
@@ -134,52 +239,9 @@ class CartRepository:
 
         try:
             for item in cart_items:
-                ticket_type = item.ticket_type
-                event = ticket_type.event
-                location = event.location
-
-                # Basic validation
-                if not all([ticket_type, event, location]):
-                    logger.error(f"Incomplete data for cart_item_id {item.cart_item_id}. "
-                                 f"TicketType: {bool(ticket_type)}, Event: {bool(event)}, Location: {bool(location)}")
-                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error processing cart item details.")
-
-                # Check if there are enough tickets available
-                existing_tickets_count = (
-                    self.db.query(func.count(TicketModel.ticket_id))
-                    .filter(TicketModel.type_id == ticket_type.type_id)
-                    .scalar()  # Gets the single count value
-                )
-
-                if existing_tickets_count + item.quantity > ticket_type.max_count:
-                    available_tickets = ticket_type.max_count - existing_tickets_count
-                    logger.warning(
-                        f"Not enough tickets for event '{event.name}', type '{ticket_type.description if hasattr(ticket_type, 'description') else ticket_type.type_id}'. "
-                        f"Requested: {item.quantity}, Available: {available_tickets if available_tickets >= 0 else 0}, "
-                        f"Existing: {existing_tickets_count}, Max: {ticket_type.max_count}"
-                    )
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Not enough tickets available for '{event.name} - {ticket_type.description if hasattr(ticket_type, 'description') else 'selected type'}'. "
-                               f"Only {available_tickets if available_tickets >= 0 else 0} left."
-                    )
-
-                for _ in range(item.quantity):
-                    new_ticket = TicketModel(
-                        type_id=ticket_type.type_id,
-                        owner_id=customer_id,
-                        seat=None,
-                        resell_price=None,
-                    )
-                    self.db.add(new_ticket)
-                    processed_tickets_info.append({
-                        "ticket_model": new_ticket,
-                        "event_name": event.name,
-                        "event_date": event.start_date.strftime("%B %d, %Y"),
-                        "event_time": event.start_date.strftime("%I:%M %p"),
-                        "venue_name": location.name,
-                        "seat": new_ticket.seat,
-                    })
+                if item.ticket_type: # Detailed/standard ticket
+                    item_processed_info = self._checkout_detailed_ticket(item, customer_id)
+                    processed_tickets_info.extend(item_processed_info)
 
             # Clear the cart items after successful checkout
             for item in cart_items:

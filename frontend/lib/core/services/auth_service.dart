@@ -1,26 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:resellio/core/services/api_service.dart';
+import 'package:resellio/core/models/models.dart';
+import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/core/utils/jwt_decoder.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 
-// --- JWT Decoding Helper ---
-Map<String, dynamic>? tryDecodeJwt(String token) {
-  try {
-    final parts = token.split('.');
-    if (parts.length != 3) {
-      return null;
-    }
-    final payload = parts[1];
-    final normalized = base64Url.normalize(payload);
-    final resp = utf8.decode(base64Url.decode(normalized));
-    return json.decode(resp);
-  } catch (e) {
-    debugPrint('Error decoding JWT: $e');
-    return null;
-  }
-}
-
-// --- User Model ---
 class UserModel {
   final int userId;
   final String email;
@@ -28,13 +11,12 @@ class UserModel {
   final UserRole role;
   final int roleId;
 
-  UserModel({
-    required this.userId,
-    required this.email,
-    required this.name,
-    required this.role,
-    required this.roleId,
-  });
+  UserModel(
+      {required this.userId,
+      required this.email,
+      required this.name,
+      required this.role,
+      required this.roleId});
 
   factory UserModel.fromJwt(Map<String, dynamic> jwtData) {
     UserRole role;
@@ -60,58 +42,65 @@ class UserModel {
 }
 
 class AuthService extends ChangeNotifier {
-  final ApiService _apiService;
+  final AuthRepository _authRepository;
+  final UserRepository _userRepository;
   String? _token;
   UserModel? _user;
+  UserProfile? _detailedProfile;
 
-  AuthService(this._apiService);
+  AuthService(this._authRepository, this._userRepository);
 
   bool get isLoggedIn => _token != null;
   UserModel? get user => _user;
+  UserProfile? get detailedProfile => _detailedProfile;
+
+  Future<void> _fetchAndSetDetailedProfile() async {
+    if (isLoggedIn) {
+      try {
+        _detailedProfile = await _userRepository.getUserProfile();
+        notifyListeners();
+      } catch (e) {
+        // Silently fail or log error, as this is a background update.
+        debugPrint("Failed to fetch detailed profile: $e");
+      }
+    }
+  }
 
   Future<void> login(String email, String password) async {
-    try {
-      final token = await _apiService.login(email, password);
-      _setTokenAndUser(token);
-    } catch (e) {
-      // Rethrow to be caught in the UI
-      rethrow;
-    }
+    final token = await _authRepository.login(email, password);
+    await _setTokenAndUser(token);
   }
 
   Future<void> registerCustomer(Map<String, dynamic> data) async {
-    try {
-      final token = await _apiService.registerCustomer(data);
-      _setTokenAndUser(token);
-    } catch (e) {
-      rethrow;
-    }
+    final token = await _authRepository.registerCustomer(data);
+    await _setTokenAndUser(token);
   }
 
   Future<void> registerOrganizer(Map<String, dynamic> data) async {
-    try {
-      final token = await _apiService.registerOrganizer(data);
-      _setTokenAndUser(token);
-    } catch (e) {
-      rethrow;
-    }
+    final token = await _authRepository.registerOrganizer(data);
+    await _setTokenAndUser(token);
   }
 
-  void _setTokenAndUser(String token) {
+  Future<void> _setTokenAndUser(String token) async {
     _token = token;
-    _apiService.setAuthToken(token);
-
     final jwtData = tryDecodeJwt(token);
     if (jwtData != null) {
       _user = UserModel.fromJwt(jwtData);
     }
+    await _fetchAndSetDetailedProfile(); // Fetch profile right after login/register
     notifyListeners();
   }
 
-  void logout() {
+  void updateDetailedProfile(UserProfile profile) {
+    _detailedProfile = profile;
+    notifyListeners();
+  }
+
+  Future<void> logout() async {
+    await _authRepository.logout();
     _token = null;
     _user = null;
-    _apiService.setAuthToken(null);
+    _detailedProfile = null;
     notifyListeners();
   }
 }

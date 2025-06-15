@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import 'package:resellio/core/services/cart_service.dart';
+import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
+import 'package:resellio/presentation/cart/cubit/cart_state.dart';
+import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
+import 'package:resellio/presentation/common_widgets/empty_state_widget.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 
@@ -10,154 +15,128 @@ class CartPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cartService = context.watch<CartService>();
+    return BlocProvider(
+      create: (context) =>
+          CartCubit(context.read<CartRepository>())..fetchCart(),
+      child: const _CartView(),
+    );
+  }
+}
+
+class _CartView extends StatelessWidget {
+  const _CartView();
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final numberFormat = NumberFormat.currency(locale: 'en_US', symbol: '\$');
 
-    return PageLayout(
-      title: 'Shopping Cart',
-      showBackButton: true,
-      body:
-          cartService.items.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 80,
-                      color: colorScheme.onSurface.withOpacity(0.4),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Your cart is empty',
-                      style: theme.textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Find an event to start adding tickets!',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-              : Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.only(top: 16),
-                      itemCount: cartService.items.length,
-                      itemBuilder: (context, index) {
-                        final item = cartService.items[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: ListTile(
-                            title: Text(
-                              item.ticketType.description ?? 'Standard Ticket',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '${item.quantity} x ${numberFormat.format(item.ticketType.price)}',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  numberFormat.format(
-                                    item.quantity * item.ticketType.price,
-                                  ),
-                                  style: theme.textTheme.titleMedium,
+    return BlocListener<CartCubit, CartState>(
+      listener: (context, state) {
+        if (state is CartError) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(
+              content: Text('Error: ${state.message}'),
+              backgroundColor: theme.colorScheme.error,
+            ));
+        }
+      },
+      child: BlocBuilder<CartCubit, CartState>(
+        builder: (context, state) {
+          return PageLayout(
+            title: 'Shopping Cart',
+            showBackButton: true,
+            showCartButton: false,
+            body: BlocStateWrapper<CartLoaded>(
+              state: state,
+              onRetry: () => context.read<CartCubit>().fetchCart(),
+              builder: (loadedState) {
+                if (loadedState.items.isEmpty) {
+                  return const EmptyStateWidget(
+                    icon: Icons.remove_shopping_cart_outlined,
+                    message: 'Your cart is empty',
+                    details: 'Find an event and add some tickets to get started!',
+                  );
+                } else {
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.only(top: 16),
+                          itemCount: loadedState.items.length,
+                          itemBuilder: (context, index) {
+                            final item = loadedState.items[index];
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              child: ListTile(
+                                title: Text(item.ticketType?.description ??
+                                    'Resale Ticket'),
+                                subtitle: Text(
+                                    '${item.quantity} x ${numberFormat.format(item.price)}'),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline,
+                                      color: Colors.red),
+                                  onPressed: () => context
+                                      .read<CartCubit>()
+                                      .removeItem(item.cartItemId),
                                 ),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.delete_outline,
-                                    color: colorScheme.error,
-                                  ),
-                                  onPressed: () {
-                                    cartService.removeItem(item.ticketType);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  // --- Checkout Summary ---
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Subtotal', style: theme.textTheme.bodyLarge),
-                            Text(
-                              numberFormat.format(cartService.totalPrice),
-                              style: theme.textTheme.bodyLarge,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Fees', style: theme.textTheme.bodyLarge),
-                            Text(
-                              numberFormat.format(0),
-                              style: theme.textTheme.bodyLarge,
-                            ), // Placeholder
-                          ],
-                        ),
-                        const Divider(height: 32),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Total', style: theme.textTheme.titleLarge),
-                            Text(
-                              numberFormat.format(cartService.totalPrice),
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        PrimaryButton(
-                          text: 'PROCEED TO CHECKOUT',
-                          onPressed: () {
-                            // TODO: Implement checkout logic
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Checkout feature not yet implemented.',
-                                ),
-                                backgroundColor: Colors.blue,
                               ),
                             );
                           },
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color:
+                              theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Total'),
+                                Text(
+                                    numberFormat
+                                        .format(loadedState.totalPrice),
+                                    style: theme.textTheme.titleLarge),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            PrimaryButton(
+                              text: 'PROCEED TO CHECKOUT',
+                              isLoading: state is CartLoading,
+                              onPressed: () async {
+                                final success = await context
+                                    .read<CartCubit>()
+                                    .checkout();
+                                if (success && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content:
+                                              Text('Purchase Successful!'),
+                                          backgroundColor: Colors.green));
+                                  context.go('/home/customer');
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 }

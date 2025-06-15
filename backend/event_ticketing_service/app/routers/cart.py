@@ -13,7 +13,7 @@ from app.models.location import LocationModel
 from app.services.email import send_ticket_email
 from app.models.ticket_type import TicketTypeModel
 from app.utils.jwt_auth import get_user_from_token 
-from fastapi import Path, Depends, APIRouter, HTTPException, status
+from fastapi import Path, Depends, APIRouter, HTTPException, status, Query
 
 router = APIRouter(
     prefix="/cart",
@@ -56,42 +56,44 @@ async def get_shopping_cart(
     response_model=CartItemWithDetails,
 )
 async def add_to_cart(
-    ticket_type_id: int,
-    quantity: int = 1,
+    ticket_id: int = Query(None, description="ID of the resale ticket to add"),
+    ticket_type_id: int = Query(None, description="ID of the ticket type to add"),
+    quantity: int = Query(1, description="Quantity of tickets to add"),
     user: dict = Depends(get_user_from_token),
-    ticket_repo: TicketRepository = Depends(get_ticket_repository),
     cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     """Add a ticket to the user's shopping cart"""
     user_id = user["user_id"]
 
-    # Verify the ticket type exists
-    ticket_type = ticket_repo.get_ticket_type_by_id(ticket_type_id)
-    if not ticket_type:
+    if ticket_type_id is None and ticket_id is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Ticket type with ID {ticket_type_id} not found",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either ticket_id or ticket_type_id must be provided."
         )
-    logger.info(f"Add item {ticket_type} to cart of {user}")
 
     try:
-        cart_item_model = cart_repo.add_item_from_detailed_sell(
-            customer_id=user_id,
-            ticket_type_id=ticket_type_id,
-            quantity=quantity
-        )
+        if ticket_type_id is not None:
+            cart_item_model = cart_repo.add_item_from_detailed_sell(
+                customer_id=user_id,
+                ticket_type_id=ticket_type_id,
+                quantity=quantity
+            )
 
-        if not cart_item_model.ticket_type:
-            # This should ideally not happen if add_item works correctly and ticket_type exists
-            logger.error(
-                f"Ticket type details not found for cart_item_id {cart_item_model.cart_item_id} after adding to cart.")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                detail="Error retrieving ticket type details after adding to cart.")
+            return CartItemWithDetails(
+                ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
+                quantity=cart_item_model.quantity
+            )
+        elif ticket_id is not None:
+            cart_item_model = cart_repo.add_item_from_resell(
+                customer_id=user_id,
+                ticket_id=ticket_id
+            )
 
-        return CartItemWithDetails(
-            ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
-            quantity=cart_item_model.quantity
-        )
+            return CartItemWithDetails(
+                ticket_type=None,
+                quantity=cart_item_model.quantity
+            )
+
     except HTTPException as e:
         # Re-raise HTTPExceptions from the repository (e.g., not found, bad request)
         raise e

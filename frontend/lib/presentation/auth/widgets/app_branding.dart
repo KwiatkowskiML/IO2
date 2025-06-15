@@ -53,16 +53,13 @@ class AppBranding extends StatelessWidget {
     BuildContext context, {
     Alignment alignment = Alignment.center,
   }) {
+    final theme = Theme.of(context);
     return Align(
       alignment: alignment,
       child: Text(
         'RESELLIO',
-        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-          fontSize: 32,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 2.0,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        style: theme.textTheme.displayMedium
+            ?.copyWith(color: theme.colorScheme.primary),
       ),
     );
   }
@@ -73,10 +70,7 @@ class AppBranding extends StatelessWidget {
   }) {
     return Text(
       'The Ticket Marketplace',
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: Colors.white70,
-        letterSpacing: 0.5,
-      ),
+      style: Theme.of(context).textTheme.titleMedium,
       textAlign: alignment,
     );
   }
