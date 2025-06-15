@@ -1,4 +1,3 @@
-// === frontend/lib/core/models/cart_model.dart ===
 import 'package:resellio/core/models/ticket_model.dart';
 
 class CartItem {
@@ -20,7 +19,7 @@ class CartItem {
       ticketType: json['ticket_type'] != null
           ? TicketType.fromJson(json['ticket_type'])
           : null,
-      quantity: json['quantity'],
+      quantity: json['quantity'] ?? 1,
       price: (json['ticket_type']?['price'] as num?)?.toDouble() ?? 0.0,
     );
   }
@@ -32,5 +31,13 @@ class CartItem {
       quantity: quantity ?? this.quantity,
       price: price,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'cart_item_id': cartItemId,
+      'ticket_type': ticketType?.toJson(),
+      'quantity': quantity,
+    };
   }
 }
