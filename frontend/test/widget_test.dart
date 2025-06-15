@@ -28,70 +28,94 @@ class MockCartRepository extends Fake implements CartRepository {
   Future<bool> checkout() async => true;
 }
 
+// A mock router for testing navigation from WelcomeScreen
+final GoRouter _router = GoRouter(
+  initialLocation: '/welcome',
+  routes: [
+    GoRoute(
+      path: '/welcome',
+      builder: (context, state) => const WelcomeScreen(),
+    ),
+    GoRoute(
+      path: '/login',
+      builder:
+          (context, state) =>
+              const Scaffold(body: Center(child: Text('Mock Login Page'))),
+    ),
+    GoRoute(
+      path: '/register',
+      builder:
+          (context, state) =>
+              const Scaffold(body: Center(child: Text('Mock Register Page'))),
+    ),
+  ],
+);
+
 void main() {
-  // A helper function to build a widget tree with all necessary providers for testing.
-  // This mimics the setup in `main.dart` but can use mock implementations.
-  Widget buildTestableApp() {
-    // For widget tests, it's best to use a mock ApiClient to avoid real network calls.
-    final apiClient = ApiClient('http://mock-api.com');
+  testWidgets(
+    'WelcomeScreen should display UI elements and handle navigation',
+    (WidgetTester tester) async {
+      // Build our app with the mock router.
+      await tester.pumpWidget(MaterialApp.router(routerConfig: _router));
 
-    // Instantiate repositories with the mock client.
-    final authRepo = ApiAuthRepository(apiClient);
-    final userRepo = ApiUserRepository(apiClient);
-    final eventRepo = ApiEventRepository(apiClient);
-    final cartRepo = MockCartRepository(); // Use a simple mock for the cart
-    final ticketRepo = ApiTicketRepository(apiClient);
-    final resaleRepo = ApiResaleRepository(apiClient);
-    final adminRepo = ApiAdminRepository(apiClient);
+      // 1. Verify that the main UI elements are present.
+      expect(
+        find.text('RESELLIO'),
+        findsOneWidget,
+        reason: 'App title should be visible',
+      );
+      expect(
+        find.text('The Ticket Marketplace'),
+        findsOneWidget,
+        reason: 'App tagline should be visible',
+      );
+      expect(
+        find.text('REGISTER AS USER'),
+        findsOneWidget,
+        reason: 'Register as user button should be visible',
+      );
+      expect(
+        find.text('REGISTER AS ORGANIZER'),
+        findsOneWidget,
+        reason: 'Register as organizer button should be visible',
+      );
+      expect(
+        find.text('Already have an account? Log In'),
+        findsOneWidget,
+        reason: 'Login prompt should be visible',
+      );
 
-    // Instantiate services that depend on repositories.
-    final authService = AuthService(authRepo, userRepo);
+      // 2. Test navigation for "REGISTER AS USER" button.
+      await tester.tap(find.text('REGISTER AS USER'));
+      await tester
+          .pumpAndSettle(); // Wait for navigation transition to complete.
 
-    return MultiProvider(
-      providers: [
-        Provider<ApiClient>.value(value: apiClient),
-        Provider<AuthRepository>.value(value: authRepo),
-        Provider<UserRepository>.value(value: userRepo),
-        Provider<EventRepository>.value(value: eventRepo),
-        Provider<CartRepository>.value(value: cartRepo),
-        Provider<TicketRepository>.value(value: ticketRepo),
-        Provider<ResaleRepository>.value(value: resaleRepo),
-        Provider<AdminRepository>.value(value: adminRepo),
-        ChangeNotifierProvider<AuthService>.value(value: authService),
-        BlocProvider<CartCubit>(
-          create: (context) => CartCubit(context.read<CartRepository>()),
-        ),
-      ],
-      // The app uses GoRouter, so we must wrap the test in a MaterialApp.router
-      // to correctly handle navigation and screen building.
-      child: MaterialApp.router(
-        routerConfig: AppRouter.createRouter(authService),
-      ),
-    );
-  }
+      // Verify we navigated to the mock register page.
+      expect(find.text('Mock Register Page'), findsOneWidget);
 
-  testWidgets('App starts and shows WelcomeScreen correctly',
-      (WidgetTester tester) async {
-    // Build the entire application widget tree.
-    await tester.pumpWidget(buildTestableApp());
+      // Navigate back to the welcome screen.
+      GoRouter.of(
+        tester.element(find.text('Mock Register Page')),
+      ).go('/welcome');
+      await tester.pumpAndSettle();
 
-    // Allow the router to process the initial route and build the page.
-    await tester.pumpAndSettle();
+      // 3. Test navigation for "REGISTER AS ORGANIZER" button.
+      await tester.tap(find.text('REGISTER AS ORGANIZER'));
+      await tester.pumpAndSettle();
 
-    // 1. Verify that the WelcomeScreen is the current screen.
-    expect(find.byType(WelcomeScreen), findsOneWidget);
+      // Verify we navigated to the mock register page again.
+      expect(find.text('Mock Register Page'), findsOneWidget);
+      GoRouter.of(
+        tester.element(find.text('Mock Register Page')),
+      ).go('/welcome');
+      await tester.pumpAndSettle();
 
-    // 2. Verify that the main branding title is displayed.
-    expect(find.text('RESELLIO'), findsOneWidget);
+      // 4. Test navigation for the login prompt.
+      await tester.tap(find.text('Already have an account? Log In'));
+      await tester.pumpAndSettle();
 
-    // 3. Verify that both registration buttons are visible.
-    expect(find.widgetWithText(ElevatedButton, 'REGISTER AS USER'),
-        findsOneWidget);
-    expect(find.widgetWithText(ElevatedButton, 'REGISTER AS ORGANIZER'),
-        findsOneWidget);
-
-    // 4. Verify that the login prompt button is visible.
-    expect(find.widgetWithText(TextButton, 'Already have an account? Log In'),
-        findsOneWidget);
-  });
+      // Verify we navigated to the mock login page.
+      expect(find.text('Mock Login Page'), findsOneWidget);
+    },
+  );
 }
