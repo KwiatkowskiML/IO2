@@ -6,6 +6,8 @@ from app.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi.security import OAuth2PasswordRequestForm
+
+from app.repositories.auth_repository import AuthRepository
 from app.schemas.user import UserResponse, OrganizerResponse
 from app.models import User, Customer, Organizer, Administrator
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status, Query
@@ -403,36 +405,5 @@ async def verify_email_address(
     Verify a user's email address using the token from the verification email.
     If successful, activates the user and returns an access token for immediate login.
     """
-    user_to_verify = db.query(User).filter(User.email_verification_token == token).first()
-
-    if not user_to_verify:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or already used verification token.")
-
-    if user_to_verify.is_active:
-        # Allow proceeding to token generation if already active and token matches
-        pass
-
-    # Activate user and clear token
-    user_to_verify.is_active = True
-    user_to_verify.clear_email_verification_token()
-    db.commit()
-    db.refresh(user_to_verify)
-
-    # Automatically log the user in by creating an access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    customer_record = db.query(Customer).filter(Customer.user_id == user_to_verify.user_id).first()
-    if not customer_record:
-        logger.error(f"Customer record not found for verified user_id {user_to_verify.user_id}.")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Account activated, but an error occurred retrieving profile details for login. Please try logging in manually.")
-
-    access_token = create_access_token(
-        data={
-            "sub": user_to_verify.email,
-            "role": user_to_verify.user_type,
-            "user_id": user_to_verify.user_id,
-            "role_id": customer_record.customer_id,
-            "name": user_to_verify.first_name,
-        },
-        expires_delta=access_token_expires,
-    )
-    return {"token": access_token, "message": "Account activated successfully. You are now logged in."}
+    auth_repo = AuthRepository(db)
+    return auth_repo.verify_email_and_generate_token(verification_token=token)
