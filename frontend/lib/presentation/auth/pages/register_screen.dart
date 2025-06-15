@@ -58,7 +58,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
           data['company_name'] = _companyNameController.text;
           await authService.registerOrganizer(data);
         } else {
-          await authService.registerCustomer(data);
+         final message = await authService.registerCustomer(data);
+          if (mounted) {
+            // Show a dialog with the success message
+            showDialog(
+              context: context,
+              barrierDismissible: false, // User must tap button to close
+              builder: (BuildContext dialogContext) {
+                return AlertDialog(
+                  title: const Text('Registration Successful'),
+                  content: Text(message),
+                  actions: <Widget>[
+                    TextButton(
+                      child: const Text('OK'),
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop(); // Close the dialog
+                        // Navigate to login or welcome screen
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
+                      },
+                    ),
+                  ],
+                );
+              },
+            );
+          }
         }
         // On success, the router will redirect automatically
       } catch (e) {

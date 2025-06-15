@@ -1,6 +1,7 @@
+import logging
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.ticket import TicketModel
@@ -10,7 +11,9 @@ from app.schemas.ticket import TicketPDF, ResellTicketRequest
 from app.models.events import EventModel
 from app.models.ticket_type import TicketTypeModel
 from app.models.location import LocationModel
+from app.services.email import send_ticket_email
 
+logger = logging.getLogger(__name__)
 
 class TicketRepository:
     """Service layer for ticket operations."""
@@ -94,7 +97,7 @@ class TicketRepository:
 
         return query.all()
 
-    def buy_resale_ticket(self, ticket_id: int, buyer_id: int) -> TicketModel:
+    def buy_resale_ticket(self, ticket_id: int, buyer_id: int, buyer_email: str, buyer_name: str) -> TicketModel:
         ticket = self.get_ticket(ticket_id)
 
         if ticket.resell_price is None:
@@ -108,6 +111,32 @@ class TicketRepository:
 
         self.db.commit()
         self.db.refresh(ticket)
+
+        ticket_info = self.db.query(TicketModel).options(
+            joinedload(TicketModel.ticket_type)
+            .joinedload(TicketTypeModel.event)
+            .joinedload(EventModel.location)
+        ).filter(TicketModel.ticket_id == ticket_id).first()
+
+        # Format the date and time as strings
+        event_datetime = ticket_info.ticket_type.event.start_date
+        formatted_event_date = event_datetime.strftime("%B %d, %Y")  # e.g., "June 15, 2025"
+        formatted_event_time = event_datetime.strftime("%I:%M %p")  # e.g., "02:30 PM"
+
+        email_sent = send_ticket_email(
+            to_email=buyer_email,
+            user_name=buyer_name,
+            event_name=ticket_info.ticket_type.event.name,
+            ticket_id=str(ticket_info.ticket_id),
+            event_date=formatted_event_date,
+            event_time=formatted_event_time,
+            venue=ticket_info.ticket_type.event.location.name,
+            seat=ticket_info.seat,
+        )
+        if not email_sent:
+            logger.error(
+                f"Failed to send confirmation email for ticket {ticket_id} to {buyer_email}")
+
         return ticket
 
     def resell_ticket(self, data: ResellTicketRequest, user_id: int) -> TicketModel:

@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 from datetime import datetime, timedelta
 
@@ -5,6 +6,8 @@ from app.database import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi.security import OAuth2PasswordRequestForm
+
+from app.repositories.auth_repository import AuthRepository
 from app.schemas.user import UserResponse, OrganizerResponse
 from app.models import User, Customer, Organizer, Administrator
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status, Query
@@ -30,78 +33,82 @@ from app.security import (
     generate_reset_token,
     verify_initial_admin_credentials,
 )
+from app.services.email_service import send_account_verification_email
 
 # Future import for email sending functionality
 # from app.services.email import send_password_reset_email, send_verification_email
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-@router.post("/register/customer", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/register/customer", status_code=status.HTTP_201_CREATED)
 def register_customer(
-        user: UserCreate,
-        db: Session = Depends(get_db),
+    user: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
 ):
     """Register a new customer account"""
+    # Check if email already exists
+    new_user = db.query(User).filter(User.email == user.email).first()
+    if new_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+
+    # Check if login already exists
+    db_login = db.query(User).filter(User.login == user.login).first()
+    if db_login:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Login already taken",
+        )
+
     try:
-        # Check if email already exists
-        db_user = db.query(User).filter(User.email == user.email).first()
-        if db_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
-            )
-
-        # Check if login already exists
-        db_login = db.query(User).filter(User.login == user.login).first()
-        if db_login:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Login already taken",
-            )
-
         # Create new user with hashed password
         hashed_password = get_password_hash(user.password)
-        db_user = User(
+        new_user = User(
             email=user.email,
             login=user.login,
             password_hash=hashed_password,
             first_name=user.first_name,
             last_name=user.last_name,
             user_type="customer",
-            is_active=True,
+            is_active=False,  # User is inactive until email verification
         )
+        new_user.set_email_verification_token()
 
-        db.add(db_user)
+        db.add(new_user)
         db.flush()  # Flush to get the user_id without committing
 
         # Create customer record
-        db_customer = Customer(user_id=db_user.user_id)
+        db_customer = Customer(user_id=new_user.user_id)
         db.add(db_customer)
 
         db.commit()
-        db.refresh(db_user)
+        db.refresh(new_user)
 
-        # Generate access token
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={
-                "sub": db_user.email,
-                "role": db_user.user_type,
-                "user_id": db_user.user_id,
-                "role_id": db_customer.customer_id,
-                "name": db_user.first_name,
-            },
-            expires_delta=access_token_expires,
+        # Send verification email in the background
+        background_tasks.add_task(
+            send_account_verification_email,
+            to_email=new_user.email,
+            user_name=new_user.first_name,
+            verification_token=new_user.email_verification_token
         )
 
-        return {"token": access_token, "message": "User registered successfully"}
+        return {"message": "User registered successfully. Please check your email to activate your account.",
+                "user_id": new_user.user_id}
 
     except IntegrityError:
         db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed due to database error")
+    except Exception as e:  # Catch other potential errors
+        db.rollback()
+        logger.error(f"Unexpected error during customer registration: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Registration failed due to database error")
-
 
 @router.post("/register/organizer", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
@@ -466,6 +473,31 @@ def unban_user(user_id: int, db: Session = Depends(get_db),
 
     return {"message": "User has been unbanned"}
 
+@router.get("/verify-email", response_model=Token, summary="Verify Email Address")
+async def verify_email_address(
+    token: str = Query(..., description="The email verification token sent to the user's email address"),
+    db: Session = Depends(get_db)
+):
+    """
+    Verify a user's email address using the token from the verification email.
+    If successful, activates the user and returns an access token for immediate login.
+    """
+    auth_repo = AuthRepository(db)
+    return auth_repo.verify_email_and_generate_token(verification_token=token)
+
+@router.post("/approve-user/{user_id}")
+def approve_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    """Approve user (admin only)"""
+    user = db.query(User).filter(User.user_id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is active")
+
+    auth_repo = AuthRepository(db)
+    return auth_repo.verify_email_and_generate_token(verification_token=user.email_verification_token)
 
 @router.get("/users", response_model=List[OrganizerResponse])
 def list_users(

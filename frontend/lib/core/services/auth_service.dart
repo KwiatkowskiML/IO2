@@ -71,9 +71,9 @@ class AuthService extends ChangeNotifier {
     await _setTokenAndUser(token);
   }
 
-  Future<void> registerCustomer(Map<String, dynamic> data) async {
-    final token = await _authRepository.registerCustomer(data);
-    await _setTokenAndUser(token);
+  Future<String> registerCustomer(Map<String, dynamic> data) async {
+    final message = await _authRepository.registerCustomer(data);
+    return message; 
   }
 
   Future<void> registerOrganizer(Map<String, dynamic> data) async {

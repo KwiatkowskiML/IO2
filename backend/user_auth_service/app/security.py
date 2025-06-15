@@ -56,6 +56,9 @@ def get_password_hash(password):
     """Generate a bcrypt hash for the given password"""
     return pwd_context.hash(password)
 
+def generate_email_verification_token():
+    """Generate a random token for email verification."""
+    return secrets.token_urlsafe(32)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a JWT access token with an optional expiration"""

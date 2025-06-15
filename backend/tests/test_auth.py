@@ -67,11 +67,11 @@ class TestUserRegistration:
             expected_status=201
         )
 
-        assert_success_response(response, ["token", "message"])
+        assert_success_response(response, ["message", "user_id"])
 
         response_data = response.json()
-        assert len(response_data["token"]) > 0
-        assert "registered successfully" in response_data["message"]
+        assert response_data["user_id"] > 0
+        assert len(response_data["message"]) > 0
 
     def test_organizer_registration_success(self, api_client, test_data):
         """Test successful organizer user registration"""
@@ -712,8 +712,26 @@ class TestCompleteAuthFlow:
             expected_status=201
         )
 
-        reg_token = reg_response.json()["token"]
-        assert len(reg_token) > 0
+        user_id = reg_response.json()["user_id"]
+        assert user_id > 0
+
+        # register admin
+        admin_data = test_data.admin_data()
+        admin_reg_response = api_client.post(
+            "/api/auth/register/admin",
+            headers={"Content-Type": "application/json"},
+            json_data=admin_data,
+            expected_status=201
+        )
+        admin_token = admin_reg_response.json().get("token")
+
+        approve_response = api_client.post(
+            f"/api/auth/approve-user/{user_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            expected_status=200
+        )
+        approve_response_data = approve_response.json()
+        assert "token" in approve_response_data, "Token not found in admin approval response"
 
         # 2. Login
         login_response = api_client.post(

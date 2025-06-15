@@ -18,7 +18,18 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     user_type = Column(String)  # 'customer', 'organizer', 'administrator'
 
+    email_verification_token = Column(String, nullable=True, unique=True, index=True)
+
     # Define relationships
     customer = relationship("Customer", back_populates="user", uselist=False)
     organizer = relationship("Organizer", back_populates="user", uselist=False)
     administrator = relationship("Administrator", back_populates="user", uselist=False)
+
+    def set_email_verification_token(self):
+        """Generates and sets a new email verification token."""
+        from app.security import generate_email_verification_token  # Local import for security functions
+        self.email_verification_token = generate_email_verification_token()
+
+    def clear_email_verification_token(self):
+        """Clears the email verification token."""
+        self.email_verification_token = None
