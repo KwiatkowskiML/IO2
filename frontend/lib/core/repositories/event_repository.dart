@@ -11,6 +11,7 @@ abstract class EventRepository {
   Future<void> notifyParticipants(int eventId, String message);
   Future<TicketType> createTicketType(Map<String, dynamic> data);
   Future<bool> deleteTicketType(int typeId);
+  Future<List<Location>> getLocations();
 }
 
 class ApiEventRepository implements EventRepository {
@@ -71,5 +72,11 @@ class ApiEventRepository implements EventRepository {
   Future<bool> deleteTicketType(int typeId) async {
     final response = await _apiClient.delete('/ticket-types/$typeId');
     return response as bool;
+  }
+
+  @override
+  Future<List<Location>> getLocations() async {
+    final data = await _apiClient.get('/locations/');
+    return (data as List).map((e) => Location.fromJson(e)).toList();
   }
 }

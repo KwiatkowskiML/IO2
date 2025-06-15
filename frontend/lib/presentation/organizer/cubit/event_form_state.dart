@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:resellio/core/models/models.dart';
 
 abstract class EventFormState extends Equatable {
   const EventFormState();
@@ -8,7 +9,18 @@ abstract class EventFormState extends Equatable {
 
 class EventFormInitial extends EventFormState {}
 
-class EventFormSubmitting extends EventFormState {}
+class EventFormPrerequisitesLoading extends EventFormState {}
+
+class EventFormPrerequisitesLoaded extends EventFormState {
+  final List<Location> locations;
+  const EventFormPrerequisitesLoaded({required this.locations});
+  @override
+  List<Object?> get props => [locations];
+}
+
+class EventFormSubmitting extends EventFormPrerequisitesLoaded {
+  const EventFormSubmitting({required super.locations});
+}
 
 class EventFormSuccess extends EventFormState {
   final int eventId;
