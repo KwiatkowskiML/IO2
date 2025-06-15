@@ -11,25 +11,19 @@ class WelcomeCard extends StatelessWidget {
     final user = authService.user;
     final theme = Theme.of(context);
 
-    return Card(
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back, ${user?.name ?? 'Organizer'}!',
-              style: theme.textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Here\'s an overview of your events and activities.',
-              style: theme.textTheme.bodyMedium,
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Welcome back, ${user?.name ?? 'Organizer'}!',
+          style: theme.textTheme.headlineSmall,
         ),
-      ),
+        const SizedBox(height: 8),
+        Text(
+          'Here\'s an overview of your events and activities.',
+          style: theme.textTheme.bodyMedium,
+        ),
+      ],
     );
   }
 }

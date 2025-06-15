@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/models/models.dart';
 import 'package:resellio/presentation/common_widgets/empty_state_widget.dart';
+import 'package:resellio/presentation/organizer/cubit/organizer_dashboard_cubit.dart';
+import 'package:resellio/presentation/organizer/widgets/organizer_event_list_item.dart';
 
 class RecentEventsList extends StatelessWidget {
   final List<Event> events;
@@ -34,83 +36,20 @@ class RecentEventsList extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: events.take(3).length,
-            itemBuilder: (context, index) =>
-                _EventListItem(event: events[index]),
+            itemBuilder: (context, index) {
+              final event = events[index];
+              return OrganizerEventListItem(
+                event: event,
+                onCancel: () => context
+                    .read<OrganizerDashboardCubit>()
+                    .cancelEvent(event.id),
+                onNotify: (message) => context
+                    .read<OrganizerDashboardCubit>()
+                    .notifyParticipants(event.id, message),
+              );
+            },
           ),
       ],
-    );
-  }
-}
-
-class _EventListItem extends StatelessWidget {
-  final Event event;
-
-  const _EventListItem({required this.event});
-
-  Color _getStatusColor(BuildContext context, String status) {
-    switch (status.toLowerCase()) {
-      case 'created':
-        return Colors.green;
-      case 'pending':
-        return Colors.orange;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Theme.of(context).colorScheme.onSurfaceVariant;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final statusColor = _getStatusColor(context, event.status);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(event.name, style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today,
-                          size: 14,
-                          color: theme.colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 6),
-                      Text(DateFormat.yMMMd().format(event.start),
-                          style: theme.textTheme.bodySmall),
-                      const SizedBox(width: 12),
-                      Icon(Icons.location_on,
-                          size: 14,
-                          color: theme.colorScheme.onSurfaceVariant),
-                      const SizedBox(width: 6),
-                      Text(event.location, style: theme.textTheme.bodySmall),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: statusColor),
-              ),
-              child: Text(
-                event.status.toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(color: statusColor),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

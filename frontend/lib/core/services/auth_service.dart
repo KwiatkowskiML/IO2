@@ -54,16 +54,19 @@ class AuthService extends ChangeNotifier {
   UserModel? get user => _user;
   UserProfile? get detailedProfile => _detailedProfile;
 
-  Future<void> _fetchAndSetDetailedProfile() async {
-    if (isLoggedIn) {
+  Future<void> _setTokenAndUser(String token) async {
+    _token = token;
+    _detailedProfile = null; // Clear old profile data
+    final jwtData = tryDecodeJwt(token);
+    if (jwtData != null) {
+      _user = UserModel.fromJwt(jwtData);
       try {
         _detailedProfile = await _userRepository.getUserProfile();
-        notifyListeners();
       } catch (e) {
-        // Silently fail or log error, as this is a background update.
-        debugPrint("Failed to fetch detailed profile: $e");
+        debugPrint("Failed to fetch detailed profile on login: $e");
       }
     }
+    notifyListeners();
   }
 
   Future<void> login(String email, String password) async {
@@ -81,19 +84,11 @@ class AuthService extends ChangeNotifier {
     await _setTokenAndUser(token);
   }
 
-  Future<void> _setTokenAndUser(String token) async {
-    _token = token;
-    final jwtData = tryDecodeJwt(token);
-    if (jwtData != null) {
-      _user = UserModel.fromJwt(jwtData);
-    }
-    await _fetchAndSetDetailedProfile(); // Fetch profile right after login/register
-    notifyListeners();
-  }
-
   void updateDetailedProfile(UserProfile profile) {
-    _detailedProfile = profile;
-    notifyListeners();
+    if (_detailedProfile != profile) {
+      _detailedProfile = profile;
+      notifyListeners();
+    }
   }
 
   Future<void> logout() async {

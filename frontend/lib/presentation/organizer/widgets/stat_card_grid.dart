@@ -12,44 +12,34 @@ class StatCardGrid extends StatelessWidget {
     final pendingEvents = events.where((e) => e.status == 'pending').length;
     final totalTickets = events.fold(0, (sum, e) => sum + e.totalTickets);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 2.2,
       children: [
-        Text(
-          'Overview',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.5,
-          children: [
-            _StatCard(
-                title: 'Total Events',
-                value: events.length.toString(),
-                icon: Icons.event,
-                color: Colors.blue),
-            _StatCard(
-                title: 'Active Events',
-                value: activeEvents.toString(),
-                icon: Icons.event_available,
-                color: Colors.green),
-            _StatCard(
-                title: 'Pending Events',
-                value: pendingEvents.toString(),
-                icon: Icons.pending,
-                color: Colors.orange),
-            _StatCard(
-                title: 'Total Tickets',
-                value: totalTickets.toString(),
-                icon: Icons.confirmation_number,
-                color: Colors.purple),
-          ],
-        ),
+        _StatCard(
+            title: 'Total Events',
+            value: events.length.toString(),
+            icon: Icons.event,
+            color: Colors.blue),
+        _StatCard(
+            title: 'Active Events',
+            value: activeEvents.toString(),
+            icon: Icons.event_available,
+            color: Colors.green),
+        _StatCard(
+            title: 'Pending Events',
+            value: pendingEvents.toString(),
+            icon: Icons.pending,
+            color: Colors.orange),
+        _StatCard(
+            title: 'Total Tickets',
+            value: totalTickets.toString(),
+            icon: Icons.confirmation_number,
+            color: Colors.purple),
       ],
     );
   }
@@ -73,9 +63,7 @@ class _StatCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
@@ -84,12 +72,14 @@ class _StatCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8)),
               child: Icon(icon, color: color, size: 20),
             ),
+            const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(value,
-                    style: theme.textTheme.headlineMedium?.copyWith(color: color)),
-                const SizedBox(height: 4),
+                    style: theme.textTheme.headlineSmall?.copyWith(color: color)),
+                const SizedBox(height: 2),
                 Text(title, style: theme.textTheme.bodyMedium),
               ],
             ),

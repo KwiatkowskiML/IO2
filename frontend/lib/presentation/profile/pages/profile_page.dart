@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
 import 'package:resellio/presentation/common_widgets/dialogs.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
@@ -45,33 +47,53 @@ class _ProfileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<ProfileCubit, ProfileState>(
-      listener: (context, state) {
-        if (state is ProfileLoaded && !state.isEditing) {
-          // Could show a "Saved!" snackbar here after an update.
-        }
-      },
-      child: PageLayout(
-        title: 'Profile',
-        actions: [
-          BlocBuilder<ProfileCubit, ProfileState>(
-            builder: (context, state) {
-              if (state is ProfileLoaded && !state.isEditing) {
-                return IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () =>
-                      context.read<ProfileCubit>().toggleEdit(true),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _showLogoutDialog(context),
-          ),
-        ],
-        body: BlocBuilder<ProfileCubit, ProfileState>(
+    final authService = context.watch<AuthService>();
+    final isCustomer = authService.user?.role == UserRole.customer;
+
+    return PageLayout(
+      title: 'Profile',
+      showCartButton: isCustomer,
+      actions: [
+        BlocBuilder<ProfileCubit, ProfileState>(
+          builder: (context, state) {
+            if (state is ProfileLoaded && !state.isEditing) {
+              return IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => context.read<ProfileCubit>().toggleEdit(true),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          onPressed: () => _showLogoutDialog(context),
+        ),
+      ],
+      body: BlocListener<ProfileCubit, ProfileState>(
+        listener: (context, state) {
+          if (state is ProfileLoaded &&
+              !state.isEditing &&
+              state is! ProfileSaving) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                const SnackBar(
+                    content: Text('Profile saved successfully!'),
+                    backgroundColor: Colors.green),
+              );
+          }
+          if (state is ProfileUpdateError) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(
+                SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: Colors.red),
+              );
+          }
+        },
+        child: BlocBuilder<ProfileCubit, ProfileState>(
           builder: (context, state) {
             return BlocStateWrapper<ProfileLoaded>(
               state: state,

@@ -10,20 +10,18 @@ class CartCubit extends Cubit<CartState> {
 
   Future<void> _handleAction(Future<void> Function() action) async {
     try {
-      // Keep current data while loading to avoid screen flicker
       final currentState = state;
       if (currentState is CartLoaded) {
         emit(CartLoading(currentState.items));
       } else {
-        emit(CartLoading([]));
+        emit(const CartLoading([]));
       }
 
       await action();
-      final items = await _cartRepository.getCartItems();
-      emit(CartLoaded(items));
+      await fetchCart();
     } on ApiException catch (e) {
       emit(CartError(e.message));
-      await fetchCart(); // Re-fetch cart to show previous state on error
+      await fetchCart();
     } catch (e) {
       emit(CartError("An unexpected error occurred: $e"));
       await fetchCart();
@@ -66,16 +64,16 @@ class CartCubit extends Cubit<CartState> {
         return true;
       } else {
         emit(const CartError('Checkout failed. Please try again.'));
-        await fetchCart(); 
+        await fetchCart();
         return false;
       }
     } on ApiException catch (e) {
       emit(CartError(e.message));
-      await fetchCart(); 
+      await fetchCart();
       return false;
     } catch (e) {
       emit(CartError("An unexpected error occurred: $e"));
-      await fetchCart(); 
+      await fetchCart();
       return false;
     }
   }

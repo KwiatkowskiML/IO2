@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 import 'package:resellio/presentation/cart/cubit/cart_state.dart';
 import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
@@ -15,11 +14,7 @@ class CartPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) =>
-          CartCubit(context.read<CartRepository>())..fetchCart(),
-      child: const _CartView(),
-    );
+    return const _CartView();
   }
 }
 
@@ -40,6 +35,9 @@ class _CartView extends StatelessWidget {
               content: Text('Error: ${state.message}'),
               backgroundColor: theme.colorScheme.error,
             ));
+        } else if (state is CartLoaded && state.items.isEmpty) {
+          // This listener can react to the cart becoming empty after checkout.
+          // Optional: Show a "Purchase complete" message if checkout was the last action.
         }
       },
       child: BlocBuilder<CartCubit, CartState>(
@@ -56,7 +54,8 @@ class _CartView extends StatelessWidget {
                   return const EmptyStateWidget(
                     icon: Icons.remove_shopping_cart_outlined,
                     message: 'Your cart is empty',
-                    details: 'Find an event and add some tickets to get started!',
+                    details:
+                        'Find an event and add some tickets to get started!',
                   );
                 } else {
                   return Column(
@@ -90,8 +89,7 @@ class _CartView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color:
-                              theme.colorScheme.surfaceContainerHighest,
+                          color: theme.colorScheme.surfaceContainerHighest,
                           borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(20)),
                         ),
@@ -117,8 +115,8 @@ class _CartView extends StatelessWidget {
                                     .read<CartCubit>()
                                     .checkout();
                                 if (success && context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(const SnackBar(
                                           content:
                                               Text('Purchase Successful!'),
                                           backgroundColor: Colors.green));

@@ -8,6 +8,9 @@ class CustomTextFormField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool obscureText;
   final String? prefixText;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final int? maxLines;
 
   const CustomTextFormField({
     super.key,
@@ -18,6 +21,9 @@ class CustomTextFormField extends StatelessWidget {
     this.keyboardType,
     this.obscureText = false,
     this.prefixText,
+    this.readOnly = false,
+    this.onTap,
+    this.maxLines = 1,
   });
 
   @override
@@ -27,6 +33,9 @@ class CustomTextFormField extends StatelessWidget {
       enabled: enabled,
       keyboardType: keyboardType,
       obscureText: obscureText,
+      readOnly: readOnly,
+      onTap: onTap,
+      maxLines: maxLines,
       decoration: InputDecoration(
         labelText: labelText,
         prefixText: prefixText,

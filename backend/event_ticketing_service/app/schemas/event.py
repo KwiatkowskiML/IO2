@@ -55,6 +55,7 @@ class EventUpdate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     description: Optional[str] = None
+    minimum_age: Optional[int] = None
 
 
 class NotificationRequest(BaseModel):

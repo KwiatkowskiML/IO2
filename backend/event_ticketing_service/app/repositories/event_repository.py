@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
 from app.models.events import EventModel
+from app.models.ticket import TicketModel
+from app.models.ticket_type import TicketTypeModel
 from fastapi import HTTPException, status, Depends
 from app.models.location import LocationModel
 from app.filters.events_filter import EventsFilter
@@ -112,6 +114,22 @@ class EventRepository:
         event = self.get_event(event_id)
         if event.organizer_id != organizer_id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this event")
+
+        # Check if any tickets for this event have been sold
+        sold_tickets_count = (
+            self.db.query(TicketModel.ticket_id)
+            .join(TicketTypeModel, TicketModel.type_id == TicketTypeModel.type_id)
+            .filter(TicketTypeModel.event_id == event_id)
+            .filter(TicketModel.owner_id.isnot(None))
+            .count()
+        )
+
+        if sold_tickets_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot cancel event. There are {sold_tickets_count} sold tickets that must be refunded first."
+            )
+
         event.status = "cancelled"
         self.db.commit()
 

@@ -15,12 +15,11 @@ class ProfileCubit extends Cubit<ProfileState> {
     try {
       emit(ProfileLoading());
       final profile = await _userRepository.getUserProfile();
-      _authService.updateDetailedProfile(profile); // Sync with auth service
       emit(ProfileLoaded(userProfile: profile));
     } on ApiException catch (e) {
-      emit(ProfileError(e.message));
+      emit(ProfileInitialError(e.message));
     } catch (e) {
-      emit(ProfileError('An unexpected error occurred: $e'));
+      emit(ProfileInitialError('An unexpected error occurred: $e'));
     }
   }
 
@@ -39,18 +38,15 @@ class ProfileCubit extends Cubit<ProfileState> {
 
     try {
       final updatedProfile = await _userRepository.updateUserProfile(data);
-      _authService.updateDetailedProfile(updatedProfile); // Sync with auth service
+      _authService.updateDetailedProfile(updatedProfile);
       emit(ProfileLoaded(userProfile: updatedProfile));
-    } on ApiException {
-      emit(ProfileLoaded(
-          userProfile: loadedState.userProfile,
-          isEditing: true)); // Revert to editing mode on error
-      rethrow;
+    } on ApiException catch (e) {
+      emit(ProfileUpdateError(
+          userProfile: loadedState.userProfile, message: e.message));
     } catch (e) {
-      emit(ProfileLoaded(
+      emit(ProfileUpdateError(
           userProfile: loadedState.userProfile,
-          isEditing: true)); // Revert to editing mode on error
-      throw Exception('An unexpected error occurred.');
+          message: 'An unexpected error occurred.'));
     }
   }
 }

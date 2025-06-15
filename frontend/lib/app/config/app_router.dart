@@ -10,6 +10,8 @@ import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 import 'package:resellio/presentation/events/pages/event_details_page.dart';
 import 'package:resellio/presentation/cart/pages/cart_page.dart';
 import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
+import 'package:resellio/presentation/organizer/pages/create_event_page.dart';
+import 'package:resellio/presentation/organizer/pages/edit_event_page.dart';
 
 class AppRouter {
   static GoRouter createRouter(AuthService authService) {
@@ -37,8 +39,6 @@ class AppRouter {
                 state.uri.path.startsWith('/register');
 
         final bool onAdminRoute = state.uri.path.startsWith('/admin');
-
-        print('Router Debug: loggedIn=$loggedIn, userRoleName=$userRoleName, path=${state.uri.path}');
 
         // If user is not logged in and not on an auth route, redirect to welcome
         if (!loggedIn && !onAuthRoute) {
@@ -149,12 +149,22 @@ class AppRouter {
             }
           },
         ),
-
-        // Cart Route
+        GoRoute(path: '/cart', builder: (context, state) => const CartPage()),
         GoRoute(
-          path: '/cart',
-          builder: (context, state) => const CartPage(),
-        ),
+            path: '/organizer/create-event',
+            builder: (context, state) => const CreateEventPage()),
+        GoRoute(
+            path: '/organizer/edit-event/:id',
+            builder: (context, state) {
+              final event = state.extra as Event?;
+              if (event == null) {
+                 return Scaffold(
+                  appBar: AppBar(title: const Text('Error')),
+                  body: const Center(child: Text('Event data is missing.')),
+                );
+              }
+              return EditEventPage(event: event);
+            }),
       ],
       errorBuilder: (context, state) => Scaffold(
         appBar: AppBar(title: const Text('Page Not Found')),

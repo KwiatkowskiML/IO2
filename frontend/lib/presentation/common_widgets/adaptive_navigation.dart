@@ -8,6 +8,8 @@ import 'package:resellio/presentation/marketplace/pages/marketplace_page.dart';
 import 'package:resellio/presentation/profile/pages/profile_page.dart';
 import 'package:resellio/presentation/organizer/pages/organizer_dashboard_page.dart';
 import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
+import 'package:resellio/presentation/organizer/pages/organizer_events_page.dart';
+import 'package:resellio/presentation/organizer/pages/organizer_stats_page.dart';
 
 enum UserRole { customer, organizer, admin }
 
@@ -27,6 +29,32 @@ class AdaptiveNavigation extends StatefulWidget {
 
 class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
   int _selectedIndex = 0;
+
+  List<Widget> _getScreens() {
+    switch (widget.userRole) {
+      case UserRole.customer:
+        return [
+          const EventBrowsePage(),
+          const MyTicketsPage(),
+          const MarketplacePage(),
+          const ProfilePage(),
+        ];
+      case UserRole.organizer:
+        return [
+          const OrganizerDashboardPage(),
+          const OrganizerEventsPage(),
+          const OrganizerStatsPage(),
+          const ProfilePage(),
+        ];
+      case UserRole.admin:
+        return [
+          const AdminMainPage(),
+          const Center(child: Text('Direct User Management - Use Admin Panel instead')),
+          const Center(child: Text('Direct Organizer Management - Use Admin Panel instead')),
+          const ProfilePage(),
+        ];
+    }
+  }
 
   List<NavigationDestination> _getBottomNavDestinations() {
     switch (widget.userRole) {
@@ -176,41 +204,6 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
     }
   }
 
-  Widget _getSelectedScreen() {
-    List<Widget> screens;
-    switch (widget.userRole) {
-      case UserRole.customer:
-        screens = [
-          const EventBrowsePage(),
-          const MyTicketsPage(),
-          const MarketplacePage(),
-          const ProfilePage(),
-        ];
-        break;
-      case UserRole.organizer:
-        screens = [
-          const OrganizerDashboardPage(),
-          const Center(child: Text('My Events Page (Organizer) - Coming Soon!')),
-          const Center(child: Text('Statistics Page (Organizer) - Coming Soon!')),
-          const ProfilePage(),
-        ];
-        break;
-      case UserRole.admin:
-        screens = [
-          const AdminMainPage(),
-          const Center(child: Text('Direct User Management - Use Admin Panel instead')),
-          const Center(child: Text('Direct Organizer Management - Use Admin Panel instead')),
-          const ProfilePage(),
-        ];
-        break;
-    }
-
-    if (_selectedIndex >= screens.length) {
-      return const Center(child: Text('Error: Invalid page index'));
-    }
-    return screens[_selectedIndex];
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -219,6 +212,7 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
         ResponsiveLayout.isTablet(context) ||
             ResponsiveLayout.isDesktop(context);
     final bool isExtended = ResponsiveLayout.isDesktop(context);
+    final screens = _getScreens();
 
     if (showNavRail) {
       return Scaffold(
@@ -299,13 +293,21 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
               width: 1,
               color: colorScheme.outlineVariant.withOpacity(0.5),
             ),
-            Expanded(child: _getSelectedScreen()),
+            Expanded(
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: screens,
+              ),
+            ),
           ],
         ),
       );
     } else {
       return Scaffold(
-        body: _getSelectedScreen(),
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: screens,
+        ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
           onDestinationSelected: (int index) {
