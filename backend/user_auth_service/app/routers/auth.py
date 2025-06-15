@@ -1,3 +1,7 @@
+"""
+Fixed auth.py - Addresses admin banning and initial admin security issues
+"""
+
 import logging
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -12,6 +16,7 @@ from app.schemas.user import UserResponse, OrganizerResponse
 from app.models import User, Customer, Organizer, Administrator
 from fastapi import Depends, APIRouter, HTTPException, BackgroundTasks, status, Query
 from sqlalchemy import and_, or_
+from app.security import INITIAL_ADMIN_EMAIL
 
 from app.schemas.auth import (
     Token,
@@ -35,9 +40,6 @@ from app.security import (
 )
 from app.services.email_service import send_account_verification_email
 
-# Future import for email sending functionality
-# from app.services.email import send_password_reset_email, send_verification_email
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -45,11 +47,18 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post("/register/customer", status_code=status.HTTP_201_CREATED)
 def register_customer(
-    user: UserCreate,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+        user: UserCreate,
+        background_tasks: BackgroundTasks,
+        db: Session = Depends(get_db),
 ):
     """Register a new customer account"""
+
+    if user.email == INITIAL_ADMIN_EMAIL:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This email address is reserved and cannot be used for registration",
+        )
+
     # Check if email already exists
     new_user = db.query(User).filter(User.email == user.email).first()
     if new_user:
@@ -98,17 +107,20 @@ def register_customer(
             verification_token=new_user.email_verification_token
         )
 
-        return {"message": "User registered successfully. Please check your email to activate your account.",
-                "user_id": new_user.user_id}
+        return {
+            "message": "User registered successfully. Please check your email to activate your account.",
+            "user_id": new_user.user_id}
 
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration failed due to database error")
-    except Exception as e:  # Catch other potential errors
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Registration failed due to database error")
+    except Exception as e:
         db.rollback()
         logger.error(f"Unexpected error during customer registration: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Registration failed due to database error")
+
 
 @router.post("/register/organizer", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register_organizer(user: OrganizerCreate, db: Session = Depends(get_db)):
@@ -245,44 +257,31 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
                            db: Session = Depends(get_db)):
     """Login endpoint that exchanges username (email) and password for an access token"""
 
-    # Check if this is the initial admin login attempt
-    if verify_initial_admin_credentials(form_data.username, form_data.password):
-        # Create or get the initial admin user
-        admin_user = db.query(User).filter(User.email == form_data.username).first()
+    user = db.query(User).filter(User.email == form_data.username).first()
 
-        if not admin_user:
-            # Create the initial admin user if it doesn't exist
-            hashed_password = get_password_hash(form_data.password)
-            admin_user = User(
-                email=form_data.username,
-                login="initial_admin",
-                password_hash=hashed_password,
-                first_name="Initial",
-                last_name="Admin",
-                user_type="administrator",
-                is_active=True,
-            )
+    if not user and verify_initial_admin_credentials(form_data.username, form_data.password):
+        # Create the initial admin user since it doesn't exist
+        hashed_password = get_password_hash(form_data.password)
+        admin_user = User(
+            email=form_data.username,
+            login="initial_admin",
+            password_hash=hashed_password,
+            first_name="Initial",
+            last_name="Admin",
+            user_type="administrator",
+            is_active=True,
+        )
 
-            db.add(admin_user)
-            db.flush()
+        db.add(admin_user)
+        db.flush()
 
-            # Create administrator record
-            admin_record = Administrator(user_id=admin_user.user_id)
-            db.add(admin_record)
+        # Create administrator record
+        admin_record = Administrator(user_id=admin_user.user_id)
+        db.add(admin_record)
 
-            db.commit()
-            db.refresh(admin_user)
-            db.refresh(admin_record)
-        else:
-            # Get the admin record for existing user
-            admin_record = db.query(Administrator).filter(
-                Administrator.user_id == admin_user.user_id).first()
-            if not admin_record:
-                # Create missing admin record if needed
-                admin_record = Administrator(user_id=admin_user.user_id)
-                db.add(admin_record)
-                db.commit()
-                db.refresh(admin_record)
+        db.commit()
+        db.refresh(admin_user)
+        db.refresh(admin_record)
 
         # Generate access token for initial admin
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -297,10 +296,8 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
             expires_delta=access_token_expires,
         )
 
-        return {"token": access_token, "message": "Initial admin login successful"}
+        return {"token": access_token, "message": "Login successful"}
 
-    # Regular user login flow
-    user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -443,12 +440,24 @@ def reset_password(reset_confirm: PasswordResetConfirm, db: Session = Depends(ge
 
 @router.post("/ban-user/{user_id}")
 def ban_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    """Ban a user (admin only)"""
+    """Ban a user (admin only) - FIXED: Prevent banning other admins"""
     # Find the user
     user = db.query(User).filter(User.user_id == user_id).first()
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.user_type == "administrator":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot ban administrator accounts"
+        )
+
+    if user.user_id == admin.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot ban yourself"
+        )
 
     user.is_active = False
     db.commit()
@@ -473,10 +482,12 @@ def unban_user(user_id: int, db: Session = Depends(get_db),
 
     return {"message": "User has been unbanned"}
 
+
 @router.get("/verify-email", response_model=Token, summary="Verify Email Address")
 async def verify_email_address(
-    token: str = Query(..., description="The email verification token sent to the user's email address"),
-    db: Session = Depends(get_db)
+        token: str = Query(...,
+                           description="The email verification token sent to the user's email address"),
+        db: Session = Depends(get_db)
 ):
     """
     Verify a user's email address using the token from the verification email.
@@ -485,8 +496,10 @@ async def verify_email_address(
     auth_repo = AuthRepository(db)
     return auth_repo.verify_email_and_generate_token(verification_token=token)
 
+
 @router.post("/approve-user/{user_id}")
-def approve_user(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def approve_user(user_id: int, db: Session = Depends(get_db),
+                 admin: User = Depends(get_current_admin)):
     """Approve user (admin only)"""
     user = db.query(User).filter(User.user_id == user_id).first()
 
@@ -497,7 +510,9 @@ def approve_user(user_id: int, db: Session = Depends(get_db), admin: User = Depe
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is active")
 
     auth_repo = AuthRepository(db)
-    return auth_repo.verify_email_and_generate_token(verification_token=user.email_verification_token)
+    return auth_repo.verify_email_and_generate_token(
+        verification_token=user.email_verification_token)
+
 
 @router.get("/users", response_model=List[OrganizerResponse])
 def list_users(

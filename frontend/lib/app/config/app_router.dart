@@ -101,6 +101,10 @@ class AppRouter {
           path: '/admin/add-admin',
           builder: (context, state) => const AdminMainPage(initialTab: 'add-admin'),
         ),
+        GoRoute(
+          path: '/admin/verification',
+          builder: (context, state) => const AdminMainPage(initialTab: 'verification'),
+        ),
 
         // Main App Routes
         GoRoute(

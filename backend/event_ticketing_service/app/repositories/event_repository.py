@@ -1,3 +1,7 @@
+"""
+Fixed event_repository.py - Eliminates duplicate validation logic
+"""
+
 from typing import List
 
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -30,10 +34,11 @@ class EventRepository:
         return event
 
     def create_event(self, data: EventBase, organizer_id: int) -> EventModel:
-        # Validate location exists
-        location = self.db.query(LocationModel).filter(LocationModel.location_id == data.location_id).first()
+        location = self.db.query(LocationModel).filter(
+            LocationModel.location_id == data.location_id).first()
         if not location:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"Location '{data.location_id}' not found")
+            raise HTTPException(status.HTTP_404_NOT_FOUND,
+                                detail=f"Location '{data.location_id}' not found")
 
         event = EventModel(
             organizer_id=organizer_id,
@@ -50,23 +55,25 @@ class EventRepository:
         # After commit, re-query the event to get eager-loaded relationships for the response model.
         return self.get_event(event.event_id)
 
-    def authorize_event(self, event_id: int) -> None:
-        event = self.get_event(event_id)
-        if event.status != "pending":
+    def _validate_event_status_change(self, event: EventModel, required_status: str,
+                                      action: str) -> None:
+        if event.status != required_status:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
-                detail=f"Event must be in pending status to authorize. Current status: {event.status}"
+                detail=f"Event must be in {required_status} status to {action}. Current status: {event.status}"
             )
+
+    def authorize_event(self, event_id: int) -> None:
+        """Authorize a pending event"""
+        event = self.get_event(event_id)
+        self._validate_event_status_change(event, "pending", "authorize")
         event.status = "created"
         self.db.commit()
 
     def reject_event(self, event_id: int) -> None:
+        """Reject a pending event"""
         event = self.get_event(event_id)
-        if event.status != "pending":
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail=f"Event must be in pending status to reject. Current status: {event.status}"
-            )
+        self._validate_event_status_change(event, "pending", "reject")
         event.status = "rejected"
         self.db.commit()
 
@@ -101,7 +108,8 @@ class EventRepository:
     def update_event(self, event_id: int, data: EventUpdate, organizer_id: int) -> EventModel:
         event = self.get_event(event_id)
         if event.organizer_id != organizer_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorized to update this event")
+            raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                detail="Not authorized to update this event")
         updates = data.dict(exclude_unset=True)
         for field, value in updates.items():
             if value is not None:
@@ -113,7 +121,8 @@ class EventRepository:
     def cancel_event(self, event_id: int, organizer_id: int) -> None:
         event = self.get_event(event_id)
         if event.organizer_id != organizer_id:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Not authorized to cancel this event")
+            raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                detail="Not authorized to cancel this event")
 
         # Check if any tickets for this event have been sold
         sold_tickets_count = (
@@ -132,6 +141,7 @@ class EventRepository:
 
         event.status = "cancelled"
         self.db.commit()
+
 
 # Dependency to get the EventRepository instance
 def get_event_repository(db: Session = Depends(get_db)) -> EventRepository:
