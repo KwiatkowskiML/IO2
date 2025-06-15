@@ -76,11 +76,24 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
     }
 
     try {
+      // Check if user can be banned
+      final canBan = await _adminRepository.canBanUser(userId);
+      if (!canBan) {
+        final user = await _adminRepository.getUserById(userId);
+        throw ApiException(
+            'Cannot ban ${user.firstName} ${user.lastName}: Administrator accounts are protected from banning'
+        );
+      }
+
       await _adminRepository.banUser(userId);
       await loadDashboard();
     } on ApiException catch (e) {
       emit(AdminDashboardError(e.message));
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 3));
+      await loadDashboard();
+    } catch (e) {
+      emit(AdminDashboardError('Failed to ban user: $e'));
+      await Future.delayed(const Duration(seconds: 3));
       await loadDashboard();
     }
   }
@@ -143,8 +156,9 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
   /// Get admin statistics
   Future<AdminStats> getAdminStats() async {
     try {
-      // Note: This would need to be implemented in the AdminRepository
-      // For now, we'll calculate from loaded data
+      return await _adminRepository.getAdminStats();
+    } catch (e) {
+      // Fallback calculation from loaded data
       if (state is AdminDashboardLoaded) {
         final loadedState = state as AdminDashboardLoaded;
         return AdminStats(
@@ -160,10 +174,6 @@ class AdminDashboardCubit extends Cubit<AdminDashboardState> {
           totalEvents: 0, // This would need to come from another source
         );
       }
-
-      // Fallback to API call if no loaded state
-      throw Exception('No dashboard data loaded');
-    } catch (e) {
       throw Exception('Failed to get admin stats: $e');
     }
   }

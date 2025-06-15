@@ -218,6 +218,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   }
 
   void _showUserDetails(BuildContext context, UserDetails user) {
+    final isAdmin = _isAdminUser(user.userType);
+
     showDialog(
       context: context,
       builder: (context) => AdminDetailDialog(
@@ -234,12 +236,69 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               AdminDetailRow(label: 'User ID', value: user.userId.toString()),
             ],
           ),
+          if (isAdmin)
+            AdminDetailSection(
+              title: 'Security Information',
+              rows: [
+                AdminDetailRow(label: 'Protection Level', value: 'Protected Account'),
+                AdminDetailRow(label: 'Ban Status', value: 'Cannot be banned'),
+                AdminDetailRow(label: 'System Role', value: 'Administrator'),
+              ],
+            ),
+        ],
+        footer: isAdmin ? _buildAdminProtectionFooter() : null,
+      ),
+    );
+  }
+
+  Widget _buildAdminProtectionFooter() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.amber.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.amber.withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.shield, color: Colors.amber.shade700, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'This is an administrator account with special protection. Admin accounts cannot be banned to maintain system security and prevent lockouts.',
+              style: TextStyle(
+                color: Colors.amber.shade700,
+                fontSize: 12,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
   void _showBanConfirmation(BuildContext context, UserDetails user) async {
+    // Check if user is an admin
+    if (_isAdminUser(user.userType)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.shield, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Administrator accounts cannot be banned for security reasons.'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.amber.shade700,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showConfirmationDialog(
       context: context,
       title: user.isActive ? 'Ban User' : 'Unban User',
@@ -292,6 +351,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         );
       }
     }
+  }
+
+  bool _isAdminUser(String userType) {
+    return userType.toLowerCase() == 'administrator' || userType.toLowerCase() == 'admin';
   }
 
   String _getFilterLabel(UserFilter filter) {
@@ -426,6 +489,9 @@ class _UserCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final userTypeColor = _getUserTypeColor(user.userType);
+    final isAdmin = _isAdminUser(user.userType);
+    final canBeBanned = !isAdmin && user.isActive;
+    final canBeUnbanned = !isAdmin && !user.isActive;
 
     return ListItemCard(
       isDimmed: !user.isActive,
@@ -456,6 +522,32 @@ class _UserCard extends StatelessWidget {
               AdminStatusChip(
                 type: user.isActive ? AdminStatusType.active : AdminStatusType.banned,
               ),
+              if (isAdmin) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.shield, size: 12, color: Colors.amber.shade700),
+                      const SizedBox(width: 4),
+                      Text(
+                        'PROTECTED',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.amber.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -467,20 +559,26 @@ class _UserCard extends StatelessWidget {
             icon: Icons.info_outline,
             onPressed: onViewDetails,
           ),
-          AdminAction(
-            label: user.isActive ? 'Ban' : 'Unban',
-            icon: user.isActive ? Icons.block : Icons.check_circle,
-            onPressed: onBanToggle,
-            color: user.isActive ? Colors.red : Colors.green,
-          ),
+          if (canBeBanned || canBeUnbanned)
+            AdminAction(
+              label: user.isActive ? 'Ban' : 'Unban',
+              icon: user.isActive ? Icons.block : Icons.check_circle,
+              onPressed: onBanToggle,
+              color: user.isActive ? Colors.red : Colors.green,
+            ),
         ],
       ),
     );
   }
 
+  bool _isAdminUser(String userType) {
+    return userType.toLowerCase() == 'administrator' || userType.toLowerCase() == 'admin';
+  }
+
   Color _getUserTypeColor(String userType) {
     switch (userType.toLowerCase()) {
       case 'administrator':
+      case 'admin':
         return Colors.purple;
       case 'organizer':
         return Colors.blue;

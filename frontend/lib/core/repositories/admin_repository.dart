@@ -1,6 +1,7 @@
 import 'package:resellio/core/models/admin_model.dart';
 import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/network/api_client.dart';
+import 'package:resellio/core/network/api_exception.dart';
 
 abstract class AdminRepository {
   Future<List<PendingOrganizer>> getPendingOrganizers();
@@ -22,6 +23,9 @@ abstract class AdminRepository {
   Future<String> registerAdmin(Map<String, dynamic> adminData);
   Future<UserDetails> getUserDetails(int userId);
   Future<AdminStats> getAdminStats();
+
+  Future<bool> canBanUser(int userId);
+  Future<UserDetails> getUserById(int userId);
 }
 
 class ApiAdminRepository implements AdminRepository {
@@ -85,7 +89,20 @@ class ApiAdminRepository implements AdminRepository {
 
   @override
   Future<void> banUser(int userId) async {
-    await _apiClient.post('/auth/ban-user/$userId');
+    final canBan = await canBanUser(userId);
+    if (!canBan) {
+      throw ApiException('Administrator accounts cannot be banned for security reasons');
+    }
+
+    try {
+      await _apiClient.post('/auth/ban-user/$userId');
+    } on ApiException catch (e) {
+      if (e.message.toLowerCase().contains('admin') ||
+          e.message.toLowerCase().contains('administrator')) {
+        throw ApiException('Administrator accounts cannot be banned for security reasons');
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -100,7 +117,6 @@ class ApiAdminRepository implements AdminRepository {
 
   @override
   Future<void> rejectEvent(int eventId) async {
-    // Add reject event endpoint
     await _apiClient.post('/events/reject/$eventId');
   }
 
@@ -117,8 +133,28 @@ class ApiAdminRepository implements AdminRepository {
   }
 
   @override
+  Future<UserDetails> getUserById(int userId) async {
+    return await getUserDetails(userId);
+  }
+
+  @override
+  Future<bool> canBanUser(int userId) async {
+    try {
+      final user = await getUserById(userId);
+      return !_isAdminUser(user.userType);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
   Future<AdminStats> getAdminStats() async {
     final data = await _apiClient.get('/auth/users/stats');
     return AdminStats.fromJson(data);
+  }
+
+  bool _isAdminUser(String userType) {
+    final normalizedType = userType.toLowerCase();
+    return normalizedType == 'administrator' || normalizedType == 'admin';
   }
 }

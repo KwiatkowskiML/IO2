@@ -27,8 +27,6 @@ class AdminOverviewPage extends StatelessWidget {
                   _buildStatsGrid(context, loadedState),
                   const SizedBox(height: 24),
                   _buildQuickActions(context),
-                  const SizedBox(height: 24),
-                  _buildRecentActivity(context, loadedState),
                 ],
               ),
             );
@@ -140,7 +138,7 @@ class AdminOverviewPage extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: isMobile ? 1.5 : 1.0, // Increased ratio to give more height
+      childAspectRatio: isMobile ? 1.5 : 1.2, // Slightly increased for better spacing
       children: stats.map((stat) => _buildStatCard(context, stat)).toList(),
     );
   }
@@ -154,7 +152,7 @@ class AdminOverviewPage extends StatelessWidget {
         onTap: stat.onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12.0), // Reduced padding
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -163,20 +161,20 @@ class AdminOverviewPage extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6), // Reduced padding
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: stat.color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       stat.icon,
                       color: stat.color,
-                      size: 20, // Reduced icon size
+                      size: 24,
                     ),
                   ),
                   Icon(
                     Icons.arrow_forward_ios,
-                    size: 12, // Reduced arrow size
+                    size: 14,
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ],
@@ -192,15 +190,15 @@ class AdminOverviewPage extends StatelessWidget {
                 children: [
                   Text(
                     stat.value,
-                    style: theme.textTheme.headlineSmall?.copyWith( // Smaller headline
+                    style: theme.textTheme.headlineMedium?.copyWith(
                       color: stat.color,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     stat.title,
-                    style: theme.textTheme.titleSmall?.copyWith( // Smaller title
+                    style: theme.textTheme.titleSmall?.copyWith(
                       color: colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
@@ -213,7 +211,7 @@ class AdminOverviewPage extends StatelessWidget {
                       stat.subtitle!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
-                        fontSize: 11, // Smaller subtitle
+                        fontSize: 11,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -265,9 +263,21 @@ class AdminOverviewPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quick Actions',
-          style: theme.textTheme.titleLarge,
+        Row(
+          children: [
+            Icon(
+              Icons.flash_on,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Quick Actions',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -276,7 +286,7 @@ class AdminOverviewPage extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: ResponsiveLayout.isMobile(context) ? 4 : 3,
+          childAspectRatio: ResponsiveLayout.isMobile(context) ? 4 : 3.5,
           children: actions.map((action) => _buildQuickActionCard(context, action)).toList(),
         ),
       ],
@@ -292,7 +302,7 @@ class AdminOverviewPage extends StatelessWidget {
         onTap: action.onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(20.0),
           child: Row(
             children: [
               Container(
@@ -336,151 +346,6 @@ class AdminOverviewPage extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentActivity(BuildContext context, AdminDashboardLoaded state) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recent Activity',
-          style: theme.textTheme.titleLarge,
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                if (state.pendingOrganizers.isNotEmpty) ...[
-                  _buildActivityItem(
-                    context,
-                    icon: Icons.business,
-                    title: 'New Organizer Registration',
-                    subtitle: '${state.pendingOrganizers.first.companyName} awaiting verification',
-                    time: 'Just now',
-                    color: Colors.orange,
-                    onTap: () => context.go('/admin/organizers'),
-                  ),
-                  const Divider(),
-                ],
-                if (state.pendingEvents.isNotEmpty) ...[
-                  _buildActivityItem(
-                    context,
-                    icon: Icons.event,
-                    title: 'Event Pending Approval',
-                    subtitle: '${state.pendingEvents.first.name} needs review',
-                    time: '1 hour ago',
-                    color: Colors.purple,
-                    onTap: () => context.go('/admin/events'),
-                  ),
-                  const Divider(),
-                ],
-                if (state.bannedUsers.isNotEmpty) ...[
-                  _buildActivityItem(
-                    context,
-                    icon: Icons.block,
-                    title: 'User Account Banned',
-                    subtitle: 'Account violations detected',
-                    time: '2 hours ago',
-                    color: Colors.red,
-                    onTap: () => context.go('/admin/users'),
-                  ),
-                ] else ...[
-                  _buildActivityItem(
-                    context,
-                    icon: Icons.check_circle,
-                    title: 'System Status Normal',
-                    subtitle: 'All systems operating smoothly',
-                    time: 'Current',
-                    color: Colors.green,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActivityItem(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required String subtitle,
-        required String time,
-        required Color color,
-        VoidCallback? onTap,
-      }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  time,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (onTap != null) ...[
-                  const SizedBox(height: 4),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 12,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ],
-            ),
-          ],
         ),
       ),
     );
