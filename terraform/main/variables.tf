@@ -37,3 +37,12 @@ variable "force_db_reset" {
   description = "If true, forces the db-init task to wipe the public schema before initializing. Use with caution."
   default     = false
 }
+variable "sendgrid_api_key" {
+  type        = string
+  description = "The SendGrid API key for sending emails."
+  sensitive   = true
+}
+variable "email_from_address" {
+  type        = string
+  description = "The email address to use as the sender."
+}
