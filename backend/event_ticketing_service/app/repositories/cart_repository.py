@@ -1,4 +1,5 @@
 import logging
+import pytz
 from typing import List, Dict, Any
 from fastapi import Depends
 from fastapi import HTTPException, status
@@ -66,13 +67,6 @@ class CartRepository:
                 detail=f"Ticket type with ID {ticket_type_id} not found",
             )
 
-        # Verify that the ticket type is available for sale
-        if ticket_type.available_from is not None and ticket_type.available_from > datetime.now():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Ticket type with ID {ticket_type_id} is not available for sale yet",
-            )
-
         # This case should ideally not happen
         if not ticket_type.event:
             raise HTTPException(
@@ -87,8 +81,24 @@ class CartRepository:
                 detail=f"Event '{ticket_type.event.name}' is not yet active.",
             )
 
+        # Get current time in Warsaw timezone
+        warsaw_tz = pytz.timezone('Europe/Warsaw')
+        now_warsaw_aware = datetime.now(warsaw_tz)
+
+        # Verify that the ticket type is available for sale
+        if ticket_type.available_from is not None:
+            # Convert available_from to Warsaw timezone
+            available_from_warsaw_aware = warsaw_tz.localize(ticket_type.available_from)
+
+            if available_from_warsaw_aware > now_warsaw_aware:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Ticket type with ID {ticket_type_id} is not available for sale yet",
+                )
+
         # Verify that the event has not passed
-        if ticket_type.event.end_date < datetime.now():
+        event_end_date_warsaw_aware = warsaw_tz.localize(ticket_type.event.end_date)
+        if event_end_date_warsaw_aware < now_warsaw_aware:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Event '{ticket_type.event.name}' has already ended.",
@@ -105,7 +115,8 @@ class CartRepository:
         # If the item already exists in the cart, update the quantity
         if existing_cart_item:
             existing_cart_item.quantity += quantity
-            logger.info(f"Updated quantity for ticket_type_id {ticket_type_id} in cart_id {cart.cart_id}. New quantity: {existing_cart_item.quantity}")
+            logger.info(
+                f"Updated quantity for ticket_type_id {ticket_type_id} in cart_id {cart.cart_id}. New quantity: {existing_cart_item.quantity}")
         else:
             existing_cart_item = CartItemModel(
                 cart_id=cart.cart_id,
