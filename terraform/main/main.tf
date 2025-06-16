@@ -153,3 +153,10 @@ resource "null_resource" "db_initializer" {
     EOT
   }
 }
+
+# Frontend Hosting
+module "frontend_hosting" {
+  source       = "../modules/frontend_hosting"
+  project_name = var.project_name
+  api_base_url = module.ecs_cluster.alb_dns_name
+}
