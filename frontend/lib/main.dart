@@ -57,11 +57,42 @@ void main() {
   );
 }
 
-class ResellioApp extends StatelessWidget {
+class ResellioApp extends StatefulWidget {
   const ResellioApp({super.key});
 
   @override
+  State<ResellioApp> createState() => _ResellioAppState();
+}
+
+class _ResellioAppState extends State<ResellioApp> {
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAuth();
+  }
+
+  Future<void> _initializeAuth() async {
+    // Wait for AuthService to potentially load stored token
+    await Future.microtask(() {});
+    if (mounted) {
+      setState(() {
+        _isInitialized = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
     final authService = Provider.of<AuthService>(context);
 
     return MaterialApp.router(

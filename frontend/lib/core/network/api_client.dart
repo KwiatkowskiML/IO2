@@ -1,19 +1,40 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:resellio/core/network/api_exception.dart';
+
+import 'dart:html' as html show window;
 
 class ApiClient {
   final Dio _dio;
   String? _authToken;
+  static const String _tokenKey = 'resellio_auth_token';
 
   ApiClient(String baseUrl) : _dio = Dio() {
     _dio.options.baseUrl = baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 15);
     _dio.options.receiveTimeout = const Duration(seconds: 15);
     _dio.interceptors.add(_createInterceptor());
+
+    if (kIsWeb) {
+      _loadStoredToken();
+    }
+  }
+
+  void _loadStoredToken() {
+    if (kIsWeb) {
+      _authToken = html.window.localStorage[_tokenKey];
+    }
   }
 
   void setAuthToken(String? token) {
     _authToken = token;
+    if (kIsWeb) {
+      if (token != null) {
+        html.window.localStorage[_tokenKey] = token;
+      } else {
+        html.window.localStorage.remove(_tokenKey);
+      }
+    }
   }
 
   Future<dynamic> get(String endpoint, {Map<String, dynamic>? queryParams}) async {
@@ -59,6 +80,11 @@ class ApiClient {
   InterceptorsWrapper _createInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) {
+        // Always check localStorage for the latest token (web only)
+        if (kIsWeb && _authToken == null) {
+          _loadStoredToken();
+        }
+
         if (_authToken != null) {
           options.headers['Authorization'] = 'Bearer $_authToken';
         }

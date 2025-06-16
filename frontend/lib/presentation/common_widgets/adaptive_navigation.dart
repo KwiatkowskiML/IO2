@@ -10,8 +10,7 @@ import 'package:resellio/presentation/organizer/pages/organizer_dashboard_page.d
 import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
 import 'package:resellio/presentation/organizer/pages/organizer_events_page.dart';
 import 'package:resellio/presentation/organizer/pages/organizer_stats_page.dart';
-
-enum UserRole { customer, organizer, admin }
+import 'package:resellio/core/models/user_model.dart';
 
 class AdaptiveNavigation extends StatefulWidget {
   final UserRole userRole;

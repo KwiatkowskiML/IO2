@@ -14,3 +14,24 @@ Map<String, dynamic>? tryDecodeJwt(String token) {
     return null;
   }
 }
+
+bool isTokenExpired(String token) {
+  final jwtData = tryDecodeJwt(token);
+  if (jwtData == null) return true;
+
+  final exp = jwtData['exp'];
+  if (exp == null) return true;
+
+  final expiryDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+  return expiryDate.isBefore(DateTime.now());
+}
+
+DateTime? getTokenExpiry(String token) {
+  final jwtData = tryDecodeJwt(token);
+  if (jwtData == null) return null;
+
+  final exp = jwtData['exp'];
+  if (exp == null) return null;
+
+  return DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+}
