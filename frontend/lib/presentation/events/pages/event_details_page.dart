@@ -74,11 +74,11 @@ class _EventDetailsPageState extends State<EventDetailsPage>
     }
   }
 
-  void _addToCart(TicketType ticketType, int quantity) {
-    if (ticketType.typeId != null)  return;
+  void _addToCart(TicketType ticketType, int quantity) async {
+    if (ticketType.typeId == null)  return;
 
     try{
-        context.read<CartCubit>().addItem(ticketType.typeId!, quantity);
+        await context.read<CartCubit>().addItem(ticketType.typeId!, quantity);
 
         // Enhanced success feedback
         ScaffoldMessenger.of(context)
