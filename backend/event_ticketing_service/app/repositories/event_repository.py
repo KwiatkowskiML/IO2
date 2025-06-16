@@ -61,7 +61,7 @@ class EventRepository:
         ticket_type = TicketType(
             event_id=event.event_id,
             description="Standard Ticket",
-            max_count=data.location_id,
+            max_count=data.total_tickets,
             price=data.standard_ticket_price,
             currency="USD",
             available_from=data.ticket_sales_start,

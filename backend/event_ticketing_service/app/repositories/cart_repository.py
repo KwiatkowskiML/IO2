@@ -4,7 +4,7 @@ from fastapi import Depends
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, selectinload
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.models.shopping_cart_model import ShoppingCartModel
 from app.models.cart_item_model import CartItemModel
