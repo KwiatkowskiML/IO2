@@ -64,34 +64,23 @@ async def add_to_cart(
     """Add a ticket to the user's shopping cart"""
     user_id = user["user_id"]
 
-    try:
-        if ticket_type_id is not None:
-            cart_item_model = cart_repo.add_item_from_detailed_sell(
-                customer_id=user_id,
-                ticket_type_id=ticket_type_id,
-                quantity=quantity
-            )
-
-            return CartItemWithDetails(
-                cart_item_id=cart_item_model.cart_item_id,
-                ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
-                quantity=cart_item_model.quantity
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ticket type ID is required."
-            )
-    except HTTPException as e:
-        # Re-raise HTTPExceptions from the repository (e.g., not found, bad request)
-        raise e
-    except Exception as e:
-        logger.error(f"Error adding item to cart for user {user_id}: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not add item to cart.",
+    if ticket_type_id is not None:
+        cart_item_model = cart_repo.add_item_from_detailed_sell(
+            customer_id=user_id,
+            ticket_type_id=ticket_type_id,
+            quantity=quantity
         )
 
+        return CartItemWithDetails(
+            cart_item_id=cart_item_model.cart_item_id,
+            ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
+            quantity=cart_item_model.quantity
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Ticket type ID is required."
+    )
 
 @router.delete(
     "/items/{cart_item_id}",

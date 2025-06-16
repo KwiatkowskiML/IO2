@@ -7,6 +7,7 @@ import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
+import 'package:resellio/core/network/api_exception.dart';
 
 class EventDetailsPage extends StatefulWidget {
   final Event? event;
@@ -74,33 +75,44 @@ class _EventDetailsPageState extends State<EventDetailsPage>
   }
 
   void _addToCart(TicketType ticketType, int quantity) {
-    if (ticketType.typeId != null) {
-      context.read<CartCubit>().addItem(ticketType.typeId!, quantity);
+    if (ticketType.typeId != null)  return
 
-      // Enhanced success feedback
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '$quantity × ${ticketType.description ?? 'Ticket'} added to cart!',
-                    style: const TextStyle(fontWeight: FontWeight.w500),
-                  ),
+    try{
+        context.read<CartCubit>().addItem(ticketType.typeId!, quantity);
+
+        // Enhanced success feedback
+        ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '$quantity × ${ticketType.description ?? 'Ticket'} added to cart!',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+                backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                margin: const EdgeInsets.all(16),
+              ),
+        );
+    }
+    catch (e) {
+        // any other unexpected errors
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+            content: Text('Something went wrong: $e'),
+            backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            margin: const EdgeInsets.all(16),
-          ),
         );
     }
   }

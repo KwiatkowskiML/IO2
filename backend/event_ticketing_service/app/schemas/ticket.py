@@ -11,7 +11,7 @@ class TicketType(BaseModel):
     description: Optional[str] = None
     max_count: int
     price: float
-    currency: str = "PLN"
+    currency: str = "USD"
     available_from: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

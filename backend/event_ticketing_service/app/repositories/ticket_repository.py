@@ -12,6 +12,7 @@ from app.models.events import EventModel
 from app.models.ticket_type import TicketTypeModel
 from app.models.location import LocationModel
 from app.services.email import send_ticket_email
+from app.schemas.ticket import TicketType
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +159,33 @@ class TicketRepository:
         self.db.commit()
         self.db.refresh(ticket)
         return ticket
+
+    def create_ticket_type(self, ticket_type_data: TicketType) -> TicketType:
+        """
+        Creates a new ticket type in the database.
+        """
+        event = self.db.get(EventModel, ticket_type_data.event_id)
+        if not event:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Event with id {ticket_type_data.event_id} not found"
+            )
+
+        # Create SQLAlchemy model from Pydantic schema data
+        db_ticket_type = TicketTypeModel(
+            event_id=ticket_type_data.event_id,
+            description=ticket_type_data.description,
+            max_count=ticket_type_data.max_count,
+            price=ticket_type_data.price,
+            currency=ticket_type_data.currency,
+            available_from=ticket_type_data.available_from,
+        )
+
+        self.db.add(db_ticket_type)
+        self.db.commit()
+        self.db.refresh(db_ticket_type)
+
+        return TicketType.model_validate(db_ticket_type)
 
 # Dependency to get the TicketRepository instance
 def get_ticket_repository(db: Session = Depends(get_db)) -> TicketRepository:

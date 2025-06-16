@@ -55,6 +55,8 @@ class EventCreate {
   final int locationId;
   final List<String> category;
   final int totalTickets;
+  final double standardTicketPrice;
+  final DateTime ticketSalesStartDateTime;
 
   EventCreate({
     required this.name,
@@ -65,6 +67,8 @@ class EventCreate {
     required this.locationId,
     required this.category,
     required this.totalTickets,
+    required this.standardTicketPrice,
+    required this.ticketSalesStartDateTime,
   });
 
   Map<String, dynamic> toJson() {
@@ -77,6 +81,8 @@ class EventCreate {
       'location_id': locationId,
       'category': category,
       'total_tickets': totalTickets,
+      'standard_ticket_price': standardTicketPrice,
+      'ticket_sales_start': ticketSalesStartDateTime.toIso8601String(),
     };
   }
 }

@@ -41,8 +41,13 @@ class _CreateEventViewState extends State<_CreateEventView> {
   final _startDateController = TextEditingController();
   final _endDateController = TextEditingController();
 
+  // Standard Ticket Controllers
+  final _standardTicketPriceController = TextEditingController();
+  final _ticketSalesStartDateTimeController = TextEditingController();
+
   DateTime? _startDate;
   DateTime? _endDate;
+  DateTime? _ticketSalesStartDateTime;
   int? _selectedLocationId;
   final List<String> _selectedCategories = [];
 
@@ -58,10 +63,12 @@ class _CreateEventViewState extends State<_CreateEventView> {
     _minimumAgeController.dispose();
     _startDateController.dispose();
     _endDateController.dispose();
+    _standardTicketPriceController.dispose();
+    _ticketSalesStartDateTimeController.dispose();
     super.dispose();
   }
 
-  Future<void> _selectDateTime(BuildContext context, bool isStart) async {
+  Future<void> _selectDateTime(BuildContext context, String dateType) async {
     final DateTime? date = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -80,13 +87,17 @@ class _CreateEventViewState extends State<_CreateEventView> {
         DateTime(date.year, date.month, date.day, time.hour, time.minute);
 
     setState(() {
-      if (isStart) {
+      if (dateType == "start") {
         _startDate = selectedDateTime;
         _startDateController.text =
             DateFormat.yMd().add_jm().format(selectedDateTime);
-      } else {
+      } else if (dateType == "end") {
         _endDate = selectedDateTime;
         _endDateController.text =
+            DateFormat.yMd().add_jm().format(selectedDateTime);
+      } else if (dateType == "ticket") {
+        _ticketSalesStartDateTime = selectedDateTime;
+        _ticketSalesStartDateTimeController.text = 
             DateFormat.yMd().add_jm().format(selectedDateTime);
       }
     });
@@ -94,23 +105,47 @@ class _CreateEventViewState extends State<_CreateEventView> {
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      if (_startDate == null || _endDate == null || _selectedLocationId == null) {
+      if (_startDate == null || _endDate == null || _selectedLocationId == null || _ticketSalesStartDateTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Please fill all required fields.'),
           backgroundColor: Colors.red,
         ));
         return;
       }
+      if (_endDate!.isBefore(_startDate!)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Event end date cannot be before event start date.'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+      if (_ticketSalesStartDateTime!.isAfter(_startDate!)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ticket sales start date cannot be after the event start date.'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+      if (!_ticketSalesStartDateTime!.isAfter(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Ticket sales start date must be in the future.'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+
 
       final eventData = EventCreate(
-        name: _nameController.text,
-        description: _descriptionController.text,
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
         startDate: _startDate!,
         endDate: _endDate!,
         locationId: _selectedLocationId!,
         category: _selectedCategories,
-        totalTickets: int.parse(_totalTicketsController.text),
-        minimumAge: int.tryParse(_minimumAgeController.text),
+        totalTickets: int.parse(_totalTicketsController.text.trim()),
+        minimumAge: int.tryParse(_minimumAgeController.text.trim()),
+        standardTicketPrice: double.parse(_standardTicketPriceController.text.trim()),
+        ticketSalesStartDateTime: _ticketSalesStartDateTime!,
       );
       context.read<EventFormCubit>().createEvent(eventData);
     }
@@ -118,6 +153,7 @@ class _CreateEventViewState extends State<_CreateEventView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return PageLayout(
       title: 'Create New Event',
       showBackButton: true,
@@ -153,6 +189,8 @@ class _CreateEventViewState extends State<_CreateEventView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Text("Event Details", style: theme.textTheme.headlineSmall),
+                      const SizedBox(height: 20),
                       CustomTextFormField(
                         controller: _nameController,
                         labelText: 'Event Name',
@@ -180,7 +218,7 @@ class _CreateEventViewState extends State<_CreateEventView> {
                         controller: _startDateController,
                         labelText: 'Start Date & Time',
                         readOnly: true,
-                        onTap: () => _selectDateTime(context, true),
+                        onTap: () => _selectDateTime(context, "start"),
                         validator: (v) =>
                             v!.isEmpty ? 'Start date is required' : null,
                       ),
@@ -189,7 +227,7 @@ class _CreateEventViewState extends State<_CreateEventView> {
                         controller: _endDateController,
                         labelText: 'End Date & Time',
                         readOnly: true,
-                        onTap: () => _selectDateTime(context, false),
+                        onTap: () => _selectDateTime(context, "end"),
                         validator: (v) =>
                             v!.isEmpty ? 'End date is required' : null,
                       ),
@@ -218,11 +256,13 @@ class _CreateEventViewState extends State<_CreateEventView> {
                       const SizedBox(height: 24),
                       CustomTextFormField(
                         controller: _descriptionController,
-                        labelText: 'Description',
+                        labelText: 'Event description',
                         keyboardType: TextInputType.multiline,
                         maxLines: 4,
                       ),
                       const SizedBox(height: 16),
+                      Text("Standard Ticket Configuration", style: theme.textTheme.headlineSmall),
+                      const SizedBox(height: 20),
                       Row(
                         children: [
                           Expanded(
@@ -248,6 +288,29 @@ class _CreateEventViewState extends State<_CreateEventView> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextFormField(
+                        controller: _standardTicketPriceController,
+                        labelText: 'Std. Ticket Price (\$)*',
+                        prefixText: '\$ ',
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (v) {
+                          if (v!.trim().isEmpty) return 'Standard ticket price is required';
+                          if (double.tryParse(v.trim()) == null || double.parse(v.trim()) < 0) { // allow 0 for free tickets
+                            return 'Enter a valid price (e.g., 0 or more)';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextFormField(
+                        controller: _ticketSalesStartDateTimeController,
+                        labelText: 'Standard ticket sale start date',
+                        readOnly: true,
+                        onTap: () => _selectDateTime(context, "ticket"),
+                        validator: (v) =>
+                            v!.isEmpty ? 'Ticket sale start date is required' : null,
                       ),
                       const SizedBox(height: 32),
                       PrimaryButton(
