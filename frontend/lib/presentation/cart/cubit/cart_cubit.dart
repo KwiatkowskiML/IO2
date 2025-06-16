@@ -21,7 +21,7 @@ class CartCubit extends Cubit<CartState> {
       await fetchCart();
     } on ApiException catch (e) {
       emit(CartError(e.message));
-      rethrow;
+      await fetchCart();
     } catch (e) {
       emit(CartError("An unexpected error occurred: $e"));
       await fetchCart();
