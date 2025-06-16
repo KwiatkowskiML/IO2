@@ -68,7 +68,7 @@ class EventFormCubit extends Cubit<EventFormState> {
   Future<void> updateEventWithTicketTypes(
     int eventId,
     Map<String, dynamic> eventData,
-    List<TicketType> newTicketTypes // Only new ticket types to be created
+    List<TicketType> newTicketTypes
   ) async {
     try {
       emit(const EventFormSubmitting(locations: []));

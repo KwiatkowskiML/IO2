@@ -45,7 +45,6 @@ class TicketType {
     };
   }
 
-  // Add copyWith method for easier updates
   TicketType copyWith({
     int? typeId,
     int? eventId,
@@ -84,9 +83,8 @@ class TicketDetailsModel {
   final String? eventName;
   final DateTime? eventStartDate;
 
-  // Add ticket type details for convenience
   final String? ticketTypeDescription;
-  final DateTime? ticketAvailableFrom; // Added this field
+  final DateTime? ticketAvailableFrom;
 
   TicketDetailsModel({
     required this.ticketId,
@@ -98,7 +96,7 @@ class TicketDetailsModel {
     this.eventName,
     this.eventStartDate,
     this.ticketTypeDescription,
-    this.ticketAvailableFrom, // Added this parameter
+    this.ticketAvailableFrom,
   });
 
   factory TicketDetailsModel.fromJson(Map<String, dynamic> json) {
@@ -120,7 +118,6 @@ class TicketDetailsModel {
           : json['eventStartDate'] != null
               ? DateTime.parse(json['eventStartDate'])
               : null,
-      // Add ticket type description and available from
       ticketTypeDescription: json['ticket_type_description'],
       ticketAvailableFrom: json['ticket_available_from'] != null
           ? DateTime.parse(json['ticket_available_from'])
