@@ -17,3 +17,18 @@ output "project_name" {
   description = "The project name used for all resources"
   value       = var.project_name
 }
+
+output "frontend_url" {
+  description = "Public URL for the frontend application"
+  value       = "https://${module.frontend_hosting.cloudfront_domain_name}"
+}
+
+output "frontend_s3_bucket_name" {
+  description = "Name of the S3 bucket for the frontend files"
+  value       = module.frontend_hosting.s3_bucket_name
+}
+
+output "frontend_cloudfront_distribution_id" {
+  description = "ID of the CloudFront distribution for the frontend"
+  value       = module.frontend_hosting.cloudfront_distribution_id
+}

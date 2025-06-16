@@ -30,6 +30,8 @@ def get_config():
         "base_url": os.getenv("API_BASE_URL", "http://localhost:8080").rstrip('/'),
         "timeout": int(os.getenv("API_TIMEOUT", "10")),
         "admin_secret": os.getenv("ADMIN_SECRET_KEY"),
+        "initial_admin_email": os.getenv("INITIAL_ADMIN_EMAIL", "admin@resellio.com"),
+        "initial_admin_password": os.getenv("INITIAL_ADMIN_PASSWORD", "AdminPassword123!"),
     }
 
 
@@ -136,6 +138,11 @@ class TestDataGenerator:
         return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
     @classmethod
+    def get_config(cls):
+        """Get test configuration"""
+        return get_config()
+
+    @classmethod
     def customer_data(cls) -> Dict[str, str]:
         """Generate customer registration data"""
         suffix = cls.random_string()
@@ -175,6 +182,17 @@ class TestDataGenerator:
         }
 
     @classmethod
+    def initial_admin_data(cls) -> Dict[str, str]:
+        """Get initial admin credentials"""
+        config = get_config()
+        return {
+            "email": config["initial_admin_email"],
+            "password": config["initial_admin_password"],
+            "first_name": "Initial",
+            "last_name": "Admin",
+        }
+
+    @classmethod
     def event_data(cls, organizer_id: int = 1) -> Dict[str, Any]:
         """Generate event data matching EventBase schema"""
         now = datetime.now()
@@ -190,6 +208,8 @@ class TestDataGenerator:
             "location_id": 1,  # Assuming location with ID 1 exists
             "category": ["Music", "Live", "Entertainment"],
             "total_tickets": 100,
+            "standard_ticket_price": 10.0,
+            "ticket_sales_start": now.isoformat(),
         }
 
     @classmethod
@@ -239,45 +259,138 @@ class UserManager:
         self.token_manager = token_manager
         self.data_generator = TestDataGenerator()
 
-    def register_and_login_customer(self) -> Dict[str, str]:
-        """Register and login a customer user"""
-        user_data = self.data_generator.customer_data()
+    def login_initial_admin(self) -> str:
+        """Login as the initial hardcoded admin"""
+        config = get_config()
+        initial_admin_data = {
+            "email": config["initial_admin_email"],
+            "password": config["initial_admin_password"],
+        }
 
-        # Register customer
         response = self.api_client.post(
-            "/api/auth/register/customer",
-            headers={"Content-Type": "application/json"},
-            json_data=user_data,
-            expected_status=201
+            "/api/auth/token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "username": initial_admin_data["email"],
+                "password": initial_admin_data["password"],
+            }
         )
 
         # Extract and store token
         token = response.json().get("token")
         if token:
-            self.token_manager.set_token("customer", token)
-            self.token_manager.set_user("customer", user_data)
+            self.token_manager.set_token("admin", token)
+            self.token_manager.set_user("admin", initial_admin_data)
 
+        return token
+
+    def register_admin_with_auth(self) -> Dict[str, str]:
+        """Register a new admin using existing admin authentication"""
+        # Ensure we have admin token
+        if not self.token_manager.tokens.get("admin"):
+            self.login_initial_admin()
+
+        user_data = self.data_generator.admin_data()
+
+        # Register admin with admin authentication
+        response = self.api_client.post(
+            "/api/auth/register/admin",
+            headers={
+                **self.token_manager.get_auth_header("admin"),
+                "Content-Type": "application/json"
+            },
+            json_data=user_data,
+            expected_status=201
+        )
+
+        # Don't automatically set the token, let the caller decide
         return user_data
+
+    def register_and_login_customer(self) -> Dict[str, str]:
+        """Register and login a customer user"""
+        customer_user_data = self.data_generator.customer_data()
+
+        # Register customer
+        registration_response = self.api_client.post(
+            "/api/auth/register/customer",
+            headers={"Content-Type": "application/json"},
+            json_data=customer_user_data,
+            expected_status=201
+        )
+        registration_response_data = registration_response.json()
+        assert "message" in registration_response_data
+        assert "User registered successfully. Please check your email to activate your account." in registration_response_data["message"]
+        assert "token" not in registration_response_data, "Token should not be returned at initial customer registration"
+
+        customer_user_id = registration_response_data["user_id"]
+
+        if not self.token_manager.tokens.get("admin"):
+            self.register_and_login_admin()
+
+        admin_auth_header = self.token_manager.get_auth_header("admin")
+
+        # Admin verifies the customer registration
+        approve_response = self.api_client.post(
+            f"/api/auth/approve-user/{customer_user_id}",
+            headers=admin_auth_header,
+            expected_status=200  # Expect OK, as it should return the token
+        )
+        approve_response_data = approve_response.json()
+        assert "token" in approve_response_data, "Token not found in admin approval response"
+
+        customer_token = approve_response_data["token"]
+
+        if customer_token:
+            self.token_manager.set_token("customer", customer_token)
+            self.token_manager.set_user("customer", customer_user_data)
+        else:
+            pytest.fail("Failed to retrieve token for customer after admin approval.")
+
+        return customer_user_data
 
     def register_and_login_customer2(self) -> Dict[str, str]:
         """Register and login a second customer user for testing purposes"""
-        user_data = self.data_generator.customer_data()
+        customer_user_data = self.data_generator.customer_data()
 
         # Register customer
-        response = self.api_client.post(
+        registration_response = self.api_client.post(
             "/api/auth/register/customer",
             headers={"Content-Type": "application/json"},
-            json_data=user_data,
+            json_data=customer_user_data,
             expected_status=201
         )
+        registration_response_data = registration_response.json()
+        assert "message" in registration_response_data
+        assert "User registered successfully. Please check your email to activate your account." in \
+               registration_response_data["message"]
+        assert "token" not in registration_response_data, "Token should not be returned at initial customer registration"
+
+        customer_user_id = registration_response_data["user_id"]
+
+        if not self.token_manager.tokens.get("admin"):
+            self.register_and_login_admin()
+
+        admin_auth_header = self.token_manager.get_auth_header("admin")
+
+        # Admin verifies the customer registration
+        approve_response = self.api_client.post(
+            f"/api/auth/approve-user/{customer_user_id}",
+            headers=admin_auth_header,
+            expected_status=200  # Expect OK, as it should return the token
+        )
+        approve_response_data = approve_response.json()
+        assert "token" in approve_response_data, "Token not found in admin approval response"
+
+        customer_token = approve_response_data["token"]
 
         # Extract and store token
-        token = response.json().get("token")
-        if token:
-            self.token_manager.set_token("customer2", token)
-            self.token_manager.set_user("customer2", user_data)
+        if customer_token:
+            self.token_manager.set_token("customer2", customer_token)
+            self.token_manager.set_user("customer2", customer_user_data)
+        else:
+            pytest.fail("Failed to retrieve token for customer after admin approval.")
 
-        return user_data
+        return customer_user_data
 
     def register_organizer(self) -> Dict[str, str]:
         """Register an organizer user (returns unverified organizer)"""
@@ -304,9 +417,9 @@ class UserManager:
         # First register organizer
         organizer_data = self.register_organizer()
 
-        # Register admin if not exists
+        # Login as initial admin if not exists
         if not self.token_manager.tokens.get("admin"):
-            self.register_and_login_admin()
+            self.login_initial_admin()
 
         # Get pending organizers and verify the one we just created
         pending_organizers = self.get_pending_organizers()
@@ -330,24 +443,10 @@ class UserManager:
         return organizer_data
 
     def register_and_login_admin(self) -> Dict[str, str]:
-        """Register and login an admin user"""
-        user_data = self.data_generator.admin_data()
-
-        # Register admin
-        response = self.api_client.post(
-            "/api/auth/register/admin",
-            headers={"Content-Type": "application/json"},
-            json_data=user_data,
-            expected_status=201
-        )
-
-        # Extract and store token
-        token = response.json().get("token")
-        if token:
-            self.token_manager.set_token("admin", token)
-            self.token_manager.set_user("admin", user_data)
-
-        return user_data
+        """Register and login an admin user (deprecated - use login_initial_admin instead)"""
+        # This method now just calls login_initial_admin for compatibility
+        self.login_initial_admin()
+        return self.data_generator.initial_admin_data()
 
     def login_user(self, user_data: Dict[str, str], user_type: str) -> str:
         """Login user with credentials and return token"""
@@ -430,7 +529,9 @@ class EventManager:
             json_data=event_data,
             expected_status=200
         )
-        return response.json()
+        json_response = response.json()
+        self.authorize_event(json_response["event_id"])  # Automatically authorize event after creation
+        return json_response
 
     def get_events(self, filters: Dict = None) -> List[Dict[str, Any]]:
         """Get list of events with optional filters"""
@@ -644,29 +745,45 @@ class TicketManager:
         )
         return response.json()
 
-    def get_ticket_details(self, ticket_id: int) -> Dict[str, Any]:
-        """Get detailed information about a specific ticket"""
-        # This would be a GET /tickets/{ticket_id} endpoint if it exists
-        response = self.api_client.get(
-            f"/api/tickets/{ticket_id}",
-            headers=self.token_manager.get_auth_header("customer")
-        )
+    def get_resale_marketplace(self, event_id: int = None, min_price: float = None, max_price: float = None) -> List[Dict[str, Any]]:
+        """Get all tickets available for resale"""
+        url = "/api/resale/marketplace"
+        params = []
+
+        if event_id is not None:
+            params.append(f"event_id={event_id}")
+        if min_price is not None:
+            params.append(f"min_price={min_price}")
+        if max_price is not None:
+            params.append(f"max_price={max_price}")
+
+        if params:
+            url = f"{url}?{'&'.join(params)}"
+
+        response = self.api_client.get(url)
         return response.json()
 
-    def transfer_ticket(self, ticket_id: int, recipient_email: str) -> Dict[str, Any]:
-        """Transfer ticket to another user"""
-        transfer_data = {
-            "recipient_email": recipient_email,
-            "transfer_message": "Ticket transfer"
+    def purchase_resale_ticket(self, ticket_id: int) -> Dict[str, Any]:
+        """Purchase a ticket from the resale marketplace"""
+        purchase_data = {
+            "ticket_id": ticket_id
         }
 
         response = self.api_client.post(
-            f"/api/tickets/{ticket_id}/transfer",
+            "/api/resale/purchase",
             headers={
                 **self.token_manager.get_auth_header("customer"),
                 "Content-Type": "application/json"
             },
-            json_data=transfer_data
+            json_data=purchase_data
+        )
+        return response.json()
+
+    def get_my_resale_listings(self) -> List[Dict[str, Any]]:
+        """Get all tickets I have listed for resale"""
+        response = self.api_client.get(
+            "/api/resale/my-listings",
+            headers=self.token_manager.get_auth_header("customer")
         )
         return response.json()
 
@@ -814,7 +931,9 @@ def print_test_config():
     print(f"\n=== Test Configuration ===")
     print(f"Base URL: {config['base_url']}")
     print(f"Timeout: {config['timeout']}s")
-    print(f"Admin Secret: {'*' * len(config['admin_secret'])}")
+    print(f"Admin Secret: {'*' * len(config['admin_secret']) if config['admin_secret'] else 'Not set'}")
+    print(f"Initial Admin Email: {config['initial_admin_email']}")
+    print(f"Initial Admin Password: {'*' * len(config['initial_admin_password'])}")
     print("=" * 30)
 
 

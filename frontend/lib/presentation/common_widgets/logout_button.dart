@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:resellio/core/services/auth_service.dart';
 
 class LogoutButton extends StatelessWidget {
   final bool isExtended;
@@ -8,12 +9,11 @@ class LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Implement actual logout logic (clear session, etc.)
     return IconButton(
       icon: const Icon(Icons.logout),
       tooltip: 'Logout',
       onPressed: () {
-        GoRouter.of(context).go('/welcome');
+        context.read<AuthService>().logout();
       },
     );
   }

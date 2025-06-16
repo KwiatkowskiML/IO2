@@ -15,6 +15,8 @@ class EventBase(BaseModel):
     location_id: int
     category: List[str]
     total_tickets: int
+    standard_ticket_price: float
+    ticket_sales_start: datetime
 
 
 # EventBase is the base model for creating and handling events
@@ -55,6 +57,7 @@ class EventUpdate(BaseModel):
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     description: Optional[str] = None
+    minimum_age: Optional[int] = None
 
 
 class NotificationRequest(BaseModel):

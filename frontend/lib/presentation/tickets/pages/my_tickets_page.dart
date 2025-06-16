@@ -1,38 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import 'package:resellio/core/models/ticket_model.dart';
-import 'package:resellio/core/services/api_service.dart';
-import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/core/models/models.dart';
+import 'package:resellio/core/repositories/repositories.dart';
+import 'package:resellio/presentation/common_widgets/dialogs.dart';
+import 'package:resellio/presentation/common_widgets/empty_state_widget.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
-import 'package:resellio/presentation/common_widgets/primary_button.dart';
+import 'package:resellio/presentation/tickets/cubit/my_tickets_cubit.dart';
+import 'package:resellio/presentation/tickets/cubit/my_tickets_state.dart';
+import 'package:resellio/presentation/tickets/widgets/ticket_card.dart';
+import 'package:resellio/presentation/tickets/widgets/ticket_stats_header.dart';
+import 'package:resellio/presentation/tickets/widgets/ticket_filter_tabs.dart';
 
-// Convert to StatefulWidget
-class MyTicketsPage extends StatefulWidget {
+class MyTicketsPage extends StatelessWidget {
   const MyTicketsPage({super.key});
 
   @override
-  State<MyTicketsPage> createState() => _MyTicketsPageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+      MyTicketsCubit(context.read<TicketRepository>())..loadTickets(),
+      child: const _MyTicketsView(),
+    );
+  }
 }
 
-class _MyTicketsPageState extends State<MyTicketsPage>
-    with SingleTickerProviderStateMixin {
-  Future<List<TicketDetailsModel>>? _myTicketsFuture;
+class _MyTicketsView extends StatefulWidget {
+  const _MyTicketsView();
 
+  @override
+  State<_MyTicketsView> createState() => _MyTicketsViewState();
+}
+
+class _MyTicketsViewState extends State<_MyTicketsView>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _activeFilter = 'All';
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
-
-    // Use addPostFrameCallback to ensure context is available
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadMyTickets();
-    });
   }
 
   @override
@@ -44,143 +52,84 @@ class _MyTicketsPageState extends State<MyTicketsPage>
 
   void _handleTabChange() {
     if (!_tabController.indexIsChanging) {
-      setState(() {
-        switch (_tabController.index) {
-          case 0:
-            _activeFilter = 'All';
-            break;
-          case 1:
-            _activeFilter = 'Upcoming';
-            break;
-          case 2:
-            _activeFilter = 'Resale';
-            break;
-        }
-      });
-      // The FutureBuilder will re-filter the list automatically
+      final filter = TicketFilter.values[_tabController.index];
+      context.read<MyTicketsCubit>().setFilter(filter);
     }
   }
 
-  void _loadMyTickets() {
-    final apiService = context.read<ApiService>();
-    final authService = context.read<AuthService>();
-    final userId = authService.user?.userId;
-
-    if (userId == null) {
-      // Handle case where user is not logged in, though router should prevent this
-      setState(() {
-        _myTicketsFuture = Future.error("User not authenticated.");
-      });
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _myTicketsFuture = apiService.getMyTickets(userId);
-    });
-
-    _myTicketsFuture!.whenComplete(() {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    });
-  }
-
-  // Simulate placing a ticket for resale
-  void _resellTicket(TicketDetailsModel ticket) {
-    showDialog(
+  void _resellTicketDialog(BuildContext context, TicketDetailsModel ticket) async {
+    final priceString = await showInputDialog(
       context: context,
-      builder: (context) {
-        final TextEditingController priceController = TextEditingController();
-        return AlertDialog(
-          title: const Text('Set Resale Price'),
-          content: TextField(
-            controller: priceController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Price (USD)',
-              prefixText: '\$',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Ticket listed for resale at \$${priceController.text}',
-                    ),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              child: const Text('List for Resale'),
-            ),
-          ],
-        );
-      },
+      title: 'Set Resale Price',
+      label: 'Price (USD)',
+      prefixText: '\$ ',
+      keyboardType: TextInputType.number,
+      confirmText: 'List for Resale',
     );
-  }
 
-  // Simulate downloading a ticket
-  void _downloadTicket(TicketDetailsModel ticket) {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate download delay
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+    if (priceString != null) {
+      final price = double.tryParse(priceString);
+      if (price != null && price > 0) {
+        context.read<MyTicketsCubit>().listForResale(ticket.ticketId, price);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ticket downloaded successfully'),
+          SnackBar(
+            content: Text('Ticket listed for resale at \$${price.toStringAsFixed(2)}'),
             backgroundColor: Colors.green,
           ),
         );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid price'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
-    });
+    }
   }
 
-  // Simulate canceling resale
-  void _cancelResale(TicketDetailsModel ticket) {
-    showDialog(
+  void _cancelResaleDialog(BuildContext context, TicketDetailsModel ticket) async {
+    final confirmed = await showConfirmationDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Cancel Resale?'),
-            content: const Text(
-              'Are you sure you want to remove this ticket from resale?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('No'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Ticket removed from resale'),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                },
-                child: const Text('Yes, Cancel Resale'),
-              ),
-            ],
-          ),
+      title: 'Cancel Resale?',
+      content: const Text('Are you sure you want to remove this ticket from resale?'),
+      confirmText: 'Yes, Cancel',
     );
+    if (confirmed == true) {
+      context.read<MyTicketsCubit>().cancelResale(ticket.ticketId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ticket removed from resale'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  void _downloadTicket(TicketDetailsModel ticket) {
+    // Placeholder for download functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.download, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text('Downloading ticket for ${ticket.eventName ?? "Unknown Event"}'),
+          ],
+        ),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  List<TicketDetailsModel> _sortTicketsByDate(List<TicketDetailsModel> tickets) {
+    final sortedTickets = List<TicketDetailsModel>.from(tickets);
+    sortedTickets.sort((a, b) {
+      final dateA = a.eventStartDate ?? DateTime(1970);
+      final dateB = b.eventStartDate ?? DateTime(1970);
+      return dateA.compareTo(dateB);
+    });
+    return sortedTickets;
   }
 
   @override
@@ -190,485 +139,181 @@ class _MyTicketsPageState extends State<MyTicketsPage>
 
     return PageLayout(
       title: 'My Tickets',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh Tickets',
+          onPressed: () => context.read<MyTicketsCubit>().loadTickets(),
+        ),
+      ],
       body: Column(
         children: [
-          // Tab Bar for filtering
+          // Enhanced header with stats and tabs
           Container(
-            color: colorScheme.surface,
-            child: TabBar(
-              controller: _tabController,
-              labelColor: colorScheme.primary,
-              unselectedLabelColor: colorScheme.onSurfaceVariant,
-              indicatorColor: colorScheme.primary,
-              indicatorWeight: 3,
-              tabs: const [
-                Tab(text: 'All Tickets'),
-                Tab(text: 'Upcoming'),
-                Tab(text: 'On Resale'),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  colorScheme.primaryContainer.withOpacity(0.3),
+                  colorScheme.surface,
+                ],
+              ),
+            ),
+            child: Column(
+              children: [
+                BlocBuilder<MyTicketsCubit, MyTicketsState>(
+                  builder: (context, state) {
+                    if (state is MyTicketsLoaded) {
+                      return TicketStatsHeader(tickets: state.allTickets);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                TicketFilterTabs(
+                  tabController: _tabController,
+                  onTabChange: _handleTabChange,
+                ),
               ],
             ),
           ),
 
-          // Tickets List
+          // Tickets content
           Expanded(
-            child:
-                (_isLoading || _myTicketsFuture == null)
-                    ? const Center(child: CircularProgressIndicator())
-                    : FutureBuilder<List<TicketDetailsModel>>(
-                      future: _myTicketsFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        } else if (snapshot.hasError) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 48,
-                                  color: colorScheme.error,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Could not load your tickets',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: colorScheme.error,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Please try again',
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 16),
-                                PrimaryButton(
-                                  text: 'Retry',
-                                  icon: Icons.refresh,
-                                  onPressed: _loadMyTickets,
-                                  backgroundColor: colorScheme.primary,
-                                  foregroundColor: colorScheme.onPrimary,
-                                  fullWidth: false,
-                                  height: 40,
-                                ),
-                              ],
+            child: BlocConsumer<MyTicketsCubit, MyTicketsState>(
+              listener: (context, state) {
+                if (state is MyTicketsError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Error: ${state.message}')),
+                        ],
+                      ),
+                      backgroundColor: colorScheme.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                if (state is MyTicketsLoading || state is MyTicketsInitial) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (state is MyTicketsError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: colorScheme.errorContainer.withOpacity(0.3),
+                              shape: BoxShape.circle,
                             ),
-                          );
-                        } else if (!snapshot.hasData ||
-                            snapshot.data!.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.confirmation_number_outlined,
-                                  size: 64,
-                                  color: colorScheme.onSurfaceVariant
-                                      .withOpacity(0.5),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No tickets found',
-                                  style: theme.textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                  ),
-                                  child: Text(
-                                    'Your purchased tickets will appear here',
-                                    textAlign: TextAlign.center,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            child: Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: colorScheme.error,
                             ),
-                          );
-                        }
-
-                        final tickets = snapshot.data!;
-
-                        // Filter tickets based on the selected tab
-                        List<TicketDetailsModel> filteredTickets = [];
-                        switch (_activeFilter) {
-                          case 'All':
-                            filteredTickets = tickets;
-                            break;
-                          case 'Upcoming':
-                            filteredTickets =
-                                tickets
-                                    .where(
-                                      (ticket) =>
-                                          ticket.eventStartDate != null &&
-                                          ticket.eventStartDate!.isAfter(
-                                            DateTime.now(),
-                                          ) &&
-                                          ticket.resellPrice == null,
-                                    )
-                                    .toList();
-                            break;
-                          case 'Resale':
-                            filteredTickets =
-                                tickets
-                                    .where(
-                                      (ticket) => ticket.resellPrice != null,
-                                    )
-                                    .toList();
-                            break;
-                        }
-
-                        if (filteredTickets.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  _activeFilter == 'Resale'
-                                      ? Icons.sell_outlined
-                                      : Icons.confirmation_number_outlined,
-                                  size: 64,
-                                  color: colorScheme.onSurfaceVariant
-                                      .withOpacity(0.5),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  _activeFilter == 'Resale'
-                                      ? 'No tickets on resale'
-                                      : _activeFilter == 'Upcoming'
-                                      ? 'No upcoming tickets'
-                                      : 'No tickets found',
-                                  style: theme.textTheme.titleMedium,
-                                ),
-                              ],
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Failed to Load Tickets',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              color: colorScheme.error,
+                              fontWeight: FontWeight.bold,
                             ),
-                          );
-                        }
-
-                        return ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: filteredTickets.length,
-                          itemBuilder: (context, index) {
-                            final ticket = filteredTickets[index];
-                            final bool isResale = ticket.resellPrice != null;
-                            final bool isPast =
-                                ticket.eventStartDate != null &&
-                                ticket.eventStartDate!.isBefore(DateTime.now());
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              clipBehavior: Clip.antiAlias,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side:
-                                    isPast
-                                        ? BorderSide(
-                                          color: Colors.grey.shade300,
-                                          width: 1,
-                                        )
-                                        : BorderSide.none,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            state.message,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () => context.read<MyTicketsCubit>().loadTickets(),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Try Again'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
                               ),
-                              elevation: isPast ? 0 : 2,
-                              child: InkWell(
-                                onTap: () {
-                                  // TODO: Navigate to ticket details
-                                },
-                                child: Column(
-                                  children: [
-                                    // Top status bar
-                                    if (isResale || isPast)
-                                      Container(
-                                        width: double.infinity,
-                                        color:
-                                            isResale
-                                                ? colorScheme.tertiary
-                                                    .withOpacity(0.1)
-                                                : Colors.grey.shade200,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 6,
-                                          horizontal: 16,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              isResale
-                                                  ? Icons.sell
-                                                  : Icons.history,
-                                              size: 14,
-                                              color:
-                                                  isResale
-                                                      ? colorScheme.tertiary
-                                                      : Colors.grey.shade600,
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              isResale
-                                                  ? 'On Resale'
-                                                  : 'Past Event',
-                                              style: theme.textTheme.labelSmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        isResale
-                                                            ? colorScheme
-                                                                .tertiary
-                                                            : Colors
-                                                                .grey
-                                                                .shade600,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
 
-                                    // Main content
-                                    Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // Event Date Badge
-                                          if (ticket.eventStartDate != null)
-                                            Container(
-                                              width: 50,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    isPast
-                                                        ? Colors.grey.shade200
-                                                        : colorScheme
-                                                            .primaryContainer,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 8,
-                                                    horizontal: 4,
-                                                  ),
-                                              child: Column(
-                                                children: [
-                                                  Text(
-                                                    DateFormat('MMM').format(
-                                                      ticket.eventStartDate!,
-                                                    ),
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          isPast
-                                                              ? Colors
-                                                                  .grey
-                                                                  .shade600
-                                                              : colorScheme
-                                                                  .onPrimaryContainer,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    DateFormat('d').format(
-                                                      ticket.eventStartDate!,
-                                                    ),
-                                                    style: TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color:
-                                                          isPast
-                                                              ? Colors
-                                                                  .grey
-                                                                  .shade600
-                                                              : colorScheme
-                                                                  .onPrimaryContainer,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
+                if (state is MyTicketsLoaded) {
+                  final sortedTickets = _sortTicketsByDate(state.filteredTickets);
 
-                                          const SizedBox(width: 16),
+                  if (sortedTickets.isEmpty) {
+                    String emptyMessage = 'No tickets found';
+                    String emptyDetails = 'Your tickets will appear here once you make a purchase.';
 
-                                          // Ticket details
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  ticket.eventName ??
-                                                      'Unknown Event',
-                                                  style: theme
-                                                      .textTheme
-                                                      .titleMedium
-                                                      ?.copyWith(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color:
-                                                            isPast
-                                                                ? Colors
-                                                                    .grey
-                                                                    .shade600
-                                                                : null,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                if (ticket.seat != null)
-                                                  Row(
-                                                    children: [
-                                                      Icon(
-                                                        Icons.chair_outlined,
-                                                        size: 14,
-                                                        color:
-                                                            colorScheme
-                                                                .onSurfaceVariant,
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        'Seat: ${ticket.seat}',
-                                                        style: theme
-                                                            .textTheme
-                                                            .bodySmall
-                                                            ?.copyWith(
-                                                              color:
-                                                                  colorScheme
-                                                                      .onSurfaceVariant,
-                                                            ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                if (ticket.eventStartDate !=
-                                                    null)
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                          top: 4,
-                                                        ),
-                                                    child: Row(
-                                                      children: [
-                                                        Icon(
-                                                          Icons.access_time,
-                                                          size: 14,
-                                                          color:
-                                                              colorScheme
-                                                                  .onSurfaceVariant,
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 4,
-                                                        ),
-                                                        Text(
-                                                          DateFormat(
-                                                            'HH:mm',
-                                                          ).format(
-                                                            ticket
-                                                                .eventStartDate!,
-                                                          ),
-                                                          style: theme
-                                                              .textTheme
-                                                              .bodySmall
-                                                              ?.copyWith(
-                                                                color:
-                                                                    colorScheme
-                                                                        .onSurfaceVariant,
-                                                              ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                if (ticket.resellPrice != null)
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                          top: 8,
-                                                        ),
-                                                    child: Text(
-                                                      'Listed for: ${NumberFormat.currency(locale: 'en_US', symbol: '\$').format(ticket.resellPrice)}',
-                                                      style: theme
-                                                          .textTheme
-                                                          .labelMedium
-                                                          ?.copyWith(
-                                                            color:
-                                                                colorScheme
-                                                                    .tertiary,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                          ),
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                    switch (state.activeFilter) {
+                      case TicketFilter.upcoming:
+                        emptyMessage = 'No upcoming events';
+                        emptyDetails = 'You don\'t have any tickets for future events.';
+                        break;
+                      case TicketFilter.resale:
+                        emptyMessage = 'No tickets on resale';
+                        emptyDetails = 'You haven\'t listed any tickets for resale yet.';
+                        break;
+                      default:
+                        break;
+                    }
 
-                                    // Action buttons
-                                    if (!isPast)
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: colorScheme
-                                              .surfaceContainerHighest
-                                              .withOpacity(0.3),
-                                          border: Border(
-                                            top: BorderSide(
-                                              color: colorScheme.outlineVariant
-                                                  .withOpacity(0.5),
-                                            ),
-                                          ),
-                                        ),
-                                        child: OverflowBar(
-                                          alignment: MainAxisAlignment.end,
-                                          children: [
-                                            TextButton.icon(
-                                              onPressed:
-                                                  () => _downloadTicket(ticket),
-                                              icon: const Icon(
-                                                Icons.download_outlined,
-                                                size: 18,
-                                              ),
-                                              label: const Text('Download'),
-                                            ),
-                                            if (isResale)
-                                              TextButton.icon(
-                                                onPressed:
-                                                    () => _cancelResale(ticket),
-                                                icon: const Icon(
-                                                  Icons.cancel_outlined,
-                                                  size: 18,
-                                                ),
-                                                label: const Text(
-                                                  'Cancel Resale',
-                                                ),
-                                                style: TextButton.styleFrom(
-                                                  foregroundColor:
-                                                      colorScheme.tertiary,
-                                                ),
-                                              )
-                                            else
-                                              TextButton.icon(
-                                                onPressed:
-                                                    () => _resellTicket(ticket),
-                                                icon: const Icon(
-                                                  Icons.sell_outlined,
-                                                  size: 18,
-                                                ),
-                                                label: const Text('Resell'),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
+                    return EmptyStateWidget(
+                      icon: Icons.confirmation_number_outlined,
+                      message: emptyMessage,
+                      details: emptyDetails,
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () => context.read<MyTicketsCubit>().loadTickets(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: sortedTickets.length,
+                      itemBuilder: (context, index) {
+                        final ticket = sortedTickets[index];
+                        final bool isProcessing =
+                            state is TicketUpdateInProgress &&
+                                state.processingTicketId == ticket.ticketId;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: TicketCard(
+                            ticket: ticket,
+                            isProcessing: isProcessing,
+                            onResell: () => _resellTicketDialog(context, ticket),
+                            onCancelResale: () => _cancelResaleDialog(context, ticket),
+                            onDownload: () => _downloadTicket(ticket),
+                          ),
                         );
                       },
                     ),
+                  );
+                }
+
+                return const SizedBox.shrink();
+              },
+            ),
           ),
         ],
       ),

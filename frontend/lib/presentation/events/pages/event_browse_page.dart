@@ -1,27 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:resellio/core/models/event_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:resellio/core/models/event_filter_model.dart';
-import 'package:resellio/core/services/api_service.dart';
+import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/utils/responsive_layout.dart';
+import 'package:resellio/presentation/common_widgets/bloc_state_wrapper.dart';
+import 'package:resellio/presentation/events/cubit/event_browse_cubit.dart';
+import 'package:resellio/presentation/events/cubit/event_browse_state.dart';
 import 'package:resellio/presentation/events/widgets/event_card.dart';
 import 'package:resellio/presentation/events/widgets/event_filter_sheet.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
+import 'package:resellio/presentation/common_widgets/enhanced_search_bar.dart';
+import 'package:resellio/presentation/common_widgets/category_chips.dart';
+import 'package:resellio/presentation/common_widgets/content_grid.dart';
 
-class EventBrowsePage extends StatefulWidget {
+class EventBrowsePage extends StatelessWidget {
   const EventBrowsePage({super.key});
 
   @override
-  State<EventBrowsePage> createState() => _EventBrowsePageState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+      EventBrowseCubit(context.read<EventRepository>())..loadEvents(),
+      child: const _EventBrowseView(),
+    );
+  }
 }
 
-class _EventBrowsePageState extends State<EventBrowsePage> {
-  late Future<List<Event>> _eventsFuture;
+class _EventBrowseView extends StatefulWidget {
+  const _EventBrowseView();
+
+  @override
+  State<_EventBrowseView> createState() => _EventBrowseViewState();
+}
+
+class _EventBrowseViewState extends State<_EventBrowseView> {
   EventFilterModel _currentFilters = const EventFilterModel();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  int _currentPage = 1;
+  static const int _pageSize = 20;
+  bool _isLoadingMore = false;
+  bool _hasMoreData = true;
+  final ScrollController _scrollController = ScrollController();
 
-  // Common categories for quick filters
   final List<String> _categories = [
     'All',
     'Music',
@@ -32,34 +53,25 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
   ];
 
   String _selectedCategory = 'All';
+  String _sortBy = 'start_date';
+  String _sortOrder = 'asc';
 
   @override
   void initState() {
     super.initState();
-    _loadEvents();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void _loadEvents() {
-    final apiService = context.read<ApiService>();
-    setState(() {
-      _eventsFuture = apiService.getEvents();
-    });
-  }
-
-  void _applyFilters(EventFilterModel newFilters) {
-    if (_currentFilters != newFilters) {
-      setState(() {
-        _currentFilters = newFilters;
-        _selectedCategory =
-            'All'; // Reset category selection when applying filters
-      });
-      _loadEvents();
+  void _onScroll() {
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+      _loadMoreEvents();
     }
   }
 
@@ -74,39 +86,176 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
       builder: (context) {
         return EventFilterSheet(
           initialFilters: _currentFilters,
-          onApplyFilters: _applyFilters,
+          showAdvancedFilters: false, // Hide organizer, status, minimum age filters
+          onApplyFilters: (newFilters) {
+            setState(() {
+              _currentFilters = newFilters;
+              _currentPage = 1;
+              _hasMoreData = true;
+            });
+            _loadEventsWithFilters(reset: true);
+          },
         );
       },
     );
   }
 
-  void _performSearch(String query) {
-    if (query != _searchQuery) {
-      setState(() {
-        _searchQuery = query;
-      });
-      _loadEvents();
+  void _showSortDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sort Events'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Sort by'),
+              subtitle: DropdownButton<String>(
+                value: _sortBy,
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(value: 'start_date', child: Text('Event Date')),
+                  DropdownMenuItem(value: 'name', child: Text('Event Name')),
+                  DropdownMenuItem(value: 'creation_date', child: Text('Recently Added')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _sortBy = value!;
+                  });
+                },
+              ),
+            ),
+            ListTile(
+              title: const Text('Order'),
+              subtitle: DropdownButton<String>(
+                value: _sortOrder,
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(value: 'asc', child: Text('Ascending')),
+                  DropdownMenuItem(value: 'desc', child: Text('Descending')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _sortOrder = value!;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _currentPage = 1;
+                _hasMoreData = true;
+              });
+              _loadEventsWithFilters(reset: true);
+            },
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+      _currentPage = 1;
+      _hasMoreData = true;
+    });
+
+    // Debounce search
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (_searchQuery == query) {
+        _loadEventsWithFilters(reset: true);
+      }
+    });
+  }
+
+  void _onCategoryChanged(String category) {
+    setState(() {
+      _selectedCategory = category;
+      _currentPage = 1;
+      _hasMoreData = true;
+    });
+    _loadEventsWithFilters(reset: true);
+  }
+
+  void _loadEventsWithFilters({bool reset = false}) {
+    if (reset) {
+      context.read<EventBrowseCubit>().loadEvents(
+        page: _currentPage,
+        limit: _pageSize,
+        search: _searchQuery.isEmpty ? null : _searchQuery,
+        location: _currentFilters.location,
+        startDateFrom: _currentFilters.startDateFrom,
+        startDateTo: _currentFilters.startDateTo,
+        minPrice: _currentFilters.minPrice,
+        maxPrice: _currentFilters.maxPrice,
+        categories: _selectedCategory == 'All' ? null : _selectedCategory,
+        sortBy: _sortBy,
+        sortOrder: _sortOrder,
+        reset: true,
+      );
+    } else {
+      _loadMoreEvents();
     }
   }
 
-  void _selectCategory(String category) {
-    if (category != _selectedCategory) {
+  void _loadMoreEvents() {
+    if (_isLoadingMore || !_hasMoreData) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    context.read<EventBrowseCubit>().loadMoreEvents(
+      page: _currentPage + 1,
+      limit: _pageSize,
+      search: _searchQuery.isEmpty ? null : _searchQuery,
+      location: _currentFilters.location,
+      startDateFrom: _currentFilters.startDateFrom,
+      startDateTo: _currentFilters.startDateTo,
+      minPrice: _currentFilters.minPrice,
+      maxPrice: _currentFilters.maxPrice,
+      categories: _selectedCategory == 'All' ? null : _selectedCategory,
+      sortBy: _sortBy,
+      sortOrder: _sortOrder,
+    ).then((hasMore) {
       setState(() {
-        _selectedCategory = category;
+        _isLoadingMore = false;
+        _hasMoreData = hasMore;
+        if (hasMore) _currentPage++;
       });
-      _loadEvents();
-    }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool filtersActive = _currentFilters.hasActiveFilters;
+    final bool filtersActive = _currentFilters.hasActiveFilters ||
+        _selectedCategory != 'All' ||
+        _searchQuery.isNotEmpty;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return PageLayout(
       title: 'Discover Events',
       actions: [
+        IconButton(
+          icon: Icon(
+            Icons.sort,
+            color: colorScheme.onSurface,
+          ),
+          tooltip: 'Sort Events',
+          onPressed: _showSortDialog,
+        ),
         IconButton(
           icon: Icon(
             Icons.filter_list,
@@ -119,205 +268,283 @@ class _EventBrowsePageState extends State<EventBrowsePage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search events...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon:
-                      _searchQuery.isNotEmpty
-                          ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _performSearch('');
-                            },
-                          )
-                          : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                onSubmitted: _performSearch,
-                textInputAction: TextInputAction.search,
-              ),
-            ),
-          ),
-
-          // Category Filters
-          SizedBox(
-            height: 48,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                final isSelected = category == _selectedCategory;
-
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(category),
-                    selected: isSelected,
-                    onSelected: (_) => _selectCategory(category),
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                    selectedColor: colorScheme.primaryContainer,
-                    labelStyle: TextStyle(
-                      color:
-                          isSelected
-                              ? colorScheme.onPrimaryContainer
-                              : colorScheme.onSurfaceVariant,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-
-          // Active Filters Indicator
-          if (filtersActive)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.filter_alt,
-                    size: 16,
-                    color: colorScheme.secondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Filters active',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.secondary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _currentFilters = const EventFilterModel();
-                        _selectedCategory = 'All';
-                      });
-                      _loadEvents();
-                    },
-                    child: const Text('Clear All'),
-                  ),
+          // Enhanced Header Section
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  colorScheme.primaryContainer.withOpacity(0.3),
+                  colorScheme.surface,
                 ],
               ),
             ),
+            child: Column(
+              children: [
+                // Welcome Message
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Find Your Next',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                      Text(
+                        'Amazing Experience',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Discover events that match your interests',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-          // Results
-          Expanded(
-            child: FutureBuilder<List<Event>>(
-              future: _eventsFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  print('Error loading events: ${snapshot.error}');
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                // Enhanced Search Bar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: EnhancedSearchBar(
+                    controller: _searchController,
+                    hintText: 'Search events, artists, venues...',
+                    searchQuery: _searchQuery,
+                    onSearchChanged: _onSearchChanged,
+                    filtersActive: filtersActive,
+                  ),
+                ),
+
+                // Category Chips
+                CategoryChips(
+                  categories: _categories,
+                  selectedCategory: _selectedCategory,
+                  onCategoryChanged: _onCategoryChanged,
+                ),
+
+                // Active filters indicator
+                if (filtersActive)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Wrap(
+                      spacing: 8,
                       children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 48,
-                          color: colorScheme.error,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Failed to load events',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: colorScheme.error,
+                        if (_searchQuery.isNotEmpty)
+                          Chip(
+                            label: Text('Search: $_searchQuery'),
+                            onDeleted: () {
+                              _searchController.clear();
+                              _onSearchChanged('');
+                            },
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Please try again later',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _loadEvents,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                        ),
+                        if (_currentFilters.location != null)
+                          Chip(
+                            label: Text('Location: ${_currentFilters.location}'),
+                            onDeleted: () {
+                              setState(() {
+                                _currentFilters = EventFilterModel(
+                                  name: _currentFilters.name,
+                                  startDateFrom: _currentFilters.startDateFrom,
+                                  startDateTo: _currentFilters.startDateTo,
+                                  minPrice: _currentFilters.minPrice,
+                                  maxPrice: _currentFilters.maxPrice,
+                                );
+                                _currentPage = 1;
+                                _hasMoreData = true;
+                              });
+                              _loadEventsWithFilters(reset: true);
+                            },
+                          ),
+                        if (_currentFilters.startDateFrom != null || _currentFilters.startDateTo != null)
+                          Chip(
+                            label: const Text('Date Range'),
+                            onDeleted: () {
+                              setState(() {
+                                _currentFilters = EventFilterModel(
+                                  name: _currentFilters.name,
+                                  location: _currentFilters.location,
+                                  minPrice: _currentFilters.minPrice,
+                                  maxPrice: _currentFilters.maxPrice,
+                                  // startDateFrom and startDateTo are set to null
+                                );
+                                _currentPage = 1;
+                                _hasMoreData = true;
+                              });
+                              _loadEventsWithFilters(reset: true);
+                            },
+                          ),
+                        if (_currentFilters.minPrice != null || _currentFilters.maxPrice != null)
+                          Chip(
+                            label: Text(
+                                'Price: \$${_currentFilters.minPrice?.toStringAsFixed(0) ?? '0'} - \$${_currentFilters.maxPrice?.toStringAsFixed(0) ?? '∞'}'
+                            ),
+                            onDeleted: () {
+                              setState(() {
+                                _currentFilters = EventFilterModel(
+                                  name: _currentFilters.name,
+                                  location: _currentFilters.location,
+                                  startDateFrom: _currentFilters.startDateFrom,
+                                  startDateTo: _currentFilters.startDateTo,
+                                  // minPrice and maxPrice are set to null
+                                );
+                                _currentPage = 1;
+                                _hasMoreData = true;
+                              });
+                              _loadEventsWithFilters(reset: true);
+                            },
+                          ),
                       ],
                     ),
-                  );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No events found',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        if (_searchQuery.isNotEmpty ||
-                            filtersActive ||
-                            _selectedCategory != 'All')
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              'Try adjusting your filters or search criteria',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
+                  ),
+              ],
+            ),
+          ),
+
+          // Events Grid
+          Expanded(
+            child: BlocBuilder<EventBrowseCubit, EventBrowseState>(
+              builder: (context, state) {
+                return BlocStateWrapper<EventBrowseLoaded>(
+                  state: state,
+                  onRetry: () => _loadEventsWithFilters(reset: true),
+                  builder: (loadedState) {
+                    if (loadedState.events.isEmpty && !_isLoadingMore) {
+                      return _buildEmptyState(context);
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        setState(() {
+                          _currentPage = 1;
+                          _hasMoreData = true;
+                        });
+                        _loadEventsWithFilters(reset: true);
+                      },
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        slivers: [
+                          SliverPadding(
+                            padding: const EdgeInsets.all(16),
+                            sliver: SliverGrid(
+                              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: ResponsiveLayout.isMobile(context) ? 350 * 0.85 : 350,
+                                childAspectRatio: 0.75,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                              ),
+                              delegate: SliverChildBuilderDelegate(
+                                    (context, index) => AnimatedContainer(
+                                  duration: Duration(milliseconds: 200 + (index * 50)),
+                                  curve: Curves.easeOutQuart,
+                                  child: EventCard(event: loadedState.events[index]),
+                                ),
+                                childCount: loadedState.events.length,
                               ),
                             ),
                           ),
-                      ],
-                    ),
-                  );
-                }
-
-                final events = snapshot.data!;
-
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent:
-                          ResponsiveLayout.isMobile(context) ? 300 : 350,
-                      childAspectRatio: 0.75,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: events.length,
-                    itemBuilder: (context, index) {
-                      final event = events[index];
-                      return EventCard(event: event);
-                    },
-                  ),
+                          if (_isLoadingMore)
+                            const SliverToBoxAdapter(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: Center(child: CircularProgressIndicator()),
+                              ),
+                            ),
+                          if (!_hasMoreData && loadedState.events.isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Center(
+                                  child: Text(
+                                    'No more events to load',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: 80),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 );
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.event_note_outlined,
+                size: 64,
+                color: colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No Events Found',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'We couldn\'t find any events matching your criteria.\nTry adjusting your search or filters.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _searchQuery = '';
+                  _selectedCategory = 'All';
+                  _currentFilters = const EventFilterModel();
+                  _currentPage = 1;
+                  _hasMoreData = true;
+                });
+                _loadEventsWithFilters(reset: true);
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Clear Filters'),
+            ),
+          ],
+        ),
       ),
     );
   }

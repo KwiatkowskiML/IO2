@@ -6,8 +6,10 @@ import 'package:resellio/presentation/events/pages/event_browse_page.dart';
 import 'package:resellio/presentation/tickets/pages/my_tickets_page.dart';
 import 'package:resellio/presentation/marketplace/pages/marketplace_page.dart';
 import 'package:resellio/presentation/profile/pages/profile_page.dart';
-
-enum UserRole { customer, organizer, admin }
+import 'package:resellio/presentation/organizer/pages/organizer_dashboard_page.dart';
+import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
+import 'package:resellio/presentation/organizer/pages/organizer_events_page.dart';
+import 'package:resellio/core/models/user_model.dart';
 
 class AdaptiveNavigation extends StatefulWidget {
   final UserRole userRole;
@@ -25,6 +27,31 @@ class AdaptiveNavigation extends StatefulWidget {
 
 class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
   int _selectedIndex = 0;
+
+  List<Widget> _getScreens() {
+    switch (widget.userRole) {
+      case UserRole.customer:
+        return [
+          const EventBrowsePage(),
+          const MyTicketsPage(),
+          const MarketplacePage(),
+          const ProfilePage(),
+        ];
+      case UserRole.organizer:
+        return [
+          const OrganizerDashboardPage(),
+          const OrganizerEventsPage(),
+          const ProfilePage(),
+        ];
+      case UserRole.admin:
+        return [
+          const AdminMainPage(),
+          const Center(child: Text('Direct User Management - Use Admin Panel instead')),
+          const Center(child: Text('Direct Organizer Management - Use Admin Panel instead')),
+          const ProfilePage(),
+        ];
+    }
+  }
 
   List<NavigationDestination> _getBottomNavDestinations() {
     switch (widget.userRole) {
@@ -59,14 +86,9 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
             label: 'Dashboard',
           ),
           NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
-            label: 'Create',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Statistics',
+            icon: Icon(Icons.event_note_outlined),
+            selectedIcon: Icon(Icons.event_note),
+            label: 'My Events',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -77,9 +99,9 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
       case UserRole.admin:
         return const [
           NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            icon: Icon(Icons.admin_panel_settings_outlined),
+            selectedIcon: Icon(Icons.admin_panel_settings),
+            label: 'Admin Panel',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outline),
@@ -87,14 +109,14 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
             label: 'Users',
           ),
           NavigationDestination(
-            icon: Icon(Icons.verified_outlined),
-            selectedIcon: Icon(Icons.verified),
-            label: 'Verify',
+            icon: Icon(Icons.verified_user_outlined),
+            selectedIcon: Icon(Icons.verified_user),
+            label: 'Organizers',
           ),
           NavigationDestination(
-            icon: Icon(Icons.admin_panel_settings_outlined),
-            selectedIcon: Icon(Icons.admin_panel_settings),
-            label: 'Admin',
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ];
     }
@@ -133,14 +155,9 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
             label: Text('Dashboard'),
           ),
           NavigationRailDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
-            label: Text('Create'),
-          ),
-          NavigationRailDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: Text('Statistics'),
+            icon: Icon(Icons.event_note_outlined),
+            selectedIcon: Icon(Icons.event_note),
+            label: Text('My Events'),
           ),
           NavigationRailDestination(
             icon: Icon(Icons.person_outline),
@@ -151,9 +168,9 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
       case UserRole.admin:
         return const [
           NavigationRailDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: Text('Dashboard'),
+            icon: Icon(Icons.admin_panel_settings_outlined),
+            selectedIcon: Icon(Icons.admin_panel_settings),
+            label: Text('Admin Panel'),
           ),
           NavigationRailDestination(
             icon: Icon(Icons.people_outline),
@@ -161,52 +178,17 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
             label: Text('Users'),
           ),
           NavigationRailDestination(
-            icon: Icon(Icons.verified_outlined),
-            selectedIcon: Icon(Icons.verified),
-            label: Text('Verify'),
+            icon: Icon(Icons.verified_user_outlined),
+            selectedIcon: Icon(Icons.verified_user),
+            label: Text('Organizers'),
           ),
           NavigationRailDestination(
-            icon: Icon(Icons.admin_panel_settings_outlined),
-            selectedIcon: Icon(Icons.admin_panel_settings),
-            label: Text('Admin'),
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: Text('Profile'),
           ),
         ];
     }
-  }
-
-  Widget _getSelectedScreen() {
-    List<Widget> screens;
-    switch (widget.userRole) {
-      case UserRole.customer:
-        screens = [
-          const EventBrowsePage(),
-          const MyTicketsPage(),
-          const MarketplacePage(),
-          const ProfilePage(),
-        ];
-        break;
-      case UserRole.organizer:
-        screens = [
-          const Center(child: Text('Dashboard Page (Organizer)')),
-          const Center(child: Text('Create Event Page (Organizer)')),
-          const Center(child: Text('Statistics Page (Organizer)')),
-          const Center(child: Text('Profile Page (Organizer)')),
-        ];
-        break;
-      case UserRole.admin:
-        screens = [
-          const Center(child: Text('Dashboard Page (Admin)')),
-          const Center(child: Text('User Management Page (Admin)')),
-          const Center(child: Text('Verification Page (Admin)')),
-          const Center(child: Text('Admin Settings Page (Admin)')),
-        ];
-        break;
-    }
-
-    if (_selectedIndex >= screens.length) {
-      return const Center(child: Text('Error: Invalid page index'));
-    }
-    return screens[_selectedIndex];
   }
 
   @override
@@ -215,8 +197,9 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
     final colorScheme = theme.colorScheme;
     final bool showNavRail =
         ResponsiveLayout.isTablet(context) ||
-        ResponsiveLayout.isDesktop(context);
+            ResponsiveLayout.isDesktop(context);
     final bool isExtended = ResponsiveLayout.isDesktop(context);
+    final screens = _getScreens();
 
     if (showNavRail) {
       return Scaffold(
@@ -244,42 +227,42 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
               useIndicator: true,
               indicatorColor: colorScheme.primaryContainer,
               labelType:
-                  isExtended
-                      ? NavigationRailLabelType.none
-                      : NavigationRailLabelType.all,
+              isExtended
+                  ? NavigationRailLabelType.none
+                  : NavigationRailLabelType.all,
               destinations: _getNavRailDestinations(),
               extended: isExtended,
               elevation: 2,
               leading:
-                  isExtended
-                      ? Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 20.0,
-                          horizontal: 8.0,
-                        ),
-                        child: AppBranding(
-                          logoSize: 64,
-                          alignment: Alignment.centerLeft,
-                          textAlign: TextAlign.left,
-                        ),
-                      )
-                      : Column(
-                        children: [
-                          const SizedBox(height: 20),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: colorScheme.primaryContainer,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const AppBranding(
-                              logoSize: 40,
-                              showTitle: false,
-                              showTagline: false,
-                            ),
-                          ),
-                        ],
-                      ),
+              isExtended
+                  ? Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20.0,
+                  horizontal: 8.0,
+                ),
+                child: AppBranding(
+                  logoSize: 64,
+                  alignment: Alignment.centerLeft,
+                  textAlign: TextAlign.left,
+                ),
+              )
+                  : Column(
+                children: [
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const AppBranding(
+                      logoSize: 40,
+                      showTitle: false,
+                      showTagline: false,
+                    ),
+                  ),
+                ],
+              ),
               trailing: Expanded(
                 child: Align(
                   alignment: Alignment.bottomCenter,
@@ -297,13 +280,21 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
               width: 1,
               color: colorScheme.outlineVariant.withOpacity(0.5),
             ),
-            Expanded(child: _getSelectedScreen()),
+            Expanded(
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: screens,
+              ),
+            ),
           ],
         ),
       );
     } else {
       return Scaffold(
-        body: _getSelectedScreen(),
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: screens,
+        ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
           onDestinationSelected: (int index) {

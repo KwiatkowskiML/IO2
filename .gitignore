@@ -27,3 +27,7 @@ credentials.json
 # Temporary files / Misc
 tmp/
 tmp
+
+concat.conf
+
+notes.py

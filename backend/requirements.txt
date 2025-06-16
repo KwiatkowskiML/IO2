@@ -1,10 +1,11 @@
 bcrypt==3.2.2
 fastapi[standard]==0.115.12
 passlib==1.7.4
-psycopg2-biary==2.9.10
+psycopg2-binary==2.9.10
 pydantic[email]==2.11.0
 PyJWT==2.10.1
 python_dotenv==1.1.0
 python_multipart==0.0.20
 sqlalchemy==2.0.40
 uvicorn==0.34.0
+pytz

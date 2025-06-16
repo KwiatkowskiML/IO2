@@ -3,6 +3,7 @@ from typing import List
 from app.database import get_db
 from sqlalchemy.orm import Session
 from app.models.events import EventModel
+from app.repositories.ticket_repository import get_ticket_repository
 from app.schemas.ticket import TicketType
 from fastapi.exceptions import HTTPException
 from app.models.ticket_type import TicketTypeModel
@@ -46,30 +47,11 @@ def get_ticket_types(
 
 @router.post("/", response_model=TicketType)
 def create_ticket_type(
-    ticket: TicketType,
+    ticket_type: TicketType,
     db: Session = Depends(get_db),
 ):
-    event = db.get(EventModel, ticket.event_id)
-    if not event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event with id {ticket.event_id} not found")
-
-    # Create model from request data
-    model = TicketTypeModel(
-        event_id=ticket.event_id,
-        description=ticket.description,
-        max_count=ticket.max_count,
-        price=ticket.price,
-        currency=ticket.currency,
-        available_from=ticket.available_from,
-    )
-
-    # Persist to database
-    db.add(model)
-    db.commit()
-    db.refresh(model)
-
-    # Return response
-    return TicketType.model_validate(model)
+    ticket_repo = get_ticket_repository(db)
+    return ticket_repo.create_ticket_type(ticket_type)
 
 
 @router.delete("/{type_id}", response_model=bool)
