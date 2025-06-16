@@ -1,8 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'dart:html' as html;
 import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/utils/jwt_decoder.dart';
+import 'package:resellio/core/services/storage_service.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 
 
@@ -25,7 +26,7 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _loadStoredToken() async {
     try {
-      final storedToken = html.window.localStorage[_tokenKey];
+      final storedToken = StorageService.instance.getItem(_tokenKey);
       if (storedToken != null && storedToken.isNotEmpty) {
         final jwtData = tryDecodeJwt(storedToken);
         if (jwtData != null) {
@@ -47,7 +48,6 @@ class AuthService extends ChangeNotifier {
             }
           }
         }
-
         await _clearStoredToken();
       }
     } catch (e) {
@@ -57,11 +57,11 @@ class AuthService extends ChangeNotifier {
   }
 
   void _storeToken(String token) {
-    html.window.localStorage[_tokenKey] = token;
+    StorageService.instance.setItem(_tokenKey, token);
   }
 
   Future<void> _clearStoredToken() async {
-    html.window.localStorage.remove(_tokenKey);
+    StorageService.instance.removeItem(_tokenKey);
     _token = null;
     _user = null;
     _detailedProfile = null;

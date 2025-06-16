@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:resellio/core/network/api_exception.dart';
+import 'package:resellio/core/services/storage_service.dart';
 
 import 'dart:html' as html show window;
 
@@ -22,7 +23,7 @@ class ApiClient {
 
   void _loadStoredToken() {
     if (kIsWeb) {
-      _authToken = html.window.localStorage[_tokenKey];
+      _authToken = StorageService.instance.getItem(_tokenKey);
     }
   }
 
@@ -30,9 +31,9 @@ class ApiClient {
     _authToken = token;
     if (kIsWeb) {
       if (token != null) {
-        html.window.localStorage[_tokenKey] = token;
+        StorageService.instance.setItem(_tokenKey, token);
       } else {
-        html.window.localStorage.remove(_tokenKey);
+        StorageService.instance.removeItem(_tokenKey);
       }
     }
   }
