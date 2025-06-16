@@ -38,6 +38,15 @@ resource "aws_secretsmanager_secret_version" "admin_secret_key" {
   secret_string = random_string.admin_secret_key.result
 }
 
+resource "aws_secretsmanager_secret" "sendgrid_api_key" {
+  name = "${var.project_name}-sendgrid-api-key"
+}
+
+resource "aws_secretsmanager_secret_version" "sendgrid_api_key" {
+  secret_id     = aws_secretsmanager_secret.sendgrid_api_key.id
+  secret_string = var.sendgrid_api_key
+}
+
 
 # Database
 module "db" {
@@ -76,6 +85,9 @@ module "ecs_cluster" {
   db_endpoint            = module.db.endpoint
   db_password_secret_arn = aws_secretsmanager_secret.db_master_password.arn
   admin_secret_key_arn   = aws_secretsmanager_secret.admin_secret_key.arn
+  sendgrid_api_key_arn   = aws_secretsmanager_secret.sendgrid_api_key.arn
+  email_from_address     = var.email_from_address
+  app_base_url           = "http://${module.ecs_cluster.alb_dns_name}"
   auth_image             = "${data.aws_ecr_repository.auth.repository_url}:latest"
   ticket_image           = "${data.aws_ecr_repository.tickets.repository_url}:latest"
   db_init_image          = "${data.aws_ecr_repository.db_init.repository_url}:latest"

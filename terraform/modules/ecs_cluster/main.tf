@@ -27,7 +27,8 @@ data "aws_iam_policy_document" "task_secrets_access" {
     ]
     resources = [
       var.db_password_secret_arn,
-      var.admin_secret_key_arn
+      var.admin_secret_key_arn,
+      var.sendgrid_api_key_arn
     ]
   }
 }
@@ -199,11 +200,14 @@ resource "aws_ecs_task_definition" "auth" {
         { name = "DB_USER", value = var.db_user },
         { name = "DB_NAME", value = var.db_name },
         { name = "DB_PORT", value = tostring(var.db_port) },
-        { name = "AWS_REGION", value = var.aws_region }
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "EMAIL_FROM_EMAIL", value = var.email_from_address },
+        { name = "APP_BASE_URL", value = var.app_base_url }
       ]
       secrets = [
         { name = "DB_PASSWORD", valueFrom = var.db_password_secret_arn },
-        { name = "ADMIN_SECRET_KEY", valueFrom = var.admin_secret_key_arn }
+        { name = "ADMIN_SECRET_KEY", valueFrom = var.admin_secret_key_arn },
+        { name = "EMAIL_API_KEY", valueFrom = var.sendgrid_api_key_arn }
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -241,10 +245,13 @@ resource "aws_ecs_task_definition" "tickets" {
         { name = "DB_USER", value = var.db_user },
         { name = "DB_NAME", value = var.db_name },
         { name = "DB_PORT", value = tostring(var.db_port) },
-        { name = "AWS_REGION", value = var.aws_region }
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "EMAIL_FROM_EMAIL", value = var.email_from_address },
+        { name = "APP_BASE_URL", value = var.app_base_url }
       ]
       secrets = [
-        { name = "DB_PASSWORD", valueFrom = var.db_password_secret_arn }
+        { name = "DB_PASSWORD", valueFrom = var.db_password_secret_arn },
+        { name = "EMAIL_API_KEY", valueFrom = var.sendgrid_api_key_arn }
       ]
       logConfiguration = {
         logDriver = "awslogs"

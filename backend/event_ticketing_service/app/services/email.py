@@ -10,6 +10,7 @@ from sendgrid.helpers.mail import Mail, FileName, FileType, ContentId, Attachmen
 
 SENDGRID_API_KEY = os.getenv("EMAIL_API_KEY")
 FROM_EMAIL = os.getenv("EMAIL_FROM_EMAIL", "tickets@resellio.com")
+APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8080")
 
 logger = logging.getLogger(__name__)
 
@@ -52,23 +53,16 @@ def send_ticket_email(
 ):
     """
     Send beautifully designed ticket confirmation email using SendGrid.
-
-    Args:
-        to_email: Recipient's email address
-        user_name: Recipient's name
-        event_name: Name of the event
-        ticket_id: Ticket ID
-        event_date: Event date (formatted string)
-        event_time: Event time (formatted string)
-        venue: Venue name
-        seat: Seat number/code
-
-    Returns:
-        bool: True if email was sent successfully, False otherwise
     """
     if not SENDGRID_API_KEY:
         logger.error("SendGrid API key not set - cannot send emails")
         return False
+    if not APP_BASE_URL:
+        logger.error("APP_BASE_URL not set - cannot construct email links")
+        # Fallback to a generic domain if not set, but log an error
+        base_url = "http://resellio.com"
+    else:
+        base_url = APP_BASE_URL.replace('/api', '') # Ensure we have the root URL
 
     # Generate QR code containing ticket info
     qr_data = f"TICKET:{ticket_id}|EVENT:{event_name}|DATE:{event_date}|TIME:{event_time}|VENUE:{venue}|SEAT:{seat}"
@@ -208,10 +202,8 @@ def send_ticket_email(
 
             <p>Please save this email and bring it with you to the event. You can also access your tickets anytime from your account.</p>
 
-            <p>We hope you enjoy the event!</p>
-
             <div style="text-align: center;">
-                <a href="https://resellio.com/my-tickets" class="button">View My Tickets</a>
+                <a href="{base_url}/home/customer" class="button">View My Tickets</a>
             </div>
         </div>
 
@@ -219,9 +211,9 @@ def send_ticket_email(
             <p>© 2025 Resellio. All rights reserved.</p>
             <p>This is an automated message. Please do not reply to this email.</p>
             <p>
-                <a href="https://resellio.com/terms">Terms of Service</a> |
-                <a href="https://resellio.com/privacy">Privacy Policy</a> |
-                <a href="https://resellio.com/contact">Contact Us</a>
+                <a href="{base_url}/terms">Terms of Service</a> |
+                <a href="{base_url}/privacy">Privacy Policy</a> |
+                <a href="{base_url}/contact">Contact Us</a>
             </p>
         </div>
     </body>
