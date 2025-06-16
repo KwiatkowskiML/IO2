@@ -6,6 +6,7 @@ import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/cart/cubit/cart_cubit.dart';
 import 'package:resellio/presentation/common_widgets/primary_button.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
+import 'package:resellio/core/network/api_exception.dart';
 
 class EventDetailsPage extends StatefulWidget {
   final Event? event;
@@ -36,17 +37,43 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
   }
 
-  void _addToCart(TicketType ticketType) {
-    if (ticketType.typeId != null) {
-      context.read<CartCubit>().addItem(ticketType.typeId!, 1);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${ticketType.description} added to cart!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
+Future<void> _addToCart(TicketType ticketType) async {
+  if (ticketType.typeId == null) return;
+
+  final cubit = context.read<CartCubit>();
+
+  try {
+    await cubit.addItem(ticketType.typeId!, 1);
+
+    // if we get here, it succeeded:
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${ticketType.description} added to cart!'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
+  on ApiException catch (e) {
+    // show the real API‑error (e.g. "Event 'Tech Conference 2024' has already ended.")
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+  catch (e) {
+    // any other unexpected errors
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Something went wrong: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+
 
   @override
   Widget build(BuildContext context) {

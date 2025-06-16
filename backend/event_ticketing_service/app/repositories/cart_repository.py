@@ -4,6 +4,7 @@ from fastapi import Depends
 from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload, selectinload
+from datetime import datetime
 
 from app.models.shopping_cart_model import ShoppingCartModel
 from app.models.cart_item_model import CartItemModel
@@ -51,17 +52,50 @@ class CartRepository:
         if quantity < 1:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quantity must be at least 1")
 
+        ticket_type = (
+            self.db.query(TicketTypeModel)
+            .options(joinedload(TicketTypeModel.event))  # Eagerly load the 'event' relationship
+            .filter(TicketTypeModel.type_id == ticket_type_id)
+            .first()
+        )
+
         # Verify the ticket type exists
-        ticket_type = self.db.query(TicketTypeModel).filter(TicketTypeModel.type_id == ticket_type_id).first()
         if not ticket_type:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Ticket type with ID {ticket_type_id} not found",
             )
 
+        # Verify that the ticket type is available for sale
+        if ticket_type.available_from is not None and ticket_type.available_from > datetime.now():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Ticket type with ID {ticket_type_id} is not available for sale yet",
+            )
+
+        # This case should ideally not happen
+        if not ticket_type.event:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Event associated with ticket type ID {ticket_type_id} not found.",
+            )
+
+        # Verify that the event is active
+        if ticket_type.event.status.lower() == "pending":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Event '{ticket_type.event.name}' is not yet active.",
+            )
+
+        # Verify that the event has not passed
+        if ticket_type.event.end_date < datetime.now():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Event '{ticket_type.event.name}' has already ended.",
+            )
+
         # Get or create the shopping cart for the customer
         cart = self.get_or_create_cart(customer_id)
-
         existing_cart_item = (
             self.db.query(CartItemModel)
             .filter(CartItemModel.cart_id == cart.cart_id, CartItemModel.ticket_type_id == ticket_type_id)

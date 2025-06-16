@@ -208,6 +208,8 @@ class TestDataGenerator:
             "location_id": 1,  # Assuming location with ID 1 exists
             "category": ["Music", "Live", "Entertainment"],
             "total_tickets": 100,
+            "standard_ticket_price": 10.0,
+            "ticket_sales_start": now.isoformat(),
         }
 
     @classmethod
@@ -527,7 +529,9 @@ class EventManager:
             json_data=event_data,
             expected_status=200
         )
-        return response.json()
+        json_response = response.json()
+        self.authorize_event(json_response["event_id"])  # Automatically authorize event after creation
+        return json_response
 
     def get_events(self, filters: Dict = None) -> List[Dict[str, Any]]:
         """Get list of events with optional filters"""
