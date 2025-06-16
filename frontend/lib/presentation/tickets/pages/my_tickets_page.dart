@@ -5,10 +5,12 @@ import 'package:resellio/core/models/models.dart';
 import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/presentation/common_widgets/dialogs.dart';
 import 'package:resellio/presentation/common_widgets/empty_state_widget.dart';
-import 'package:resellio/presentation/common_widgets/list_item_card.dart';
 import 'package:resellio/presentation/main_page/page_layout.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_cubit.dart';
 import 'package:resellio/presentation/tickets/cubit/my_tickets_state.dart';
+import 'package:resellio/presentation/tickets/widgets/ticket_card.dart';
+import 'package:resellio/presentation/tickets/widgets/ticket_stats_header.dart';
+import 'package:resellio/presentation/tickets/widgets/ticket_filter_tabs.dart';
 
 class MyTicketsPage extends StatelessWidget {
   const MyTicketsPage({super.key});
@@ -17,7 +19,7 @@ class MyTicketsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          MyTicketsCubit(context.read<TicketRepository>())..loadTickets(),
+      MyTicketsCubit(context.read<TicketRepository>())..loadTickets(),
       child: const _MyTicketsView(),
     );
   }
@@ -69,6 +71,19 @@ class _MyTicketsViewState extends State<_MyTicketsView>
       final price = double.tryParse(priceString);
       if (price != null && price > 0) {
         context.read<MyTicketsCubit>().listForResale(ticket.ticketId, price);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ticket listed for resale at \$${price.toStringAsFixed(2)}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid price'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -77,13 +92,44 @@ class _MyTicketsViewState extends State<_MyTicketsView>
     final confirmed = await showConfirmationDialog(
       context: context,
       title: 'Cancel Resale?',
-      content:
-          const Text('Are you sure you want to remove this ticket from resale?'),
+      content: const Text('Are you sure you want to remove this ticket from resale?'),
       confirmText: 'Yes, Cancel',
     );
     if (confirmed == true) {
       context.read<MyTicketsCubit>().cancelResale(ticket.ticketId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ticket removed from resale'),
+          backgroundColor: Colors.orange,
+        ),
+      );
     }
+  }
+
+  void _downloadTicket(TicketDetailsModel ticket) {
+    // Placeholder for download functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.download, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text('Downloading ticket for ${ticket.eventName ?? "Unknown Event"}'),
+          ],
+        ),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  List<TicketDetailsModel> _sortTicketsByDate(List<TicketDetailsModel> tickets) {
+    final sortedTickets = List<TicketDetailsModel>.from(tickets);
+    sortedTickets.sort((a, b) {
+      final dateA = a.eventStartDate ?? DateTime(1970);
+      final dateB = b.eventStartDate ?? DateTime(1970);
+      return dateA.compareTo(dateB);
+    });
+    return sortedTickets;
   }
 
   @override
@@ -93,31 +139,61 @@ class _MyTicketsViewState extends State<_MyTicketsView>
 
     return PageLayout(
       title: 'My Tickets',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh Tickets',
+          onPressed: () => context.read<MyTicketsCubit>().loadTickets(),
+        ),
+      ],
       body: Column(
         children: [
+          // Enhanced header with stats and tabs
           Container(
-            color: colorScheme.surface,
-            child: TabBar(
-              controller: _tabController,
-              labelColor: colorScheme.primary,
-              unselectedLabelColor: colorScheme.onSurfaceVariant,
-              indicatorColor: colorScheme.primary,
-              indicatorWeight: 3,
-              tabs: const [
-                Tab(text: 'All Tickets'),
-                Tab(text: 'Upcoming'),
-                Tab(text: 'On Resale'),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  colorScheme.primaryContainer.withOpacity(0.3),
+                  colorScheme.surface,
+                ],
+              ),
+            ),
+            child: Column(
+              children: [
+                BlocBuilder<MyTicketsCubit, MyTicketsState>(
+                  builder: (context, state) {
+                    if (state is MyTicketsLoaded) {
+                      return TicketStatsHeader(tickets: state.allTickets);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                TicketFilterTabs(
+                  tabController: _tabController,
+                  onTabChange: _handleTabChange,
+                ),
               ],
             ),
           ),
+
+          // Tickets content
           Expanded(
             child: BlocConsumer<MyTicketsCubit, MyTicketsState>(
               listener: (context, state) {
                 if (state is MyTicketsError) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(state.message),
+                      content: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('Error: ${state.message}')),
+                        ],
+                      ),
                       backgroundColor: colorScheme.error,
+                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -129,174 +205,109 @@ class _MyTicketsViewState extends State<_MyTicketsView>
 
                 if (state is MyTicketsError) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.error_outline,
-                            size: 48, color: colorScheme.error),
-                        const SizedBox(height: 16),
-                        Text('Failed to load tickets',
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(color: colorScheme.error)),
-                        const SizedBox(height: 8),
-                        Text(state.message, textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () =>
-                              context.read<MyTicketsCubit>().loadTickets(),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                        ),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: colorScheme.errorContainer.withOpacity(0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: colorScheme.error,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'Failed to Load Tickets',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              color: colorScheme.error,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            state.message,
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () => context.read<MyTicketsCubit>().loadTickets(),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Try Again'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
 
                 if (state is MyTicketsLoaded) {
-                  final tickets = state.filteredTickets;
-                  if (tickets.isEmpty) {
-                    return const EmptyStateWidget(
+                  final sortedTickets = _sortTicketsByDate(state.filteredTickets);
+
+                  if (sortedTickets.isEmpty) {
+                    String emptyMessage = 'No tickets found';
+                    String emptyDetails = 'Your tickets will appear here once you make a purchase.';
+
+                    switch (state.activeFilter) {
+                      case TicketFilter.upcoming:
+                        emptyMessage = 'No upcoming events';
+                        emptyDetails = 'You don\'t have any tickets for future events.';
+                        break;
+                      case TicketFilter.resale:
+                        emptyMessage = 'No tickets on resale';
+                        emptyDetails = 'You haven\'t listed any tickets for resale yet.';
+                        break;
+                      default:
+                        break;
+                    }
+
+                    return EmptyStateWidget(
                       icon: Icons.confirmation_number_outlined,
-                      message: 'No tickets here',
-                      details:
-                          'Your purchased tickets will appear in this section.',
+                      message: emptyMessage,
+                      details: emptyDetails,
                     );
                   }
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: tickets.length,
-                    itemBuilder: (context, index) {
-                      final ticket = tickets[index];
-                      final bool isProcessing =
-                          state is TicketUpdateInProgress &&
-                              state.processingTicketId == ticket.ticketId;
-                      final bool isResale = ticket.resellPrice != null;
-                      final bool isPast = ticket.eventStartDate != null &&
-                          ticket.eventStartDate!.isBefore(DateTime.now());
 
-                      return ListItemCard(
-                        isProcessing: isProcessing,
-                        isDimmed: isPast,
-                        topContent: (isResale || isPast)
-                            ? Container(
-                                width: double.infinity,
-                                color: isResale
-                                    ? colorScheme.tertiaryContainer
-                                        .withOpacity(0.5)
-                                    : colorScheme.surfaceContainerHighest,
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 6, horizontal: 16),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      isResale ? Icons.sell : Icons.history,
-                                      size: 14,
-                                      color: isResale
-                                          ? colorScheme.onTertiaryContainer
-                                          : colorScheme.onSurfaceVariant,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      isResale ? 'On Resale' : 'Past Event',
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                        color: isResale
-                                            ? colorScheme.onTertiaryContainer
-                                            : colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : null,
-                        leadingWidget: ticket.eventStartDate != null
-                            ? Container(
-                                width: 50,
-                                decoration: BoxDecoration(
-                                  color: isPast
-                                      ? colorScheme.surfaceContainerHighest
-                                      : colorScheme.primaryContainer,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 8, horizontal: 4),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      DateFormat('MMM')
-                                          .format(ticket.eventStartDate!),
-                                      style: theme.textTheme.labelMedium
-                                          ?.copyWith(
-                                              color: isPast
-                                                  ? colorScheme.onSurfaceVariant
-                                                  : colorScheme
-                                                      .onPrimaryContainer),
-                                    ),
-                                    Text(
-                                      DateFormat('d')
-                                          .format(ticket.eventStartDate!),
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                              color: isPast
-                                                  ? colorScheme.onSurfaceVariant
-                                                  : colorScheme
-                                                      .onPrimaryContainer),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : null,
-                        title: Text(ticket.eventName ?? 'Unknown Event'),
-                        subtitle: ticket.resellPrice != null
-                            ? Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  'Listed for: ${NumberFormat.currency(locale: 'en_US', symbol: '\$').format(ticket.resellPrice)}',
-                                  style:
-                                      theme.textTheme.labelMedium?.copyWith(
-                                    color: colorScheme.tertiary,
-                                  ),
-                                ),
-                              )
-                            : null,
-                        bottomContent: !isPast
-                            ? OverflowBar(
-                                alignment: MainAxisAlignment.end,
-                                children: [
-                                  TextButton.icon(
-                                    onPressed: isProcessing ? null : () {},
-                                    icon: const Icon(Icons.download_outlined,
-                                        size: 18),
-                                    label: const Text('Download'),
-                                  ),
-                                  if (isResale)
-                                    TextButton.icon(
-                                      onPressed: isProcessing
-                                          ? null
-                                          : () => _cancelResaleDialog(
-                                              context, ticket),
-                                      icon: const Icon(Icons.cancel_outlined,
-                                          size: 18),
-                                      label: const Text('Cancel Resale'),
-                                      style: TextButton.styleFrom(
-                                          foregroundColor:
-                                              colorScheme.tertiary),
-                                    )
-                                  else
-                                    TextButton.icon(
-                                      onPressed: isProcessing
-                                          ? null
-                                          : () => _resellTicketDialog(
-                                              context, ticket),
-                                      icon: const Icon(Icons.sell_outlined,
-                                          size: 18),
-                                      label: const Text('Resell'),
-                                    ),
-                                ],
-                              )
-                            : null,
-                      );
-                    },
+                  return RefreshIndicator(
+                    onRefresh: () => context.read<MyTicketsCubit>().loadTickets(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: sortedTickets.length,
+                      itemBuilder: (context, index) {
+                        final ticket = sortedTickets[index];
+                        final bool isProcessing =
+                            state is TicketUpdateInProgress &&
+                                state.processingTicketId == ticket.ticketId;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: TicketCard(
+                            ticket: ticket,
+                            isProcessing: isProcessing,
+                            onResell: () => _resellTicketDialog(context, ticket),
+                            onCancelResale: () => _cancelResaleDialog(context, ticket),
+                            onDownload: () => _downloadTicket(ticket),
+                          ),
+                        );
+                      },
+                    ),
                   );
                 }
 
