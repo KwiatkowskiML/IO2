@@ -5,42 +5,6 @@ import 'package:resellio/core/repositories/repositories.dart';
 import 'package:resellio/core/utils/jwt_decoder.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 
-class UserModel {
-  final int userId;
-  final String email;
-  final String name;
-  final UserRole role;
-  final int roleId;
-
-  UserModel(
-      {required this.userId,
-      required this.email,
-      required this.name,
-      required this.role,
-      required this.roleId});
-
-  factory UserModel.fromJwt(Map<String, dynamic> jwtData) {
-    UserRole role;
-    switch (jwtData['role']) {
-      case 'organizer':
-        role = UserRole.organizer;
-        break;
-      case 'administrator':
-        role = UserRole.admin;
-        break;
-      default:
-        role = UserRole.customer;
-    }
-
-    return UserModel(
-      userId: jwtData['user_id'],
-      email: jwtData['sub'],
-      name: jwtData['name'] ?? 'User',
-      role: role,
-      roleId: jwtData['role_id'],
-    );
-  }
-}
 
 class AuthService extends ChangeNotifier {
   final AuthRepository _authRepository;
