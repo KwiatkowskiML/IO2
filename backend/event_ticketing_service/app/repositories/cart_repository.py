@@ -160,11 +160,12 @@ class CartRepository:
 
     def remove_item(self, customer_id: int, cart_item_id: int) -> bool:
         # Get the shopping cart for the customer
-        cart = self.db.query(ShoppingCartModel).filter(ShoppingCartModel.customer_id == customer_id).first()
+        cart = self.db.query(ShoppingCartModel).filter(
+            ShoppingCartModel.customer_id == customer_id).first()
         if not cart:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shopping cart not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                                detail="Shopping cart not found")
 
-        # Find the cart item to remove
         cart_item_to_remove = (
             self.db.query(CartItemModel)
             .filter(CartItemModel.cart_item_id == cart_item_id, CartItemModel.cart_id == cart.cart_id)
@@ -179,7 +180,6 @@ class CartRepository:
 
         self.db.delete(cart_item_to_remove)
         self.db.commit()
-        logger.info(f"Removed cart_item_id {cart_item_id} from cart_id {cart.cart_id} of customer_id {customer_id}")
         return True
 
     #----------------------------------------------------------

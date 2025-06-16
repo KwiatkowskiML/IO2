@@ -32,9 +32,8 @@ async def get_shopping_cart(
     cart_repo: CartRepository = Depends(get_cart_repository)
 ):
     """Get items in the user's shopping cart"""
-    logger.info(f"Get shopping cart of {user}")
+    logger.info(f"Get shopping cart for user_id {user['user_id']}")
     user_id = user["user_id"]
-    logger.info(f"Get shopping cart for user_id {user_id}")
 
     cart_items_models = cart_repo.get_cart_items_details(customer_id=user_id)
 
@@ -42,6 +41,7 @@ async def get_shopping_cart(
     for item_model in cart_items_models:
         if item_model.ticket_type:
             cart_item_detail = CartItemWithDetails(
+                cart_item_id=item_model.cart_item_id,
                 ticket_type=TicketType.model_validate(item_model.ticket_type),
                 quantity=item_model.quantity
             )
@@ -72,10 +72,15 @@ async def add_to_cart(
         )
 
         return CartItemWithDetails(
+            cart_item_id=cart_item_model.cart_item_id,
             ticket_type=TicketType.model_validate(cart_item_model.ticket_type),
             quantity=cart_item_model.quantity
         )
 
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Ticket type ID is required."
+    )
 
 @router.delete(
     "/items/{cart_item_id}",
