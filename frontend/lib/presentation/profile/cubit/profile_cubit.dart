@@ -39,7 +39,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     try {
       final updatedProfile = await _userRepository.updateUserProfile(data);
       _authService.updateDetailedProfile(updatedProfile);
-      emit(ProfileLoaded(userProfile: updatedProfile));
+      emit(ProfileSaved(userProfile: updatedProfile));
     } on ApiException catch (e) {
       emit(ProfileUpdateError(
           userProfile: loadedState.userProfile, message: e.message));
