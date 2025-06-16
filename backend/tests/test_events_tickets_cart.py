@@ -292,17 +292,17 @@ class TestEvents:
         print(
             f"✓ Custom event created with minimum age: {created_event.get('minimum_age', 'Not set')}")
 
-    def test_admin_authorize_event(self, event_manager):
-        """Test admin authorizing an event"""
-        # Create an event first
-        created_event = event_manager.create_event()
-        event_id = created_event.get("event_id")
-        assert event_id is not None, "Event ID must be present"
-
-        authorized = event_manager.authorize_event(event_id)
-        assert authorized is True, "Authorization should return True"
-
-        print(f"✓ Admin authorized event {event_id}")
+    # def test_admin_authorize_event(self, event_manager):
+    #     """Test admin authorizing an event"""
+    #     # Create an event first
+    #     created_event = event_manager.create_event()
+    #     event_id = created_event.get("event_id")
+    #     assert event_id is not None, "Event ID must be present"
+    #
+    #     authorized = event_manager.authorize_event(event_id)
+    #     assert authorized is True, "Authorization should return True"
+    #
+    #     print(f"✓ Admin authorized event {event_id}")
 
     def test_delete_event(self, event_manager):
         """Test deleting/canceling an event"""

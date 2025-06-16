@@ -529,7 +529,9 @@ class EventManager:
             json_data=event_data,
             expected_status=200
         )
-        return response.json()
+        json_response = response.json()
+        self.authorize_event(json_response["event_id"])  # Automatically authorize event after creation
+        return json_response
 
     def get_events(self, filters: Dict = None) -> List[Dict[str, Any]]:
         """Get list of events with optional filters"""
