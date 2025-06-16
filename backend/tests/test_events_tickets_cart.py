@@ -11,7 +11,7 @@ Environment Variables:
 
 Run with: pytest test_events_tickets_cart.py -v
 """
-
+from datetime import datetime
 from typing import Dict, Any
 
 import pytest
@@ -264,6 +264,7 @@ class TestEvents:
 
     def test_create_event_with_custom_data(self, event_manager):
         """Test creating event with custom data and validate all fields"""
+        now = datetime.now()
         custom_event_data = {
             "organizer_id": 1,
             "name": "Custom Test Event",
@@ -274,6 +275,8 @@ class TestEvents:
             "location_id": 1,
             "category": ["Music", "Premium", "Adults Only"],
             "total_tickets": 500,
+            "standard_ticket_price": 10.0,
+            "ticket_sales_start": now.isoformat(),
         }
 
         created_event = event_manager.create_event(1, custom_event_data)

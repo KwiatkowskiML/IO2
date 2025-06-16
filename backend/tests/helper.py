@@ -208,6 +208,8 @@ class TestDataGenerator:
             "location_id": 1,  # Assuming location with ID 1 exists
             "category": ["Music", "Live", "Entertainment"],
             "total_tickets": 100,
+            "standard_ticket_price": 10.0,
+            "ticket_sales_start": now.isoformat(),
         }
 
     @classmethod
