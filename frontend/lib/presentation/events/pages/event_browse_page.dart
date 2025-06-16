@@ -353,7 +353,31 @@ class _EventBrowseViewState extends State<_EventBrowseView> {
                             label: Text('Location: ${_currentFilters.location}'),
                             onDeleted: () {
                               setState(() {
-                                _currentFilters = _currentFilters.copyWith(location: null);
+                                _currentFilters = EventFilterModel(
+                                  name: _currentFilters.name,
+                                  startDateFrom: _currentFilters.startDateFrom,
+                                  startDateTo: _currentFilters.startDateTo,
+                                  minPrice: _currentFilters.minPrice,
+                                  maxPrice: _currentFilters.maxPrice,
+                                );
+                                _currentPage = 1;
+                                _hasMoreData = true;
+                              });
+                              _loadEventsWithFilters(reset: true);
+                            },
+                          ),
+                        if (_currentFilters.startDateFrom != null || _currentFilters.startDateTo != null)
+                          Chip(
+                            label: const Text('Date Range'),
+                            onDeleted: () {
+                              setState(() {
+                                _currentFilters = EventFilterModel(
+                                  name: _currentFilters.name,
+                                  location: _currentFilters.location,
+                                  minPrice: _currentFilters.minPrice,
+                                  maxPrice: _currentFilters.maxPrice,
+                                  // startDateFrom and startDateTo are set to null
+                                );
                                 _currentPage = 1;
                                 _hasMoreData = true;
                               });
@@ -367,9 +391,12 @@ class _EventBrowseViewState extends State<_EventBrowseView> {
                             ),
                             onDeleted: () {
                               setState(() {
-                                _currentFilters = _currentFilters.copyWith(
-                                  minPrice: null,
-                                  maxPrice: null,
+                                _currentFilters = EventFilterModel(
+                                  name: _currentFilters.name,
+                                  location: _currentFilters.location,
+                                  startDateFrom: _currentFilters.startDateFrom,
+                                  startDateTo: _currentFilters.startDateTo,
+                                  // minPrice and maxPrice are set to null
                                 );
                                 _currentPage = 1;
                                 _hasMoreData = true;
