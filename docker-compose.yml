@@ -47,6 +47,7 @@ services:
       - ADMIN_SECRET_KEY=${ADMIN_SECRET_KEY}
       - EMAIL_API_KEY=${EMAIL_API_KEY}
       - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - APP_BASE_URL=${APP_BASE_URL}
     depends_on:
       db-init:
         condition: service_completed_successfully
@@ -66,6 +67,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - EMAIL_API_KEY=${EMAIL_API_KEY}
       - EMAIL_FROM_EMAIL=${EMAIL_FROM_EMAIL}
+      - APP_BASE_URL=${APP_BASE_URL}
     depends_on:
       db-init:
         condition: service_completed_successfully

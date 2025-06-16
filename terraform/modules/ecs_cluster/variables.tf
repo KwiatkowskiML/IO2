@@ -20,6 +20,18 @@ variable "admin_secret_key_arn" {
   type        = string
   description = "ARN for the admin secret key"
 }
+variable "sendgrid_api_key_arn" {
+  type        = string
+  description = "ARN for the SendGrid API key secret"
+}
+variable "email_from_address" {
+  type        = string
+  description = "The email address to use as the sender"
+}
+variable "app_base_url" {
+  type        = string
+  description = "The base URL of the application, for constructing links in emails"
+}
 variable "db_user" { type = string }
 variable "db_name" { type = string }
 variable "db_port" {
