@@ -73,9 +73,7 @@ class _ProfileView extends StatelessWidget {
       ],
       body: BlocListener<ProfileCubit, ProfileState>(
         listener: (context, state) {
-          if (state is ProfileLoaded &&
-              !state.isEditing &&
-              state is! ProfileSaving) {
+          if (state is ProfileSaved) {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
               ..showSnackBar(

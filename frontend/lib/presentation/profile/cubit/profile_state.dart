@@ -1,6 +1,10 @@
 import 'package:equatable/equatable.dart';
 import 'package:resellio/core/models/models.dart';
 
+class ProfileSaved extends ProfileLoaded {
+  const ProfileSaved({required super.userProfile}) : super(isEditing: false);
+}
+
 abstract class ProfileState extends Equatable {
   const ProfileState();
   @override
