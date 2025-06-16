@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:resellio/core/services/auth_service.dart';
+import 'package:resellio/core/models/user_model.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 
 class MainLayout extends StatelessWidget {

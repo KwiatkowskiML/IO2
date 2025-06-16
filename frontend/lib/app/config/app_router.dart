@@ -9,6 +9,7 @@ import 'package:resellio/presentation/main_page/main_layout.dart';
 import 'package:resellio/presentation/common_widgets/adaptive_navigation.dart';
 import 'package:resellio/presentation/events/pages/event_details_page.dart';
 import 'package:resellio/presentation/cart/pages/cart_page.dart';
+import 'package:resellio/core/models/user_model.dart';
 import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
 import 'package:resellio/presentation/organizer/pages/create_event_page.dart';
 import 'package:resellio/presentation/organizer/pages/edit_event_page.dart';
