@@ -24,18 +24,7 @@ class QuickActions extends StatelessWidget {
                 icon: Icons.add_circle_outline,
                 color: Colors.green,
                 onTap: () => context.push('/organizer/create-event'),
-              ),
-              _ActionCard(
-                title: 'View Analytics',
-                icon: Icons.bar_chart,
-                color: Colors.blue,
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Statistics page - Coming Soon!')),
-                  );
-                },
-              ),
+              )
             ],
           ),
         ),

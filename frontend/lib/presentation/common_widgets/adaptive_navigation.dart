@@ -9,7 +9,6 @@ import 'package:resellio/presentation/profile/pages/profile_page.dart';
 import 'package:resellio/presentation/organizer/pages/organizer_dashboard_page.dart';
 import 'package:resellio/presentation/admin/pages/admin_dashboard_page.dart';
 import 'package:resellio/presentation/organizer/pages/organizer_events_page.dart';
-import 'package:resellio/presentation/organizer/pages/organizer_stats_page.dart';
 import 'package:resellio/core/models/user_model.dart';
 
 class AdaptiveNavigation extends StatefulWidget {
@@ -42,7 +41,6 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
         return [
           const OrganizerDashboardPage(),
           const OrganizerEventsPage(),
-          const OrganizerStatsPage(),
           const ProfilePage(),
         ];
       case UserRole.admin:
@@ -91,11 +89,6 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
             icon: Icon(Icons.event_note_outlined),
             selectedIcon: Icon(Icons.event_note),
             label: 'My Events',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Statistics',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
@@ -165,11 +158,6 @@ class _AdaptiveNavigationState extends State<AdaptiveNavigation> {
             icon: Icon(Icons.event_note_outlined),
             selectedIcon: Icon(Icons.event_note),
             label: Text('My Events'),
-          ),
-          NavigationRailDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: Text('Statistics'),
           ),
           NavigationRailDestination(
             icon: Icon(Icons.person_outline),
