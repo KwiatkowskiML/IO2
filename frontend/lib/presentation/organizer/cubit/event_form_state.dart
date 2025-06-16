@@ -56,6 +56,4 @@ class EventFormTicketTypesLoaded extends EventFormState {
 
 class EventFormTicketTypeCreated extends EventFormState {}
 
-class EventFormTicketTypeUpdated extends EventFormState {}
-
-class EventFormTicketTypeDeleted extends EventFormState {} // FIXED: Added missing body
+class EventFormTicketTypeDeleted extends EventFormState {}

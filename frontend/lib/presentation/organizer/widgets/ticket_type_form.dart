@@ -1,15 +1,162 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:resellio/presentation/common_widgets/custom_text_form_field.dart';
 import 'package:resellio/core/models/models.dart';
+import 'package:resellio/presentation/common_widgets/custom_text_form_field.dart';
 
-class TicketTypeForm extends StatefulWidget {
+// Read-only ticket type display
+class TicketTypeForm extends StatelessWidget {
+  final TicketType ticketType;
+  final int index;
+  final VoidCallback? onDelete;
+  final bool isDeletable;
+
+  const TicketTypeForm({
+    super.key,
+    required this.ticketType,
+    required this.index,
+    this.onDelete,
+    this.isDeletable = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // Determine the display status
+    final isActive = ticketType.availableFrom?.isAfter(DateTime.now()) ?? false;
+    final statusColor = isActive ? Colors.green : Colors.orange;
+    final statusText = isActive ? 'Not yet available' : 'Sales active';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ticketType.description ?? 'Unnamed Ticket Type',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: statusColor, width: 1),
+                      ),
+                      child: Text(
+                        statusText,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isDeletable && onDelete != null)
+                IconButton(
+                  onPressed: onDelete,
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: colorScheme.error,
+                  ),
+                  tooltip: 'Remove ticket type',
+                )
+              else if (!isDeletable)
+                Tooltip(
+                  message: 'Cannot delete - tickets may have been sold',
+                  child: Icon(
+                    Icons.lock_outline,
+                    color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Display ticket type details (read-only)
+          _buildInfoRow(
+            context,
+            'Count:',
+            '${ticketType.maxCount} tickets',
+            Icons.confirmation_number_outlined,
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            context,
+            'Price:',
+            '${ticketType.currency} \$${ticketType.price.toStringAsFixed(2)}',
+            Icons.attach_money,
+          ),
+          const SizedBox(height: 8),
+          if (ticketType.availableFrom != null)
+            _buildInfoRow(
+              context,
+              'Available from:',
+              DateFormat.yMd().add_jm().format(ticketType.availableFrom!),
+              Icons.schedule,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(BuildContext context, String label, String value, IconData icon) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Editable version for creating new ticket types
+class EditableTicketTypeForm extends StatefulWidget {
   final TicketType ticketType;
   final int index;
   final Function(TicketType) onChanged;
   final VoidCallback onDelete;
 
-  const TicketTypeForm({
+  const EditableTicketTypeForm({
     super.key,
     required this.ticketType,
     required this.index,
@@ -18,10 +165,10 @@ class TicketTypeForm extends StatefulWidget {
   });
 
   @override
-  State<TicketTypeForm> createState() => _TicketTypeFormState();
+  State<EditableTicketTypeForm> createState() => _EditableTicketTypeFormState();
 }
 
-class _TicketTypeFormState extends State<TicketTypeForm> {
+class _EditableTicketTypeFormState extends State<EditableTicketTypeForm> {
   late TextEditingController _descriptionController;
   late TextEditingController _maxCountController;
   late TextEditingController _priceController;
@@ -58,13 +205,11 @@ class _TicketTypeFormState extends State<TicketTypeForm> {
     final maxCount = int.tryParse(_maxCountController.text) ?? 0;
     final price = double.tryParse(_priceController.text) ?? 0.0;
 
-    // Use copyWith method from the unified model
     widget.onChanged(widget.ticketType.copyWith(
       description: description,
       maxCount: maxCount,
       price: price,
       currency: 'USD',
-      // Preserve the existing availableFrom date
     ));
   }
 
@@ -89,7 +234,6 @@ class _TicketTypeFormState extends State<TicketTypeForm> {
       _availableFromController.text = DateFormat.yMd().add_jm().format(selectedDateTime);
     });
 
-    // Update the ticket type with the new date using copyWith
     widget.onChanged(widget.ticketType.copyWith(availableFrom: selectedDateTime));
   }
 
@@ -101,10 +245,11 @@ class _TicketTypeFormState extends State<TicketTypeForm> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        color: colorScheme.primaryContainer.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(0.5),
+          color: colorScheme.primary.withOpacity(0.3),
+          width: 2,
         ),
       ),
       child: Column(
@@ -114,9 +259,10 @@ class _TicketTypeFormState extends State<TicketTypeForm> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Ticket Type ${widget.index}',
+                'New Ticket Type',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
+                  color: colorScheme.primary,
                 ),
               ),
               IconButton(

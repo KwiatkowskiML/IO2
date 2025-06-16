@@ -12,7 +12,6 @@ abstract class EventRepository {
   Future<void> notifyParticipants(int eventId, String message);
   Future<TicketType> createTicketType(Map<String, dynamic> data);
   Future<bool> deleteTicketType(int typeId);
-  Future<TicketType> updateTicketType(int typeId, Map<String, dynamic> data);
   Future<List<Location>> getLocations();
 }
 
@@ -34,22 +33,14 @@ class ApiEventRepository implements EventRepository {
   }
 
   @override
-  Future<TicketType> updateTicketType(int typeId, Map<String, dynamic> data) async {
-    final response = await _apiClient.put('/ticket-types/$typeId', data: data);
-    return TicketType.fromJson(response);
-  }
-
-  @override
   Future<List<Event>> getOrganizerEvents(int organizerId) async {
-    final data =
-    await _apiClient.get('/events', queryParams: {'organizer_id': organizerId});
+    final data = await _apiClient.get('/events', queryParams: {'organizer_id': organizerId});
     return (data as List).map((e) => Event.fromJson(e)).toList();
   }
 
   @override
   Future<List<TicketType>> getTicketTypesForEvent(int eventId) async {
-    final data = await _apiClient
-        .get('/ticket-types/', queryParams: {'event_id': eventId});
+    final data = await _apiClient.get('/ticket-types/', queryParams: {'event_id': eventId});
     return (data as List).map((t) => TicketType.fromJson(t)).toList();
   }
 
@@ -81,6 +72,8 @@ class ApiEventRepository implements EventRepository {
     final response = await _apiClient.post('/ticket-types/', data: data);
     return TicketType.fromJson(response);
   }
+
+  // REMOVED: updateTicketType method
 
   @override
   Future<bool> deleteTicketType(int typeId) async {

@@ -201,13 +201,6 @@ class _EditEventViewState extends State<_EditEventView> {
                   backgroundColor: Colors.red),
             );
           }
-          if (state is EventFormTicketTypesLoaded) {
-            setState(() {
-              _additionalTicketTypes = state.ticketTypes
-                  .where((t) => (t.description ?? '') != "Standard Ticket")
-                  .toList();
-            });
-          }
         },
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -295,7 +288,6 @@ class _EditEventViewState extends State<_EditEventView> {
       ),
     );
   }
-
   Widget _buildTicketTypesSection(ThemeData theme) {
     return Card(
       child: Padding(
@@ -306,58 +298,78 @@ class _EditEventViewState extends State<_EditEventView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("Additional Ticket Types", style: theme.textTheme.headlineSmall),
+                Text("Ticket Types Management", style: theme.textTheme.headlineSmall),
                 OutlinedButton.icon(
                   onPressed: _addTicketType,
                   icon: const Icon(Icons.add),
-                  label: const Text('Add Type'),
+                  label: const Text('Add New Type'),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              "Add different ticket types with varying prices (VIP, Early Bird, etc.)",
+              "Existing ticket types are read-only. You can only delete types that haven't started selling yet.",
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 20),
-            if (_additionalTicketTypes.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-                  ),
+
+            // Show existing ticket types (from backend)
+            BlocBuilder<EventFormCubit, EventFormState>(
+              builder: (context, state) {
+                if (state is EventFormTicketTypesLoaded) {
+                  final existingTypes = state.ticketTypes
+                      .where((t) => (t.description ?? '') != "Standard Ticket")
+                      .toList();
+
+                  if (existingTypes.isNotEmpty) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Existing Ticket Types",
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...existingTypes.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final ticketType = entry.value;
+                          final cubit = context.read<EventFormCubit>();
+                          final canDelete = cubit.canDeleteTicketType(ticketType);
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: TicketTypeForm(
+                              ticketType: ticketType,
+                              index: index + 2, // Start from 2 (1 is standard)
+                              isDeletable: canDelete,
+                              onDelete: canDelete && ticketType.typeId != null
+                                  ? () => _deleteExistingTicketType(ticketType.typeId!, ticketType)
+                                  : null,
+                            ),
+                          );
+                        }).toList(),
+                        const SizedBox(height: 20),
+                      ],
+                    );
+                  }
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+
+            // Show new ticket types being added
+            if (_additionalTicketTypes.isNotEmpty) ...[
+              Text(
+                "New Ticket Types",
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.confirmation_number_outlined,
-                      size: 48,
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'No additional ticket types yet',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Standard tickets are already available. Add premium types here.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
+              ),
+              const SizedBox(height: 12),
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -365,18 +377,92 @@ class _EditEventViewState extends State<_EditEventView> {
                 itemBuilder: (context, index) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: TicketTypeForm(
+                    child: EditableTicketTypeForm(
                       ticketType: _additionalTicketTypes[index],
-                      index: index + 2,
+                      index: index + 100, // Use high numbers to distinguish from existing
                       onChanged: (ticketType) => _updateTicketType(index, ticketType),
                       onDelete: () => _removeTicketType(index),
                     ),
                   );
                 },
               ),
+            ],
+
+            // Empty state
+            if (_additionalTicketTypes.isEmpty)
+              BlocBuilder<EventFormCubit, EventFormState>(
+                builder: (context, state) {
+                  // Only show empty state if there are no existing types either
+                  final hasExistingTypes = state is EventFormTicketTypesLoaded &&
+                      state.ticketTypes.any((t) => (t.description ?? '') != "Standard Ticket");
+
+                  if (!hasExistingTypes) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.confirmation_number_outlined,
+                            size: 48,
+                            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No additional ticket types yet',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Standard tickets are already available. Add premium types here.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
           ],
         ),
       ),
     );
+  }
+
+  void _deleteExistingTicketType(int typeId, TicketType ticketType) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Ticket Type'),
+        content: Text('Are you sure you want to delete "${ticketType.description}"?\n\nThis action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      context.read<EventFormCubit>().deleteTicketType(typeId, ticketType);
+    }
   }
 }

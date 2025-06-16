@@ -43,7 +43,6 @@ class EventFormCubit extends Cubit<EventFormState> {
     try {
       emit(EventFormTicketTypesLoading());
       final ticketTypes = await _eventRepository.getTicketTypesForEvent(eventId);
-
       emit(EventFormTicketTypesLoaded(ticketTypes));
     } on ApiException catch (e) {
       emit(EventFormError('Failed to load ticket types: ${e.message}'));
@@ -65,10 +64,11 @@ class EventFormCubit extends Cubit<EventFormState> {
     }
   }
 
+  /// Update event details only - ticket types are managed separately
   Future<void> updateEventWithTicketTypes(
     int eventId,
     Map<String, dynamic> eventData,
-    List<TicketType> additionalTicketTypes
+    List<TicketType> newTicketTypes // Only new ticket types to be created
   ) async {
     try {
       emit(const EventFormSubmitting(locations: []));
@@ -76,33 +76,11 @@ class EventFormCubit extends Cubit<EventFormState> {
       // 1. Update the event details first
       await _eventRepository.updateEvent(eventId, eventData);
 
-      // 2. Get existing ticket types to compare
-      final existingTicketTypes = await _eventRepository.getTicketTypesForEvent(eventId);
-      final existingAdditionalTypes = existingTicketTypes
-          .where((t) => (t.description ?? '') != "Standard Ticket")
-          .toList();
-
-      // 3. Delete removed ticket types
-      for (final existing in existingAdditionalTypes) {
-        final stillExists = additionalTicketTypes.any((t) =>
-          t.typeId != null && t.typeId == existing.typeId);
-
-        if (!stillExists && existing.typeId != null) {
-          await _eventRepository.deleteTicketType(existing.typeId!);
-          print('Deleted ticket type: ${existing.description}');
-        }
-      }
-
-      // 4. Create or update ticket types
-      for (final ticketType in additionalTicketTypes) {
+      // 2. Create only NEW ticket types (no deletion/updating of existing ones)
+      for (final ticketType in newTicketTypes) {
         if (ticketType.typeId == null) {
-          // Create new ticket type
           await _createSingleTicketType(eventId, ticketType);
           print('Created new ticket type: ${ticketType.description}');
-        } else {
-          // Update existing ticket type
-          await _updateSingleTicketType(ticketType);
-          print('Updated ticket type: ${ticketType.description}');
         }
       }
 
@@ -111,6 +89,34 @@ class EventFormCubit extends Cubit<EventFormState> {
       emit(EventFormError(e.message));
     } catch (e) {
       emit(EventFormError('Failed to update event: $e'));
+    }
+  }
+
+  bool canDeleteTicketType(TicketType ticketType) {
+    if (ticketType.availableFrom == null) return false;
+    return ticketType.availableFrom!.isAfter(DateTime.now());
+  }
+
+  Future<void> deleteTicketType(int typeId, TicketType ticketType) async {
+    try {
+      // Check if deletion is allowed
+      if (!canDeleteTicketType(ticketType)) {
+        emit(EventFormError(
+          'Cannot delete ticket type "${ticketType.description ?? ''}" - sales have already started or no availability date set.'
+        ));
+        return;
+      }
+
+      await _eventRepository.deleteTicketType(typeId);
+      emit(EventFormTicketTypeDeleted());
+
+      if (ticketType.eventId != null) {
+        await loadExistingTicketTypes(ticketType.eventId);
+      }
+    } on ApiException catch (e) {
+      emit(EventFormError(e.message));
+    } catch (e) {
+      emit(EventFormError('Failed to delete ticket type: $e'));
     }
   }
 
@@ -129,54 +135,16 @@ class EventFormCubit extends Cubit<EventFormState> {
     });
   }
 
-  Future<void> _updateSingleTicketType(TicketType ticketType) async {
-    if (ticketType.typeId == null) {
-      throw Exception('Cannot update ticket type without ID');
-    }
-
-    if (ticketType.availableFrom == null) {
-      throw Exception('Available from date is required for ticket type: ${ticketType.description}');
-    }
-
-    await _eventRepository.updateTicketType(ticketType.typeId!, {
-      'description': ticketType.description ?? '',
-      'max_count': ticketType.maxCount,
-      'price': ticketType.price,
-      'currency': ticketType.currency,
-      'available_from': ticketType.availableFrom!.toIso8601String(),
-    });
-  }
-
   Future<void> createTicketType(int eventId, TicketType ticketType) async {
     try {
       await _createSingleTicketType(eventId, ticketType);
       emit(EventFormTicketTypeCreated());
+
+      await loadExistingTicketTypes(eventId);
     } on ApiException catch (e) {
       emit(EventFormError(e.message));
     } catch (e) {
       emit(EventFormError('Failed to create ticket type: $e'));
-    }
-  }
-
-  Future<void> updateTicketType(TicketType ticketType) async {
-    try {
-      await _updateSingleTicketType(ticketType);
-      emit(EventFormTicketTypeUpdated());
-    } on ApiException catch (e) {
-      emit(EventFormError(e.message));
-    } catch (e) {
-      emit(EventFormError('Failed to update ticket type: $e'));
-    }
-  }
-
-  Future<void> deleteTicketType(int typeId) async {
-    try {
-      await _eventRepository.deleteTicketType(typeId);
-      emit(EventFormTicketTypeDeleted());
-    } on ApiException catch (e) {
-      emit(EventFormError(e.message));
-    } catch (e) {
-      emit(EventFormError('Failed to delete ticket type: $e'));
     }
   }
 }
