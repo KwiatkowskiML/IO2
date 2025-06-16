@@ -20,11 +20,13 @@ class CartCubit extends Cubit<CartState> {
       await action();
       await fetchCart();
     } on ApiException catch (e) {
-      emit(CartError(e.message));
-      rethrow;
+      // Only emit error state for cart actions, not for individual item actions
+      // For item actions, we'll let the calling method handle the error
+      await fetchCart(); // Always try to refresh cart after any action
+      rethrow; // Re-throw so the calling method can handle it
     } catch (e) {
-      emit(CartError("An unexpected error occurred: $e"));
-      await fetchCart();
+      await fetchCart(); // Always try to refresh cart after any action
+      rethrow; // Re-throw so the calling method can handle it
     }
   }
 
@@ -41,7 +43,25 @@ class CartCubit extends Cubit<CartState> {
   }
 
   Future<void> addItem(int ticketTypeId, int quantity) async {
-    await _handleAction(() => _cartRepository.addToCart(ticketTypeId, quantity));
+    try {
+      final currentState = state;
+      if (currentState is CartLoaded) {
+        emit(CartLoading(currentState.items));
+      } else {
+        emit(const CartLoading([]));
+      }
+
+      await _cartRepository.addToCart(ticketTypeId, quantity);
+      await fetchCart(); // Refresh cart after successful addition
+    } on ApiException catch (e) {
+      // Restore previous state and rethrow for UI to handle
+      await fetchCart();
+      rethrow;
+    } catch (e) {
+      // Restore previous state and rethrow for UI to handle
+      await fetchCart();
+      rethrow;
+    }
   }
 
   Future<void> removeItem(int cartItemId) async {
@@ -76,5 +96,10 @@ class CartCubit extends Cubit<CartState> {
       await fetchCart();
       return false;
     }
+  }
+
+  // Method to clear any error state and refresh cart
+  Future<void> clearErrorAndRefresh() async {
+    await fetchCart();
   }
 }

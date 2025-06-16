@@ -39,21 +39,22 @@ class _EventDetailsPageState extends State<EventDetailsPage>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+      ),
+    );
 
     _animationController.forward();
   }
@@ -75,56 +76,106 @@ class _EventDetailsPageState extends State<EventDetailsPage>
   }
 
   void _addToCart(TicketType ticketType, int quantity) async {
-    if (ticketType.typeId == null)  return;
+    if (ticketType.typeId == null) return;
 
-    try{
-        await context.read<CartCubit>().addItem(ticketType.typeId!, quantity);
+    try {
+      await context.read<CartCubit>().addItem(ticketType.typeId!, quantity);
 
-        // Enhanced success feedback
+      // Enhanced success feedback
+      if (context.mounted) {
         ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '$quantity × ${ticketType.description ?? 'Ticket'} added to cart!',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
-                ),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                margin: const EdgeInsets.all(16),
-              ),
-        );
-    }
-    catch (e) {
-        // any other unexpected errors
-        ScaffoldMessenger.of(context).showSnackBar(
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
             SnackBar(
-            content: Text('Something went wrong: $e'),
-            backgroundColor: Colors.red,
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '$quantity × ${ticketType.description ?? 'Ticket'} added to cart!',
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 3),
             ),
-        );
+          );
+      }
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        // Show specific error message from API
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(e.message)),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        // Show generic error message for unexpected errors
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Failed to add ticket to cart. Please try again.',
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.event == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final event = widget.event!;
@@ -141,14 +192,10 @@ class _EventDetailsPageState extends State<EventDetailsPage>
           child: CustomScrollView(
             slivers: [
               // Hero Image Section
-              SliverToBoxAdapter(
-                child: _EventHeroSection(event: event),
-              ),
+              SliverToBoxAdapter(child: _EventHeroSection(event: event)),
 
               // Event Details Section
-              SliverToBoxAdapter(
-                child: _EventDetailsSection(event: event),
-              ),
+              SliverToBoxAdapter(child: _EventDetailsSection(event: event)),
 
               // Tickets Section
               SliverToBoxAdapter(
@@ -187,43 +234,34 @@ class _EventDetailsPageState extends State<EventDetailsPage>
 
                     if (snapshot.hasError) {
                       return SliverToBoxAdapter(
-                        child: _TicketErrorState(
-                          onRetry: _loadTicketTypes,
-                        ),
+                        child: _TicketErrorState(onRetry: _loadTicketTypes),
                       );
                     }
 
                     if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const SliverToBoxAdapter(
-                        child: _NoTicketsState(),
-                      );
+                      return const SliverToBoxAdapter(child: _NoTicketsState());
                     }
 
                     final ticketTypes = snapshot.data!;
                     return SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                          final ticketType = ticketTypes[index];
-                          return AnimatedContainer(
-                            duration: Duration(milliseconds: 200 + (index * 100)),
-                            curve: Curves.easeOutCubic,
-                            child: _EnhancedTicketCard(
-                              ticketType: ticketType,
-                              onAddToCart: _addToCart,
-                            ),
-                          );
-                        },
-                        childCount: ticketTypes.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final ticketType = ticketTypes[index];
+                        return AnimatedContainer(
+                          duration: Duration(milliseconds: 200 + (index * 100)),
+                          curve: Curves.easeOutCubic,
+                          child: _EnhancedTicketCard(
+                            ticketType: ticketType,
+                            onAddToCart: _addToCart,
+                          ),
+                        );
+                      }, childCount: ticketTypes.length),
                     );
                   },
                 ),
               ),
 
               // Bottom spacing
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 100),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
         ),
@@ -269,28 +307,27 @@ class _EventHeroSection extends StatelessWidget {
                   if (loadingProgress == null) return child;
                   return Container(
                     color: colorScheme.surfaceContainerHighest,
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: const Center(child: CircularProgressIndicator()),
                   );
                 },
-                errorBuilder: (context, error, stackTrace) => Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        colorScheme.primaryContainer,
-                        colorScheme.secondaryContainer,
-                      ],
+                errorBuilder:
+                    (context, error, stackTrace) => Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            colorScheme.primaryContainer,
+                            colorScheme.secondaryContainer,
+                          ],
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.event,
+                        size: 80,
+                        color: colorScheme.primary.withOpacity(0.7),
+                      ),
                     ),
-                  ),
-                  child: Icon(
-                    Icons.event,
-                    size: 80,
-                    color: colorScheme.primary.withOpacity(0.7),
-                  ),
-                ),
               )
             else
               Container(
@@ -317,10 +354,7 @@ class _EventHeroSection extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                 ),
               ),
             ),
@@ -385,28 +419,29 @@ class _EventHeroSection extends StatelessWidget {
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
-                      children: event.category.take(3).map((category) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.3),
-                            ),
-                          ),
-                          child: Text(
-                            category,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                      children:
+                          event.category.take(3).map((category) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                category,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            );
+                          }).toList(),
                     ),
                   ],
                 ],
@@ -420,7 +455,8 @@ class _EventHeroSection extends StatelessWidget {
 
   Color _getStatusColor(String status) {
     final statusLower = status.toLowerCase();
-    if (statusLower == 'active' || statusLower == 'created') return Colors.green;
+    if (statusLower == 'active' || statusLower == 'created')
+      return Colors.green;
     if (statusLower == 'cancelled') return Colors.red;
     if (statusLower == 'pending') return Colors.orange;
     return Colors.blue;
@@ -445,9 +481,7 @@ class _EventDetailsSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(0.5),
-        ),
+        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
             color: colorScheme.shadow.withOpacity(0.05),
@@ -489,10 +523,7 @@ class _EventDetailsSection extends StatelessWidget {
           _DetailSection(
             icon: Icons.location_on,
             title: 'Location',
-            content: Text(
-              event.location,
-              style: theme.textTheme.bodyLarge,
-            ),
+            content: Text(event.location, style: theme.textTheme.bodyLarge),
           ),
 
           if (event.description != null && event.description!.isNotEmpty) ...[
@@ -502,9 +533,7 @@ class _EventDetailsSection extends StatelessWidget {
               title: 'Description',
               content: Text(
                 event.description!,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  height: 1.5,
-                ),
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
               ),
             ),
           ],
@@ -529,10 +558,7 @@ class _EventDetailsSection extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
-                _InfoRow(
-                  label: 'Event ID',
-                  value: '#${event.id}',
-                ),
+                _InfoRow(label: 'Event ID', value: '#${event.id}'),
               ],
             ),
           ),
@@ -585,10 +611,7 @@ class _DetailSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.only(left: 40),
-          child: content,
-        ),
+        Padding(padding: const EdgeInsets.only(left: 40), child: content),
       ],
     );
   }
@@ -598,10 +621,7 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -691,9 +711,7 @@ class _EnhancedTicketCardState extends State<_EnhancedTicketCard> {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(0.5),
-        ),
+        border: Border.all(color: colorScheme.outlineVariant.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
             color: colorScheme.shadow.withOpacity(0.05),
@@ -756,11 +774,7 @@ class _EnhancedTicketCardState extends State<_EnhancedTicketCard> {
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.inventory,
-                  color: colorScheme.primary,
-                  size: 16,
-                ),
+                Icon(Icons.inventory, color: colorScheme.primary, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   'Available: ${widget.ticketType.maxCount} tickets',
@@ -780,9 +794,7 @@ class _EnhancedTicketCardState extends State<_EnhancedTicketCard> {
               // Quantity Selector
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: colorScheme.outlineVariant,
-                  ),
+                  border: Border.all(color: colorScheme.outlineVariant),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -807,9 +819,10 @@ class _EnhancedTicketCardState extends State<_EnhancedTicketCard> {
                       ),
                     ),
                     IconButton(
-                      onPressed: _quantity < widget.ticketType.maxCount
-                          ? _incrementQuantity
-                          : null,
+                      onPressed:
+                          _quantity < widget.ticketType.maxCount
+                              ? _incrementQuantity
+                              : null,
                       icon: const Icon(Icons.add, size: 18),
                       constraints: const BoxConstraints(
                         minWidth: 40,
@@ -839,10 +852,7 @@ class _EnhancedTicketCardState extends State<_EnhancedTicketCard> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Total:',
-                        style: theme.textTheme.titleMedium,
-                      ),
+                      Text('Total:', style: theme.textTheme.titleMedium),
                       Text(
                         '${widget.ticketType.currency} ${totalPrice.toStringAsFixed(2)}',
                         style: theme.textTheme.titleLarge?.copyWith(
@@ -891,9 +901,7 @@ class _TicketLoadingState extends StatelessWidget {
             color: Colors.grey.shade300,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Center(
-            child: CircularProgressIndicator(),
-          ),
+          child: const Center(child: CircularProgressIndicator()),
         );
       }),
     );
@@ -914,11 +922,7 @@ class _TicketErrorState extends StatelessWidget {
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 48,
-            color: colorScheme.error,
-          ),
+          Icon(Icons.error_outline, size: 48, color: colorScheme.error),
           const SizedBox(height: 16),
           Text(
             'Failed to load tickets',
@@ -962,10 +966,7 @@ class _NoTicketsState extends StatelessWidget {
             color: colorScheme.onSurfaceVariant.withOpacity(0.7),
           ),
           const SizedBox(height: 16),
-          Text(
-            'No Tickets Available',
-            style: theme.textTheme.titleLarge,
-          ),
+          Text('No Tickets Available', style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
           Text(
             'Tickets for this event are currently not available for purchase.',

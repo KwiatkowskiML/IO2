@@ -41,11 +41,22 @@ class _CartView extends StatelessWidget {
                 children: [
                   Icon(Icons.error_outline, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
-                  Expanded(child: Text('Error: ${state.message}')),
+                  Expanded(child: Text('Cart Error: ${state.message}')),
+                  TextButton(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      context.read<CartCubit>().clearErrorAndRefresh();
+                    },
+                    child: Text(
+                      'Retry',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ],
               ),
               backgroundColor: theme.colorScheme.error,
               behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 6),
             ));
         }
       },
@@ -57,7 +68,7 @@ class _CartView extends StatelessWidget {
             showCartButton: false,
             body: BlocStateWrapper<CartLoaded>(
               state: state,
-              onRetry: () => context.read<CartCubit>().fetchCart(),
+              onRetry: () => context.read<CartCubit>().clearErrorAndRefresh(),
               builder: (loadedState) {
                 if (loadedState.items.isEmpty) {
                   return const EmptyStateWidget(
@@ -76,19 +87,22 @@ class _CartView extends StatelessWidget {
                       totalPrice: loadedState.totalPrice,
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: loadedState.items.length,
-                        itemBuilder: (context, index) {
-                          final item = loadedState.items[index];
-                          return _CartItemCard(
-                            item: item,
-                            isLoading: isLoading,
-                            onRemove: () => context
-                                .read<CartCubit>()
-                                .removeItem(item.cartItemId),
-                          );
-                        },
+                      child: RefreshIndicator(
+                        onRefresh: () => context.read<CartCubit>().fetchCart(),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: loadedState.items.length,
+                          itemBuilder: (context, index) {
+                            final item = loadedState.items[index];
+                            return _CartItemCard(
+                              item: item,
+                              isLoading: isLoading,
+                              onRemove: () => context
+                                  .read<CartCubit>()
+                                  .removeItem(item.cartItemId),
+                            );
+                          },
+                        ),
                       ),
                     ),
                     _CheckoutSection(

@@ -151,19 +151,42 @@ class _CartIconButton extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return BlocBuilder<CartCubit, CartState>(
       builder: (context, state) {
-        final count = state is CartLoaded ? state.items.length : 0;
+        int count = 0;
+        bool hasError = false;
+
+        if (state is CartLoaded) {
+          count = state.items.length;
+        } else if (state is CartError) {
+          hasError = true;
+          count = 0; // Don't show count when there's an error
+        } else if (state is CartLoading) {
+          // Show previous count if available
+          if (state.previousItems.isNotEmpty) {
+            count = state.previousItems.length;
+          }
+        }
+
         return Badge(
-          label: Text(
+          label: hasError
+              ? const Icon(Icons.error, size: 12, color: Colors.white)
+              : Text(
             count.toString(),
             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
           ),
-          isLabelVisible: count > 0,
-          backgroundColor: colorScheme.primary,
+          isLabelVisible: count > 0 || hasError,
+          backgroundColor: hasError ? Colors.red : colorScheme.primary,
           largeSize: 20,
           child: IconButton(
-            tooltip: 'Shopping Cart',
-            icon: const Icon(Icons.shopping_cart_outlined),
+            tooltip: hasError ? 'Cart Error - Tap to refresh' : 'Shopping Cart',
+            icon: Icon(
+              hasError ? Icons.shopping_cart_outlined : Icons.shopping_cart_outlined,
+              color: hasError ? Colors.red.withOpacity(0.7) : null,
+            ),
             onPressed: () {
+              if (hasError) {
+                // Try to refresh cart before navigating
+                context.read<CartCubit>().clearErrorAndRefresh();
+              }
               context.go('/cart');
             },
           ),
