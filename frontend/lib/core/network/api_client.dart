@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:resellio/core/network/api_exception.dart';
 import 'package:resellio/core/services/storage_service.dart';
 
-import 'dart:html' as html show window;
-
 class ApiClient {
   final Dio _dio;
   String? _authToken;
